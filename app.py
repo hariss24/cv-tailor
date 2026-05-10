@@ -725,20 +725,38 @@ require(['vs/editor/editor.main'], function () {
   };
 
   const params = new URLSearchParams(location.search);
-  const loadId = params.get('load');
+  const loadId  = params.get('load');
+  const htmlUrl = params.get('htmlUrl');   // blob URL si disponible
   if (loadId) {
-    fetch(`/api/history/${encodeURIComponent(loadId)}`).then(r => r.json()).then(entry => {
-      if (!entry || !entry.id) return;
-      $('doc_type').value = entry.doc_type || 'CV';
-      $('company').value = entry.company || '';
-      $('role').value = entry.role || '';
-      $('notes').value = entry.notes || '';
-      return fetch(`/api/history/${encodeURIComponent(loadId)}/html`).then(r => r.text()).then(html => {
-        htmlModel.setValue(html);
-        cssModel.setValue('');
-        switchTab('html');
-      });
-    }).then(refreshFilenamePreview);
+    // Charger les métadonnées depuis localStorage d'abord, sinon API
+    const localHist = JSON.parse(localStorage.getItem('cv-history') || '[]');
+    const localEntry = localHist.find(e => e.id === loadId);
+    if (localEntry) {
+      $('doc_type').value = localEntry.doc_type || 'CV';
+      $('company').value  = localEntry.company  || '';
+      $('role').value     = localEntry.role     || '';
+      const src = htmlUrl || localEntry.html_url || '';
+      if (src) {
+        fetch(src).then(r => r.text()).then(html => {
+          htmlModel.setValue(html); cssModel.setValue(''); switchTab('html');
+        }).then(refreshFilenamePreview);
+      }
+    } else {
+      fetch(`/api/history/${encodeURIComponent(loadId)}`).then(r => r.json()).then(entry => {
+        if (!entry || !entry.id) return;
+        $('doc_type').value = entry.doc_type || 'CV';
+        $('company').value  = entry.company  || '';
+        $('role').value     = entry.role     || '';
+        $('notes').value    = entry.notes    || '';
+        const src = htmlUrl || '';
+        const fetchHtml = src
+          ? fetch(src).then(r => r.text())
+          : fetch(`/api/history/${encodeURIComponent(loadId)}/html`).then(r => r.text());
+        return fetchHtml.then(html => {
+          htmlModel.setValue(html); cssModel.setValue(''); switchTab('html');
+        });
+      }).then(refreshFilenamePreview);
+    }
   }
 });
 
@@ -784,6 +802,8 @@ $('go').onclick = async () => {
       return;
     }
     const meta = JSON.parse(res.headers.get('X-Archive-Entry') || '{}');
+    const pdfBlobUrl  = res.headers.get('X-Blob-PDF-URL')  || '';
+    const htmlBlobUrl = res.headers.get('X-Blob-HTML-URL') || '';
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -792,6 +812,18 @@ $('go').onclick = async () => {
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
     setStatus(`PDF telecharge et archive sous ${meta.filename}`, 'ok');
+    // Persistance locale si Vercel Blob est actif
+    if (pdfBlobUrl) {
+      try {
+        const hist = JSON.parse(localStorage.getItem('cv-history') || '[]');
+        hist.unshift({
+          id: meta.id, filename: meta.filename, created_at: meta.created_at,
+          doc_type: $('doc_type').value, company: $('company').value.trim(),
+          role: $('role').value.trim(), pdf_url: pdfBlobUrl, html_url: htmlBlobUrl,
+        });
+        localStorage.setItem('cv-history', JSON.stringify(hist.slice(0, 100)));
+      } catch (_) {}
+    }
   } catch (e) {
     setStatus('Erreur : ' + e.message, 'err');
   } finally {
@@ -862,6 +894,8 @@ HISTORY_PAGE = """<!DOCTYPE html>
 </div>
 <script>
 const $ = (id) => document.getElementById(id);
+// Injecté côté serveur — true sur Vercel (serverless), false en local
+const IS_SERVERLESS = {{ is_serverless | tojson }};
 let entries = [];
 
 function fmtDate(iso) {
@@ -887,6 +921,11 @@ function el(tag, attrs = {}, children = []) {
 
 function buildRow(e) {
   const id = e.id;
+  // Préférer les URLs Blob permanentes si disponibles
+  const pdfHref = e.pdf_url  || `/api/history/${encodeURIComponent(id)}/pdf`;
+  const reloadHref = e.html_url
+    ? `/?load=${encodeURIComponent(id)}&htmlUrl=${encodeURIComponent(e.html_url)}`
+    : `/?load=${encodeURIComponent(id)}`;
   return el('tr', { 'data-id': id }, [
     el('td', { text: fmtDate(e.created_at) }),
     el('td', {}, [el('span', { class: 'badge', text: e.doc_type || '' })]),
@@ -894,11 +933,11 @@ function buildRow(e) {
     el('td', { text: e.role || '-' }),
     el('td', { class: 'filename', title: e.filename, text: e.filename || '' }),
     el('td', { class: 'actions' }, [
-      el('a', { class: 'btn', href: `/api/history/${encodeURIComponent(id)}/pdf`, target: '_blank', text: 'Voir PDF' }),
-      el('a', { class: 'btn', href: `/?load=${encodeURIComponent(id)}`, text: 'Recharger' }),
-      el('button', { class: 'ghost', onclick: () => openLocal(id), text: 'Ouvrir local' }),
+      el('a', { class: 'btn', href: pdfHref, target: '_blank', text: 'Voir PDF' }),
+      el('a', { class: 'btn', href: reloadHref, text: 'Recharger' }),
+      !IS_SERVERLESS && el('button', { class: 'ghost', onclick: () => openLocal(id), text: 'Ouvrir local' }),
       el('button', { class: 'ghost danger', onclick: () => del(id), text: 'Supprimer' }),
-    ]),
+    ].filter(Boolean)),
   ]);
 }
 
@@ -930,15 +969,32 @@ function render(filter='') {
 }
 
 async function load() {
+  // Priorité : localStorage (Vercel Blob) → API serveur (local)
+  const local = localStorage.getItem('cv-history');
+  if (local) {
+    try {
+      entries = JSON.parse(local);
+      render($('search').value);
+      return;
+    } catch (_) {}
+  }
   const r = await fetch('/api/history');
-  entries = await r.json();
-  render($('search').value);
+  if (r.ok) { entries = await r.json(); render($('search').value); }
 }
 
 async function del(id) {
-  if (!confirm('Supprimer cette entree (PDF et HTML) ?')) return;
-  const r = await fetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (r.ok) load();
+  if (!confirm('Supprimer cette entree ?')) return;
+  // Retirer du localStorage
+  const local = localStorage.getItem('cv-history');
+  if (local) {
+    try {
+      const hist = JSON.parse(local).filter(e => e.id !== id);
+      localStorage.setItem('cv-history', JSON.stringify(hist));
+    } catch (_) {}
+  }
+  // Aussi côté serveur (local dev — ignore si absent)
+  fetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
+  load();
 }
 
 async function openLocal(id) {
@@ -962,7 +1018,7 @@ def index():
 
 @app.route("/history")
 def history_page():
-    return render_template_string(HISTORY_PAGE)
+    return render_template_string(HISTORY_PAGE, is_serverless=archive._IS_SERVERLESS)
 
 
 @app.route("/convert", methods=["POST"])
@@ -996,6 +1052,19 @@ def convert():
         custom_filename=custom_filename,
     )
 
+    # Vercel Blob — upload si le token est configuré (optionnel)
+    pdf_blob_url = ""
+    html_blob_url = ""
+    if archive._BLOB_TOKEN:
+        try:
+            pdf_blob_url = archive.upload_to_blob(pdf_bytes, entry["filename"], "application/pdf")
+            html_filename = entry["filename"].replace(".pdf", ".html")
+            html_blob_url = archive.upload_to_blob(
+                html.encode("utf-8"), html_filename, "text/html; charset=utf-8"
+            )
+        except Exception:
+            pass  # Dégradation gracieuse si le Blob est indisponible
+
     response = send_file(
         io.BytesIO(pdf_bytes),
         mimetype="application/pdf",
@@ -1005,7 +1074,11 @@ def convert():
     response.headers["X-Archive-Entry"] = _json.dumps({
         "id": entry["id"], "filename": entry["filename"], "created_at": entry["created_at"],
     })
-    response.headers["Access-Control-Expose-Headers"] = "X-Archive-Entry"
+    response.headers["X-Blob-PDF-URL"] = pdf_blob_url
+    response.headers["X-Blob-HTML-URL"] = html_blob_url
+    response.headers["Access-Control-Expose-Headers"] = (
+        "X-Archive-Entry, X-Blob-PDF-URL, X-Blob-HTML-URL"
+    )
     return response
 
 

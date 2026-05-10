@@ -9,12 +9,17 @@ import json
 import os
 import re
 import unicodedata
+import urllib.parse
+import urllib.request as _urllib_req
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
 OWNER = "Hariss"
+
+# Vercel Blob Storage — défini automatiquement quand le store est créé dans le dashboard
+_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 
 # Sur Vercel / Lambda le home n'est pas accessible en écriture → /tmp
 _IS_SERVERLESS = bool(
@@ -171,3 +176,31 @@ def delete_document(doc_id: str) -> bool:
                 pass
     _write_history(remaining)
     return True
+
+
+# ---------------------------------------------------------------------------
+# Vercel Blob Storage (optionnel — activer dans le dashboard Vercel)
+# ---------------------------------------------------------------------------
+
+def upload_to_blob(data: bytes, filename: str, content_type: str = "application/octet-stream") -> str:
+    """Uploade `data` vers Vercel Blob et retourne l'URL publique permanente.
+
+    Nécessite la variable d'environnement ``BLOB_READ_WRITE_TOKEN``.
+    Elle est créée automatiquement par Vercel quand on ajoute un Blob store
+    au projet (Vercel dashboard → Storage → Create → Blob).
+    """
+    if not _BLOB_TOKEN:
+        raise RuntimeError("BLOB_READ_WRITE_TOKEN non défini — créez un Blob store dans le dashboard Vercel")
+    safe_name = urllib.parse.quote(filename, safe="")
+    req = _urllib_req.Request(
+        f"https://blob.vercel-storage.com/{safe_name}",
+        data=data,
+        method="PUT",
+        headers={
+            "Authorization": f"Bearer {_BLOB_TOKEN}",
+            "x-api-version": "7",
+            "Content-Type": content_type,
+        },
+    )
+    with _urllib_req.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read())["url"]
