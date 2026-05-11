@@ -974,25 +974,23 @@ $('go').onclick = async () => {
 
     setStatus(`PDF telecharge : ${meta.filename}`, 'ok');
 
-    // Persistance dans localStorage si Vercel Blob est actif
-    if (pdfBlobUrl) {
-      try {
-        const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-        hist.unshift({
-          id:         meta.id || crypto.randomUUID(),
-          filename:   meta.filename,
-          created_at: meta.created_at,
-          doc_type:   $('doc_type').value,
-          company:    $('company').value.trim(),
-          role:       $('role').value.trim(),
-          notes:      $('notes').value.trim(),
-          job_desc:   $('ia-job-desc').value.trim(),
-          pdf_url:    pdfBlobUrl,
-          html_url:   htmlBlobUrl,
-        });
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, 100)));
-      } catch (_) {}
-    }
+    // Persistance dans localStorage (pour Vercel ou comme fallback)
+    try {
+      const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      hist.unshift({
+        id:         meta.id || crypto.randomUUID(),
+        filename:   meta.filename,
+        created_at: meta.created_at,
+        doc_type:   $('doc_type').value,
+        company:    $('company').value.trim(),
+        role:       $('role').value.trim(),
+        notes:      $('notes').value.trim(),
+        job_desc:   $('ia-job-desc').value.trim(),
+        pdf_url:    pdfBlobUrl || null,
+        html_url:   htmlBlobUrl || null,
+      });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, 100)));
+    } catch (_) {}
   } catch (e) {
     setStatus('Erreur : ' + e.message, 'err');
   } finally {
@@ -1276,7 +1274,7 @@ function buildRow(e) {
     el('td', { text: fmtDate(e.created_at) }),
     el('td', {}, [el('span', { class: 'badge', text: e.doc_type || '' })]),
     el('td', { text: e.company || '-' }),
-    el('td', { text: e.role    || '-' }),
+    el('td', { title: e.job_desc || '', text: e.role || '-' }),
     el('td', { class: 'filename', title: e.filename, text: e.filename || '' }),
     el('td', { class: 'actions' }, actions),
   ]);
@@ -1318,28 +1316,30 @@ function showError(msg) {
 }
 
 async function load() {
-  // 1. Priorité : localStorage (Vercel Blob — persistant)
+  // 1. En local : on privilégie l'API Serveur pour la vérité absolue
+  if (!IS_SERVERLESS) {
+    try {
+      const r = await fetch('/api/history');
+      if (r.ok) {
+        entries = await r.json();
+        render($('search').value);
+        return;
+      }
+    } catch (_) {}
+  }
+
+  // 2. Sur Vercel ou fallback : on utilise le localStorage
   try {
     const raw    = localStorage.getItem(HISTORY_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    // Utiliser localStorage si : entrées présentes OU mode serverless
-    // (sur Vercel, l'API /api/history ne persiste pas entre les cold starts)
-    if (parsed !== null && (parsed.length > 0 || IS_SERVERLESS)) {
+    if (parsed !== null) {
       entries = parsed;
       render($('search').value);
       return;
     }
   } catch (_) {}
 
-  // 2. Fallback : API serveur (local dev avec archive persistante)
-  try {
-    const r = await fetch('/api/history');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    entries = await r.json();
-    render($('search').value);
-  } catch (err) {
-    showError('Impossible de charger l\'historique : ' + err.message);
-  }
+  showError('Historique vide ou impossible à charger.');
 }
 
 async function del(id) {
