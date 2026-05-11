@@ -22,38 +22,49 @@ python mcp_server.py
 
 Quick syntax check across all Python modules:
 ```bash
-python -m py_compile app.py mcp_server.py archive.py pdf_engine.py
+python -m py_compile app.py mcp_server.py archive.py pdf_engine.py api/index.py
 ```
 
 There is no test suite. When validating changes, write a temporary `test_*.py` script that exercises the relevant entry point (Flask via `urllib.request` against `http://127.0.0.1:5050`, MCP via `subprocess.Popen` + JSON-RPC over stdin/stdout), run it, then delete it.
 
 ## Architecture
 
-Two independent frontends share a single rendering and archival backend:
+Two independent frontends and a Serverless API share a single rendering and archival backend:
 
-```
+```text
 Browser ──HTTP──▶ app.py (Flask + tkinter)        ┐
                                                    ├──▶ pdf_engine.html_to_pdf_bytes()  (sync Playwright)
-Claude desktop ──stdio MCP──▶ mcp_server.py       ┘   ──▶ archive.save_document()       (filesystem + history.json)
+Claude desktop ──stdio MCP──▶ mcp_server.py       ┘   ──▶ archive.save_document()       (local fs + history.json)
+                                                                │
+Vercel Serverless ──HTTP──▶ api/index.py          ──────────────┼─▶ Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN)
 ```
 
-`pdf_engine.py` is the **only** place that talks to Playwright. It exposes one sync function `html_to_pdf_bytes(html, page_format, margin, background) -> bytes`. Anything that needs PDF rendering must go through it — do not call `sync_playwright` elsewhere.
+`pdf_engine.py` is the **only** place that talks to Playwright. It exposes one sync function `html_to_pdf_bytes(html, page_format, margin, background) -> bytes`. Anything that needs PDF rendering must go through it.
 
-`archive.py` is the **only** place that writes to disk under `~/Documents/CV-Archive/`. It owns the `history.json` schema (id, created_at, doc_type, company, role, notes, filename, pdf_path, html_path) and the smart filename pattern `{doc_type}_Hariss_{company}_{YYYY-MM-DD}.pdf`. Writes are atomic (`.json.tmp` + rename) so the web UI and the MCP server can both write concurrently without corruption.
+`archive.py` handles storage. 
+- In **Local Mode**: writes to disk under `~/Documents/CV-Archive/`. It owns `history.json`.
+- In **Serverless Mode** (Vercel / AWS Lambda): `/tmp` is read-only except for `/tmp/CV-Archive/`. It detects this via environment variables (`VERCEL`).
+- **Blob Storage**: If `BLOB_READ_WRITE_TOKEN` is present, it uploads generated PDFs and HTML to Vercel Blob Storage, returning permanent URLs (`pdf_blob_url`, `html_blob_url`).
 
-`app.py` is a single Flask file. The two HTML pages (`PAGE`, `HISTORY_PAGE`) are inline triple-quoted strings — there is no `templates/` directory. The main page uses Monaco editor (loaded from a CDN, no build step) on the left and a sandboxed `<iframe srcdoc>` preview on the right; both stay in sync via a 400 ms debounce. The Flask server runs in a daemon thread while a tkinter "Quitter" window owns the main thread.
+`app.py` is a single Flask file containing the local launcher and the UI.
+- The two HTML pages (`PAGE`, `HISTORY_PAGE`) are inline triple-quoted strings.
+- Uses Monaco editor on the left and a sandboxed `<iframe srcdoc>` preview on the right.
+- **Mobile Responsive**: The layout stacks vertically under 768px. The Javascript splitter (`initSplitter`) adapts dynamically to handle `touchmove` and vertical resizing.
+- **Photo Base64 Injection**: Local images are encoded to Base64 in JavaScript and injected into the editor using Monaco's `insertSnippet`. It targets `<!-- URL_DE_VOTRE_PHOTO_ICI -->` or inserts at the cursor. Large Base64 strings are wrapped in `<!-- #region Photo_Base64 --> ... <!-- #endregion -->` to allow native editor code folding.
+- **AI Assistant**: A modal that generates ChatGPT/Claude prompts based on the current template and job offer. The `job_desc` field is sent to `/convert` and permanently saved in the archive history.
 
-`mcp_server.py` uses `FastMCP` and exposes `convert_html_to_pdf`, `list_recent_documents`, `get_archive_dir`. Tool functions are `async` and wrap the sync Playwright call with `await asyncio.to_thread(html_to_pdf_bytes, ...)` — calling sync Playwright directly inside the asyncio loop raises "use the Async API instead". Logs must go to stderr (`print(..., file=sys.stderr)`); stdout is reserved for the MCP protocol.
+`api/index.py` is the Vercel Serverless entry point. It wraps `app.py` using `werkzeug.middleware.dispatcher`.
+
+`mcp_server.py` uses `FastMCP` and exposes PDF conversion tools.
 
 ## Conventions and gotchas
 
 - `PAGE` in `app.py` is a **raw string** (`r"""..."""`) because the inline JS contains regex literals with `\w` and `\s` — without `r`, Python 3.12+ emits `SyntaxWarning`.
-- The web UI's `/convert` endpoint always archives. Don't add a "skip archive" flag — the archive is the single source of truth used by `/history` and the MCP `list_recent_documents` tool.
-- The `X-Archive-Entry` response header on `/convert` carries the new entry's `{id, filename, created_at}` so the browser can name the download properly.
+- The web UI's `/convert` endpoint always archives. Don't add a "skip archive" flag.
+- **History Fallback**: The frontend `load()` prioritizes `localStorage` over the `/api/history` route because the serverless environment loses local disk state between cold starts.
 - `OWNER = "Hariss"` in `archive.py` is hardcoded into filenames. Change it there if reusing the project for someone else.
-- `app.py` calls `os.startfile()` and `subprocess.run(["explorer", "/select,", ...])` — Windows-only. They will silently fail or be skipped on other platforms.
-- Local launcher `C:\Users\tahet\cv_pdf_web.pyw` (outside this repo) is a thin wrapper that prepends this directory to `sys.path`, `chdir`s into it, and calls `app.main()`. Double-clicking it on Windows uses `pythonw.exe` and avoids the console window.
+- `app.py` calls `os.startfile()` and `subprocess.run(["explorer", "/select,", ...])` — Windows-only. These are hidden from the UI when running on Vercel.
 
 ## MCP integration
 
-Claude desktop config lives at `%APPDATA%\Claude\claude_desktop_config.json` (Windows). The `mcpServers.html-to-pdf` entry already points to `mcp_server.py`. After any change to `mcp_server.py`, restart Claude desktop fully (not just close window) to pick it up.
+Claude desktop config lives at `%APPDATA%\Claude\claude_desktop_config.json` (Windows). The `mcpServers.html-to-pdf` entry already points to `mcp_server.py`. After any change to `mcp_server.py`, restart Claude desktop fully to pick it up.
