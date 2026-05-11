@@ -121,6 +121,23 @@ PAGE = r"""<!DOCTYPE html>
   .btn-copier { display: block; width: 100%; padding: 14px; font-size: 15px; font-weight: 600; text-align: center; background: linear-gradient(135deg, #4f8cff, #2563eb); color: white; border: none; border-radius: 8px; margin-top: 24px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; }
   .btn-copier:hover { box-shadow: 0 4px 12px rgba(79, 140, 255, 0.4); transform: translateY(-1px); }
   .btn-copier:active { transform: translateY(1px); }
+
+  /* Responsive Mobile */
+  @media (max-width: 768px) {
+    html, body { height: auto; overflow: visible; }
+    .wrap { height: auto; min-height: 100vh; padding: 12px; }
+    .topbar { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .meta { grid-template-columns: 1fr; gap: 12px; }
+    .split { flex-direction: column; flex: none; height: 800px; } /* Hauteur fixe pour split sur mobile */
+    .editor-pane, .preview-pane { flex: 1 1 50% !important; min-height: 300px; width: 100% !important; }
+    .splitter { width: 100%; height: 12px; cursor: row-resize; background: #1b1f27; }
+    
+    .modal-content { padding: 20px; width: 100%; border-radius: 8px; }
+    .modal-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .close-modal { position: absolute; top: 16px; right: 16px; }
+    .ia-options { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .ia-options select { width: 100%; }
+  }
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css" />
 </head>
@@ -984,22 +1001,44 @@ $('go').onclick = async () => {
   const splitter   = $('splitter');
   const editorPane = $('editor-pane');
   let dragging     = false;
-  splitter.addEventListener('mousedown', e => {
+
+  const onStart = (e) => {
     dragging = true;
-    e.preventDefault();
-    document.body.style.cursor = 'col-resize';
-  });
-  window.addEventListener('mousemove', e => {
+    // Eviter preventDefault sur touchstart si non necessaire, mais requis ici pour bloquer le scroll
+    if (e.cancelable) e.preventDefault();
+    const isMobile = window.innerWidth <= 768;
+    document.body.style.cursor = isMobile ? 'row-resize' : 'col-resize';
+  };
+
+  const onMove = (e) => {
     if (!dragging) return;
     const rect = split.getBoundingClientRect();
-    const x    = e.clientX - rect.left;
-    const pct  = Math.max(15, Math.min(85, (x / rect.width) * 100));
-    editorPane.style.flexBasis = `${pct}%`;
-  });
-  window.addEventListener('mouseup', () => {
+    const isMobile = window.innerWidth <= 768;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    if (isMobile) {
+      const y = clientY - rect.top;
+      const pct = Math.max(15, Math.min(85, (y / rect.height) * 100));
+      editorPane.style.flexBasis = `${pct}%`;
+    } else {
+      const x = clientX - rect.left;
+      const pct = Math.max(15, Math.min(85, (x / rect.width) * 100));
+      editorPane.style.flexBasis = `${pct}%`;
+    }
+  };
+
+  const onEnd = () => {
     dragging = false;
     document.body.style.cursor = '';
-  });
+  };
+
+  splitter.addEventListener('mousedown', onStart);
+  splitter.addEventListener('touchstart', onStart, {passive: false});
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, {passive: false});
+  window.addEventListener('mouseup', onEnd);
+  window.addEventListener('touchend', onEnd);
 })();
 
 // ---- Assistant IA ----------------------------------------------------------
