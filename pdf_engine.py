@@ -64,7 +64,6 @@ def _playwright_render(html: str, page_format: str, margin: str, background: boo
                 print_background=background,
                 prefer_css_page_size=True,
                 margin={"top": margin, "right": margin, "bottom": margin, "left": margin},
-                timeout=60_000,
             )
         finally:
             browser.close()
