@@ -101,9 +101,13 @@ PAGE = r"""<!DOCTYPE html>
   button.go:disabled { background: #444; cursor: wait; }
   button.ghost { background: #2a2f3a; color: #e6e6e6; border: 0; border-radius: 8px; padding: 10px 16px; font-size: 13px; cursor: pointer; }
   button.ghost:hover { background: #353b48; }
-  #status { font-size: 13px; color: #9aa0a6; }
-  #status.ok { color: #5dd39e; }
-  #status.err { color: #ff6b6b; }
+  #status { font-size: 12px; color: #9aa0a6; }
+  #autosave { font-size: 11px; color: #5dd39e; opacity: 0; transition: opacity 0.6s; margin-left: 8px; }
+  #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast { background: #1b1f27; border: 1px solid #2a2f3a; border-left-width: 3px; border-radius: 8px; padding: 10px 16px; font-size: 13px; color: #e6e6e6; box-shadow: 0 4px 16px rgba(0,0,0,0.5); pointer-events: auto; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; max-width: 340px; word-break: break-word; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.ok { border-left-color: #5dd39e; }
+  .toast.err { border-left-color: #ff6b6b; }
   
   /* Modal IA */
   .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
@@ -176,6 +180,7 @@ PAGE = r"""<!DOCTYPE html>
         <div class="tabs">
           <button class="tab active" type="button" data-tab="html">HTML</button>
           <button class="tab" type="button" data-tab="css">CSS</button>
+          <span id="autosave">&#10003; Brouillon sauvegardé</span>
         </div>
         <div class="actions-mini">
           <select id="template-select" title="Charger un template">
@@ -205,8 +210,8 @@ PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <details>
-    <summary>Options PDF (avancees)</summary>
+  <details open>
+    <summary>Options PDF (avancées)</summary>
     <div class="opts">
       <div class="opt">
         <label for="format">Format</label>
@@ -219,7 +224,7 @@ PAGE = r"""<!DOCTYPE html>
       <div class="opt">
         <label for="margin">Marges</label>
         <select id="margin">
-          <option value="0" selected>Aucune (CSS gere tout)</option>
+          <option value="0" selected>Aucune (CSS gère tout)</option>
           <option value="10mm">10 mm</option>
           <option value="15mm">15 mm</option>
           <option value="20mm">20 mm</option>
@@ -230,11 +235,11 @@ PAGE = r"""<!DOCTYPE html>
         <input type="text" id="filename" placeholder="auto" />
       </div>
       <div class="opt">
-        <label><input type="checkbox" id="bg" checked /> Inclure les arrieres-plans</label>
+        <label><input type="checkbox" id="bg" checked /> Inclure les arrière-plans</label>
       </div>
     </div>
     <div class="filename-preview" id="filename_preview"></div>
-    <textarea id="notes" placeholder="Notes pour vous-meme, conservees dans l'archive..."></textarea>
+    <textarea id="notes" placeholder="Notes pour vous-même, conservées dans l'archive..."></textarea>
   </details>
 
   <div class="actions">
@@ -243,6 +248,8 @@ PAGE = r"""<!DOCTYPE html>
     <span id="status"></span>
   </div>
 </div>
+
+<div id="toast-container"></div>
 
 <!-- Modal IA -->
 <div id="modal-ia" class="modal">
@@ -286,7 +293,35 @@ PAGE = r"""<!DOCTYPE html>
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-const setStatus = (msg, cls) => { const s = $('status'); s.textContent = msg; s.className = cls || ''; };
+
+function showToast(msg, cls, persist) {
+  const c = $('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast' + (cls ? ' ' + cls : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  if (!persist) {
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 250); }, 3500);
+  }
+  return t;
+}
+
+let _activeToast = null;
+function setStatus(msg, cls) {
+  if (_activeToast) { _activeToast.classList.remove('show'); setTimeout(() => { if (_activeToast) { _activeToast.remove(); _activeToast = null; } }, 250); }
+  if (!msg) return;
+  _activeToast = showToast(msg, cls, cls === 'err');
+}
+
+let _autosaveTimer = null;
+function flashAutosave() {
+  const el = $('autosave');
+  if (!el) return;
+  el.style.opacity = '1';
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(() => { el.style.opacity = '0'; }, 2000);
+}
 
 const STORAGE_KEY_HTML = 'html-to-pdf:draft:html';
 const STORAGE_KEY_CSS  = 'html-to-pdf:draft:css';
@@ -798,11 +833,11 @@ require(['vs/editor/editor.main'], function () {
   });
 
   htmlModel.onDidChangeContent(() => {
-    try { localStorage.setItem(STORAGE_KEY_HTML, htmlModel.getValue()); } catch (_) {}
+    try { localStorage.setItem(STORAGE_KEY_HTML, htmlModel.getValue()); flashAutosave(); } catch (_) {}
     schedulePreview();
   });
   cssModel.onDidChangeContent(() => {
-    try { localStorage.setItem(STORAGE_KEY_CSS, cssModel.getValue()); } catch (_) {}
+    try { localStorage.setItem(STORAGE_KEY_CSS, cssModel.getValue()); flashAutosave(); } catch (_) {}
     schedulePreview();
   });
 
@@ -916,16 +951,22 @@ function insertSnippet(text) {
 
 // ---- Effacer ---------------------------------------------------------------
 $('clear').onclick = () => {
+  const hasContent = (htmlModel && htmlModel.getValue().trim()) || (cssModel && cssModel.getValue().trim());
+  if (hasContent && !confirm('Effacer tout le contenu ? Cette action est irréversible.')) return;
   if (htmlModel) htmlModel.setValue('');
   if (cssModel)  cssModel.setValue('');
   ['company', 'role', 'filename', 'notes'].forEach(id => $(id).value = '');
-  setStatus('');
   refreshFilenamePreview();
   try {
     localStorage.removeItem(STORAGE_KEY_HTML);
     localStorage.removeItem(STORAGE_KEY_CSS);
   } catch (_) {}
 };
+
+// ---- Raccourci clavier Ctrl+Enter → Convertir ------------------------------
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); $('go').click(); }
+});
 
 // ---- Convertir en PDF ------------------------------------------------------
 $('go').onclick = async () => {
