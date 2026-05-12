@@ -19,15 +19,28 @@ from typing import Iterable
 
 OWNER = "Hariss"
 
-# ---- Vercel Blob Storage (optionnel) ----------------------------------------
-# Défini automatiquement quand un Blob store est créé dans le dashboard Vercel.
+# ---- MongoDB & Vercel Blob Storage ------------------------------------------
 _BLOB_TOKEN: str | None = os.environ.get("BLOB_READ_WRITE_TOKEN")
+_MONGO_URI: str | None = os.environ.get("MONGODB_URI")
+
+_mongo_client = None
+_history_collection = None
+if _MONGO_URI:
+    try:
+        import pymongo
+        _mongo_client = pymongo.MongoClient(_MONGO_URI, serverSelectionTimeoutMS=5000)
+        # On utilise une DB nommée 'cv_generator' et une collection 'history'
+        _history_collection = _mongo_client.get_database("cv_generator").get_collection("history")
+    except Exception as e:
+        print("Erreur d'initialisation MongoDB :", e)
+        _history_collection = None
 
 # ---- Détection de l'environnement serverless --------------------------------
 _IS_SERVERLESS: bool = bool(
     os.environ.get("VERCEL")
     or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
     or os.environ.get("PDF_ENGINE", "").lower() == "weasyprint"
+    or _MONGO_URI  # Si MongoDB est là, on le traite comme Serverless (disque éphémère ou cloud)
 )
 
 # ---- Répertoire d'archive ---------------------------------------------------
@@ -117,6 +130,16 @@ def _unique_path(directory: Path, filename: str) -> Path:
 # ---- Lecture / écriture de l'historique -------------------------------------
 
 def _read_history() -> list[dict]:
+    if _history_collection is not None:
+        try:
+            # On récupère tous les documents, triés par date décroissante
+            docs = list(_history_collection.find({}, {"_id": 0}).sort("created_at", -1))
+            return docs
+        except Exception as e:
+            print("Erreur lecture MongoDB :", e)
+            return []
+
+    # Fallback local
     ensure_archive_dir()
     try:
         return json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
@@ -125,6 +148,10 @@ def _read_history() -> list[dict]:
 
 
 def _write_history(entries: Iterable[dict]) -> None:
+    # Cette fonction n'est utilisée que pour le mode "Local"
+    if _history_collection is not None:
+        return  # En MongoDB, on met à jour chaque doc un par un, on ne réécrit pas tout
+        
     ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
     tmp = HISTORY_FILE.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(list(entries), indent=2, ensure_ascii=False), encoding="utf-8")
@@ -176,6 +203,13 @@ def save_document(
         "html_blob_url": "",
     }
 
+    if _history_collection is not None:
+        try:
+            _history_collection.insert_one(entry.copy())
+            return entry
+        except Exception as e:
+            print("Erreur insertion MongoDB :", e)
+
     history = _read_history()
     history.insert(0, entry)
     _write_history(history)
@@ -183,7 +217,17 @@ def save_document(
 
 
 def update_document_blob_urls(doc_id: str, pdf_blob_url: str, html_blob_url: str) -> None:
-    """Met à jour les URLs Blob d'un document existant dans history.json."""
+    """Met à jour les URLs Blob d'un document existant dans history.json ou MongoDB."""
+    if _history_collection is not None:
+        try:
+            _history_collection.update_one(
+                {"id": doc_id},
+                {"$set": {"pdf_blob_url": pdf_blob_url, "html_blob_url": html_blob_url}}
+            )
+            return
+        except Exception as e:
+            print("Erreur update MongoDB :", e)
+
     history = _read_history()
     for entry in history:
         if entry.get("id") == doc_id:
@@ -206,6 +250,28 @@ def get_document(doc_id: str) -> dict | None:
 
 
 def delete_document(doc_id: str) -> bool:
+    if _history_collection is not None:
+        try:
+            found = _history_collection.find_one({"id": doc_id})
+            if not found: return False
+            
+            # 1. Supprimer les fichiers Blob
+            if _BLOB_TOKEN:
+                for key in ("pdf_blob_url", "html_blob_url"):
+                    url = found.get(key, "")
+                    if url:
+                        try:
+                            _delete_blob(url)
+                        except Exception:
+                            pass
+                            
+            # 2. Supprimer l'entrée DB
+            _history_collection.delete_one({"id": doc_id})
+            return True
+        except Exception as e:
+            print("Erreur delete MongoDB :", e)
+            return False
+
     history = _read_history()
     remaining: list[dict] = []
     found: dict | None = None
