@@ -1667,7 +1667,7 @@ def api_text_to_html():
             for chunk in ai_engine.stream_completion(
                 text, _SYSTEM_TEXT_TO_HTML, api_key=user_key
             ):
-                yield f"data: {_json_ai.dumps(chunk)}\n\n"
+                yield f"data: {_json_ai.dumps(chunk, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as exc:
             yield f"data: [ERROR] {exc}\n\n"
@@ -1715,8 +1715,45 @@ def api_pdf_to_html():
                     images=[img_bytes],
                     api_key=user_key,
                 ):
-                    yield f"data: {_json_ai.dumps(chunk)}\n\n"
+                    yield f"data: {_json_ai.dumps(chunk, ensure_ascii=False)}\n\n"
             doc.close()
+            yield "data: [DONE]\n\n"
+        except Exception as exc:
+            yield f"data: [ERROR] {exc}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.route("/api/tailor", methods=["POST"])
+def api_tailor():
+    data = request.get_json(force=True) or {}
+    html = (data.get("html") or "").strip()
+    job_desc = (data.get("job_desc") or "").strip()
+
+    if not html or not job_desc:
+        return jsonify({"error": "Le HTML du CV et la description du poste sont requis."}), 400
+
+    user_key = (request.headers.get("X-Api-Key") or "").strip() or None
+
+    if not user_key:
+        if not quota.check_and_increment():
+            return jsonify({"error": (
+                "Quota journalier atteint — colle ton texte manuellement "
+                "ou ajoute ta propre clé dans ⚙️ Paramètres."
+            )}), 429
+
+    prompt = f"CV HTML :\n{html}\n\nOffre d'emploi :\n{job_desc}"
+
+    def generate():
+        try:
+            for chunk in ai_engine.stream_completion(
+                prompt, _SYSTEM_TAILOR, api_key=user_key
+            ):
+                yield f"data: {_json_ai.dumps(chunk, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as exc:
             yield f"data: [ERROR] {exc}\n\n"

@@ -100,3 +100,32 @@ def test_pdf_to_html_streams_sse(client):
 
     assert resp.status_code == 200
     assert "[DONE]" in resp.data.decode()
+
+
+def test_tailor_missing_html_returns_400(client):
+    resp = client.post("/api/tailor", json={"job_desc": "Développeur Python"})
+    assert resp.status_code == 400
+
+
+def test_tailor_missing_job_desc_returns_400(client):
+    resp = client.post("/api/tailor", json={"html": "<h1>CV</h1>"})
+    assert resp.status_code == 400
+
+
+def test_tailor_streams_sse(client):
+    def fake_stream(prompt, system, images=None, api_key=None):
+        assert "<h1>CV</h1>" in prompt
+        assert "Développeur Python" in prompt
+        yield "<h1>CV adapté</h1>"
+
+    with patch("app.ai_engine.stream_completion", side_effect=fake_stream), \
+         patch("app.quota.check_and_increment", return_value=True):
+        resp = client.post(
+            "/api/tailor",
+            json={"html": "<h1>CV</h1>", "job_desc": "Développeur Python senior"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.data.decode()
+    assert "CV adapté" in body
+    assert "[DONE]" in body
