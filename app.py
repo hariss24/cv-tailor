@@ -276,6 +276,19 @@ PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Panneau tailoring (toujours accessible) -->
+  <div id="tailor-panel">
+    <div class="tailor-header" id="tailor-toggle">
+      <span>🎯 Adapter à une offre d'emploi</span>
+      <span id="tailor-chevron">▼</span>
+    </div>
+    <div class="tailor-body" id="tailor-body">
+      <textarea id="job-desc-input" placeholder="Colle l'offre d'emploi ici..."></textarea>
+      <div><button id="btn-tailor" class="tailor-btn" type="button">Adapter le CV</button></div>
+      <div class="tailor-status" id="tailor-status"></div>
+    </div>
+  </div>
+
   <details open>
     <summary>Options PDF (avancées)</summary>
     <div class="opts">
@@ -316,6 +329,21 @@ PAGE = r"""<!DOCTYPE html>
 </div>
 
 <div id="toast-container"></div>
+
+<!-- Modal Paramètres -->
+<div id="modal-settings">
+  <div class="settings-content">
+    <span id="close-settings" style="position:absolute;top:14px;right:16px;cursor:pointer;font-size:18px;color:#9aa0a6;">&times;</span>
+    <h2>⚙️ Paramètres</h2>
+    <p class="settings-desc">Clé Gemini ou Anthropic personnelle. Jamais stockée sur le serveur — conservée dans ton navigateur uniquement. Pas de limite de quota avec ta propre clé.</p>
+    <input type="password" id="settings-api-key" placeholder="AIza… (Gemini) ou sk-ant-… (Anthropic)" autocomplete="off" />
+    <div class="key-active" id="key-active-indicator">✓ Clé personnelle active — quota non appliqué</div>
+    <div class="settings-actions">
+      <button id="btn-settings-save" type="button">Enregistrer</button>
+      <button id="btn-settings-clear" type="button">Effacer</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal IA -->
 <div id="modal-ia" class="modal">
@@ -1280,6 +1308,251 @@ $('photo-upload').onchange = e => {
   reader.readAsDataURL(file);
   e.target.value = '';
 };
+
+// ============================================================
+// Clé API utilisateur (localStorage — jamais envoyée au serveur de façon persistante)
+// ============================================================
+const STORAGE_KEY_APIKEY = 'userApiKey';
+
+function getUserApiKey() {
+  return localStorage.getItem(STORAGE_KEY_APIKEY) || '';
+}
+
+function getApiHeaders() {
+  const key = getUserApiKey();
+  return key ? { 'X-Api-Key': key } : {};
+}
+
+// Ouvrir modal Paramètres
+document.getElementById('btn-settings').addEventListener('click', () => {
+  const key = getUserApiKey();
+  document.getElementById('settings-api-key').value = '';
+  document.getElementById('key-active-indicator').style.display = key ? '' : 'none';
+  document.getElementById('modal-settings').classList.add('open');
+});
+document.getElementById('close-settings').addEventListener('click', () => {
+  document.getElementById('modal-settings').classList.remove('open');
+});
+document.getElementById('modal-settings').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal-settings')) {
+    document.getElementById('modal-settings').classList.remove('open');
+  }
+});
+document.getElementById('btn-settings-save').addEventListener('click', () => {
+  const val = document.getElementById('settings-api-key').value.trim();
+  if (val) {
+    localStorage.setItem(STORAGE_KEY_APIKEY, val);
+    document.getElementById('key-active-indicator').style.display = '';
+    showToast('Clé enregistrée dans votre navigateur.', 'ok');
+  }
+  document.getElementById('modal-settings').classList.remove('open');
+});
+document.getElementById('btn-settings-clear').addEventListener('click', () => {
+  localStorage.removeItem(STORAGE_KEY_APIKEY);
+  document.getElementById('settings-api-key').value = '';
+  document.getElementById('key-active-indicator').style.display = 'none';
+  showToast('Clé effacée.', 'ok');
+  document.getElementById('modal-settings').classList.remove('open');
+});
+
+// ============================================================
+// Streaming SSE → Monaco (texte JSON-encodé)
+// ============================================================
+async function _readSseStream(resp, onChunk) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let accumulated = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (data === '[DONE]') return accumulated;
+      if (data.startsWith('[ERROR]')) throw new Error(data.slice(8).trim() || 'Erreur serveur');
+      try {
+        const chunk = JSON.parse(data);
+        accumulated += chunk;
+        if (onChunk) onChunk(accumulated);
+      } catch {}
+    }
+  }
+  return accumulated;
+}
+
+async function streamToMonaco(url, body, extraHeaders, onChunk) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    let msg = 'Erreur serveur';
+    try { msg = (await resp.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return _readSseStream(resp, onChunk);
+}
+
+async function streamFormToMonaco(url, formData, extraHeaders, onChunk) {
+  const resp = await fetch(url, { method: 'POST', headers: extraHeaders, body: formData });
+  if (!resp.ok) {
+    let msg = 'Erreur serveur';
+    try { msg = (await resp.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return _readSseStream(resp, onChunk);
+}
+
+// ============================================================
+// Panneau Import — gestion des onglets
+// ============================================================
+document.querySelectorAll('.import-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.import-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.import-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('import-tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+function markCvLoaded() {
+  document.getElementById('import-panel').style.display = 'none';
+  document.getElementById('import-collapse-bar').style.display = '';
+}
+
+document.getElementById('import-collapse-bar').addEventListener('click', () => {
+  document.getElementById('import-panel').style.display = '';
+  document.getElementById('import-collapse-bar').style.display = 'none';
+});
+
+// ============================================================
+// Import texte → HTML
+// ============================================================
+document.getElementById('btn-text-to-html').addEventListener('click', async () => {
+  const text = document.getElementById('cv-text-input').value.trim();
+  if (!text) { showToast("Colle d'abord le contenu de ton CV.", 'error'); return; }
+
+  const btn = document.getElementById('btn-text-to-html');
+  const status = document.getElementById('import-text-status');
+  btn.disabled = true;
+  status.textContent = '⏳ Conversion en cours…';
+
+  try {
+    const html = await streamToMonaco(
+      '/api/text-to-html',
+      { text },
+      getApiHeaders(),
+      (partial) => { if (htmlModel) htmlModel.setValue(partial); }
+    );
+    if (htmlModel) htmlModel.setValue(html);
+    markCvLoaded();
+    showToast('CV converti en HTML avec succès.', 'ok');
+    status.textContent = '';
+  } catch (err) {
+    showToast(err.message, 'error');
+    status.textContent = '';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ============================================================
+// Import PDF → HTML
+// ============================================================
+let _selectedPdfFile = null;
+
+document.getElementById('btn-pdf-pick').addEventListener('click', () => {
+  document.getElementById('pdf-upload-input').click();
+});
+
+document.getElementById('pdf-upload-input').addEventListener('change', (e) => {
+  _selectedPdfFile = e.target.files[0] || null;
+  document.getElementById('pdf-filename').textContent = _selectedPdfFile ? _selectedPdfFile.name : '';
+  document.getElementById('btn-pdf-to-html').disabled = !_selectedPdfFile;
+  e.target.value = '';
+});
+
+document.getElementById('btn-pdf-to-html').addEventListener('click', async () => {
+  if (!_selectedPdfFile) return;
+
+  const btn = document.getElementById('btn-pdf-to-html');
+  const status = document.getElementById('import-pdf-status');
+  btn.disabled = true;
+  status.textContent = '⏳ Lecture du PDF…';
+
+  const formData = new FormData();
+  formData.append('file', _selectedPdfFile);
+
+  try {
+    const html = await streamFormToMonaco(
+      '/api/pdf-to-html',
+      formData,
+      getApiHeaders(),
+      (partial) => {
+        if (htmlModel) htmlModel.setValue(partial);
+        status.textContent = `⏳ ${partial.length} caractères générés…`;
+      }
+    );
+    if (htmlModel) htmlModel.setValue(html);
+    markCvLoaded();
+    showToast('PDF converti en HTML avec succès.', 'ok');
+    status.textContent = '';
+  } catch (err) {
+    showToast(err.message, 'error');
+    status.textContent = '';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ============================================================
+// Tailoring — adapter à une offre
+// ============================================================
+document.getElementById('tailor-toggle').addEventListener('click', () => {
+  const body = document.getElementById('tailor-body');
+  const chevron = document.getElementById('tailor-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chevron.textContent = isOpen ? '▼' : '▲';
+});
+
+document.getElementById('btn-tailor').addEventListener('click', async () => {
+  const jobDesc = document.getElementById('job-desc-input').value.trim();
+  if (!jobDesc) { showToast("Colle d'abord une offre d'emploi.", 'error'); return; }
+  if (!htmlModel || !htmlModel.getValue().trim()) {
+    showToast("Charge d'abord un CV dans l'éditeur.", 'error'); return;
+  }
+
+  const btn = document.getElementById('btn-tailor');
+  const status = document.getElementById('tailor-status');
+  btn.disabled = true;
+  status.textContent = '⏳ Adaptation en cours…';
+
+  try {
+    const adapted = await streamToMonaco(
+      '/api/tailor',
+      { html: htmlModel.getValue(), job_desc: jobDesc },
+      getApiHeaders(),
+      (partial) => {
+        if (htmlModel) htmlModel.setValue(partial);
+        status.textContent = `⏳ ${partial.length} caractères générés…`;
+      }
+    );
+    if (htmlModel) htmlModel.setValue(adapted);
+    showToast('CV adapté avec succès.', 'ok');
+    status.textContent = '';
+  } catch (err) {
+    showToast(err.message, 'error');
+    status.textContent = '';
+  } finally {
+    btn.disabled = false;
+  }
+});
 </script>
 </body>
 </html>
