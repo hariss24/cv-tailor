@@ -1653,7 +1653,7 @@ def api_text_to_html():
     if not text:
         return jsonify({"error": "Texte vide."}), 400
 
-    user_key = request.headers.get("X-Api-Key") or None
+    user_key = (request.headers.get("X-Api-Key") or "").strip() or None
 
     if not user_key:
         if not quota.check_and_increment():
