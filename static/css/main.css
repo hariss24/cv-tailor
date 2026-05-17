@@ -226,3 +226,12 @@ button.ghost:hover { background: #353b48; }
 @media (max-width: 540px) {
   .template-cards { flex-direction: column; }
 }
+
+/* ---- Toolbar offres sauvegardées ---- */
+.job-desc-toolbar { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.job-desc-toolbar select { flex: 1; background: #14181f; border: 1px solid #2a2f3a; color: #e6e6e6; padding: 5px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; min-width: 0; }
+.job-desc-toolbar select:focus { outline: none; border-color: #4f8cff; }
+.job-desc-toolbar button { background: #2a2f3a; border: 1px solid #3a4050; color: #9aa0a6; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; transition: all 150ms; flex-shrink: 0; }
+.job-desc-toolbar button:hover { color: #e6e6e6; border-color: #4f8cff; }
+#btn-delete-offer { color: #ff6b6b; border-color: #5a2a2a; }
+#btn-delete-offer:hover { background: #3a1a1a; border-color: #ff6b6b; }

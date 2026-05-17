@@ -1299,6 +1299,91 @@ $('btn-pdf-to-html').addEventListener('click', async () => {
 });
 
 // ============================================================
+// Offres d'emploi sauvegardées
+// ============================================================
+const STORAGE_KEY_JOB_DRAFT  = 'html-to-pdf:draft:job-desc';
+const STORAGE_KEY_SAVED_OFFERS = 'html-to-pdf:saved-offers';
+
+function _getSavedOffers() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY_SAVED_OFFERS) || '[]'); } catch (_) { return []; }
+}
+
+function _setSavedOffers(list) {
+  try { localStorage.setItem(STORAGE_KEY_SAVED_OFFERS, JSON.stringify(list)); } catch (_) {}
+}
+
+function _refreshOffersSelect() {
+  const sel = $('saved-offers-select');
+  const del = $('btn-delete-offer');
+  if (!sel) return;
+  const offers = _getSavedOffers();
+  sel.innerHTML = `<option value="">Offres sauvegardées (${offers.length})...</option>` +
+    offers.map(o => `<option value="${o.id}">${o.label}</option>`).join('');
+  if (del) del.style.display = 'none';
+}
+
+function _saveCurrentOffer() {
+  const content = ($('job-desc-input').value || '').trim();
+  if (!content) { showToast("Aucune offre à sauvegarder.", 'err'); return; }
+  const company = ($('company').value || '').trim();
+  const role    = ($('role').value || '').trim();
+  const date    = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  const label   = [company, role].filter(Boolean).join(' · ') || `Offre du ${date}`;
+  const offers  = _getSavedOffers();
+  const id      = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  offers.unshift({ id, label, content, date: new Date().toISOString() });
+  if (offers.length > 30) offers.pop();
+  _setSavedOffers(offers);
+  _refreshOffersSelect();
+  showToast(`Offre "${label}" sauvegardée.`, 'ok');
+}
+
+function _syncJobDesc(value) {
+  const tailor = $('job-desc-input');
+  const modal  = $('ia-job-desc');
+  if (tailor && tailor.value !== value) tailor.value = value;
+  if (modal  && modal.value  !== value) modal.value  = value;
+  try { localStorage.setItem(STORAGE_KEY_JOB_DRAFT, value); } catch (_) {}
+  if (typeof updatePrompt === 'function') updatePrompt();
+}
+
+// Restore draft job desc on load
+(function() {
+  const draft = localStorage.getItem(STORAGE_KEY_JOB_DRAFT) || '';
+  if (draft) { const t = $('job-desc-input'); const m = $('ia-job-desc'); if (t) t.value = draft; if (m) m.value = draft; }
+  _refreshOffersSelect();
+})();
+
+// Auto-save draft + sync on input
+$('job-desc-input').addEventListener('input', (e) => { _syncJobDesc(e.target.value); });
+$('ia-job-desc').addEventListener('input', (e) => { _syncJobDesc(e.target.value); });
+
+// Save button
+$('btn-save-offer').addEventListener('click', _saveCurrentOffer);
+
+// Load saved offer on select change
+$('saved-offers-select').addEventListener('change', (e) => {
+  const id  = e.target.value;
+  const del = $('btn-delete-offer');
+  if (!id) { if (del) del.style.display = 'none'; return; }
+  const offer = _getSavedOffers().find(o => o.id === id);
+  if (!offer) return;
+  _syncJobDesc(offer.content);
+  if (del) del.style.display = '';
+});
+
+// Delete selected offer
+$('btn-delete-offer').addEventListener('click', () => {
+  const id = $('saved-offers-select').value;
+  if (!id) return;
+  const offers = _getSavedOffers().filter(o => o.id !== id);
+  _setSavedOffers(offers);
+  _syncJobDesc('');
+  _refreshOffersSelect();
+  showToast('Offre supprimée.', 'ok');
+});
+
+// ============================================================
 // Tailoring — adapter à une offre
 // ============================================================
 $('tailor-toggle').addEventListener('click', () => {
