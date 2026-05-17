@@ -245,9 +245,9 @@ a { color: inherit; text-decoration: underline; }
     <li>JavaScript</li><li>TypeScript</li><li>Python</li><li>React</li><li>Node.js</li><li>SQL</li>
   </ul>
 </section>`,
-    css: `@page { size: A4; margin: 18mm 16mm; }
+    css: `@page { size: A4; margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1e293b; line-height: 1.55; font-size: 10.5pt; }
+body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1e293b; line-height: 1.55; font-size: 10.5pt; padding: 18mm 16mm; }
 h1 { color: #2563eb; font-size: 22pt; font-weight: 700; margin-bottom: 4px; }
 .role { color: #475569; font-size: 11.5pt; margin-bottom: 6px; }
 .contact { color: #64748b; font-size: 9.5pt; }
@@ -280,8 +280,8 @@ ul.skills li { background: #eff6ff; color: #2563eb; padding: 2px 10px; border-ra
 
 <h2>Competences</h2>
 <p>Competence 1, Competence 2, Competence 3, Competence 4, Competence 5.</p>`,
-    css: `@page { size: A4; margin: 22mm; }
-body { font: 11pt/1.6 Georgia, "Times New Roman", serif; color: #222; }
+    css: `@page { size: A4; margin: 0; }
+body { font: 11pt/1.6 Georgia, "Times New Roman", serif; color: #222; padding: 22mm; }
 h1 { font-size: 22pt; font-weight: normal; margin: 0 0 4px; }
 h2 { font-size: 13pt; font-weight: normal; margin: 18px 0 6px; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
 p { margin: 0 0 6px; }
