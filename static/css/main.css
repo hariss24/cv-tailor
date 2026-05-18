@@ -307,18 +307,55 @@ button.ghost:active {
 /* ---- Responsive Mobile ---- */
 @media (max-width: 768px) {
   html, body { height: auto; overflow: visible; }
-  .wrap { height: auto; min-height: 100vh; padding: 12px; overflow: visible; }
-  .topbar { flex-direction: column; gap: 12px; align-items: flex-start; }
-  .meta { grid-template-columns: 1fr; gap: 12px; }
-  .split { flex-direction: column; flex: none; height: 800px; }
-  .editor-pane, .preview-pane { flex: 1 1 50% !important; min-height: 300px; width: 100% !important; }
-  .splitter { width: 100%; height: 12px; cursor: row-resize; background: var(--surface-alt); border-radius: 6px; }
-  .modal-content { padding: 20px; width: 100%; border-radius: 12px; }
-  .modal-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .close-modal { position: absolute; top: 16px; right: 16px; }
-  .ia-options { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .wrap { height: auto; min-height: 100svh; padding: 10px; overflow: visible; gap: 8px; }
+
+  /* Topbar : titre + boutons sur deux lignes */
+  .topbar { flex-wrap: wrap; gap: 8px; align-items: center; }
+  .topbar h1 { flex: 1 1 auto; font-size: 17px; }
+  .topbar > div { flex-wrap: wrap; gap: 6px; }
+  .topbar .btn-nav, .topbar #btn-theme, .topbar #btn-settings { padding: 5px 9px; font-size: 12px; }
+
+  /* Méta : une colonne */
+  .meta { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .meta .field:first-child { grid-column: 1 / -1; }
+
+  /* Split : éditeur au-dessus, preview en dessous */
+  .split { flex-direction: column; flex: none; height: auto; min-height: 0; gap: 6px; }
+  .editor-pane { flex: 0 0 auto !important; height: 45svh; min-height: 220px; width: 100% !important; }
+  .preview-pane { flex: 0 0 auto !important; height: 45svh; min-height: 220px; width: 100% !important; }
+
+  /* Splitter horizontal */
+  .splitter { width: 100%; height: 10px; cursor: row-resize; background: var(--surface-alt); border-radius: 6px; }
+
+  /* Pane title : boutons secondaires en scroll horizontal */
+  .pane-title { flex-wrap: nowrap; overflow-x: auto; gap: 4px; }
+  .pane-title .actions-mini { display: flex; flex-shrink: 0; gap: 2px; }
+  .pane-title .actions-mini button,
+  .pane-title .actions-mini select { font-size: 10px; padding: 2px 6px; }
+
+  /* Masquer les snippets @page et page-break sur mobile */
+  #snippet-page, #snippet-pagebreak { display: none !important; }
+
+  /* Masquer les raccourcis clavier (inutile sur mobile) */
+  .actions > span[style*="margin-left:auto"] { display: none; }
+
+  /* Barre d'actions */
+  .actions { position: static; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+  button.go { flex: 1 1 auto; }
+  button#clear { flex-shrink: 0; }
+
+  /* Modales */
+  .modal-content { padding: 18px; width: 100%; border-radius: 12px; max-height: 90svh; overflow-y: auto; }
+  .modal-header { flex-direction: row; align-items: flex-start; gap: 8px; }
+  .close-modal { position: absolute; top: 14px; right: 14px; }
+  .ia-options { flex-direction: column; align-items: flex-start; gap: 10px; }
   .ia-options select { width: 100%; }
-  .actions { position: static; }
+
+  /* Template cards : colonne */
+  .template-cards { flex-direction: column; }
+
+  /* Advanced options */
+  .opts { gap: 8px; }
 }
 
 /* ---- Panneau Import ---- */

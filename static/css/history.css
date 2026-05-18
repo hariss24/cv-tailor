@@ -52,3 +52,11 @@ tr:hover { background: var(--surface-alt); }
 
 #btn-theme { background: var(--surface); border: 1px solid var(--border); color: var(--muted); cursor: pointer; padding: 5px 9px; border-radius: 7px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; box-shadow: var(--raised-shadow); }
 #btn-theme:hover { color: var(--text); background: var(--surface-alt); }
+
+@media (max-width: 768px) {
+  .wrap { padding: 14px; }
+  .topbar { flex-wrap: wrap; gap: 8px; }
+  table { font-size: 12px; }
+  th, td { padding: 8px 8px; }
+  .filename { font-size: 11px; }
+}
