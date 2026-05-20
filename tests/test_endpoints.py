@@ -14,6 +14,12 @@ def client():
         yield c
 
 
+def _csrf_headers(client):
+    with client.session_transaction() as sess:
+        sess["_csrf"] = "test-csrf-token"
+    return {"X-CSRF-Token": "test-csrf-token"}
+
+
 def test_text_to_html_empty_body_returns_400(client):
     resp = client.post("/api/text-to-html", json={"text": ""})
     assert resp.status_code == 400
@@ -58,7 +64,7 @@ def test_text_to_html_user_key_bypasses_quota(client):
 
 
 def test_pdf_to_html_no_file_returns_400(client):
-    resp = client.post("/api/pdf-to-html", data={})
+    resp = client.post("/api/pdf-to-html", data={}, headers=_csrf_headers(client))
     assert resp.status_code == 400
 
 
@@ -67,8 +73,18 @@ def test_pdf_to_html_non_pdf_returns_400(client):
         "/api/pdf-to-html",
         data={"file": (io.BytesIO(b"content"), "document.txt")},
         content_type="multipart/form-data",
+        headers=_csrf_headers(client),
     )
     assert resp.status_code == 400
+
+
+def test_pdf_to_html_without_csrf_returns_403(client):
+    resp = client.post(
+        "/api/pdf-to-html",
+        data={"file": (io.BytesIO(b"fake pdf bytes"), "cv.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
 
 
 def test_pdf_to_html_streams_sse(client):
@@ -96,6 +112,7 @@ def test_pdf_to_html_streams_sse(client):
                 "/api/pdf-to-html",
                 data={"file": (io.BytesIO(b"fake pdf bytes"), "cv.pdf")},
                 content_type="multipart/form-data",
+                headers=_csrf_headers(client),
             )
 
     assert resp.status_code == 200

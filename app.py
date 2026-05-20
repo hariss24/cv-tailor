@@ -27,7 +27,7 @@ except ImportError:
 
 from flask import (
     Flask, Response, abort, jsonify, redirect,
-    render_template, request, send_file, session, stream_with_context,
+    render_template, request, send_file, session, stream_with_context, url_for,
 )
 
 import archive
@@ -46,6 +46,98 @@ MAX_PDF_BYTES  = 20 * 1024 * 1024  # 20 Mo
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+
+
+# ---------------------------------------------------------------------------
+# Mode local / remote
+# ---------------------------------------------------------------------------
+
+_TRUE_VALUES = {"1", "true", "yes", "on", "remote", "production"}
+
+
+def _remote_auth_password() -> str:
+    return (
+        os.environ.get("REMOTE_AUTH_PASSWORD")
+        or os.environ.get("AUTH_PASSWORD")
+        or ""
+    )
+
+
+def _is_remote_mode() -> bool:
+    app_mode = os.environ.get("APP_MODE", "").strip().lower()
+    return (
+        app_mode in _TRUE_VALUES
+        or bool(os.environ.get("VERCEL"))
+        or bool(_remote_auth_password())
+    )
+
+
+def _is_api_request() -> bool:
+    return request.path.startswith("/api/") or request.path == "/convert"
+
+
+def _auth_error(message: str, status: int):
+    if _is_api_request():
+        return jsonify({"error": message}), status
+    return message, status
+
+
+def _auth_required_response():
+    if _is_api_request():
+        return jsonify({"error": "Authentication required."}), 401
+    return redirect(url_for("login_page", next=request.full_path if request.query_string else request.path))
+
+
+def _is_auth_exempt_path(path: str) -> bool:
+    return (
+        path == "/login"
+        or path == "/logout"
+        or path.startswith("/static/")
+    )
+
+
+@app.before_request
+def _remote_auth_protect():
+    if not _is_remote_mode() or _is_auth_exempt_path(request.path):
+        return
+    if not _remote_auth_password():
+        return _auth_error("REMOTE_AUTH_PASSWORD must be configured in remote mode.", 503)
+    if session.get("remote_authenticated") is True:
+        return
+    return _auth_required_response()
+
+
+@app.route("/login", methods=["GET"])
+def login_page():
+    if not _is_remote_mode():
+        return redirect(url_for("index"))
+    if not _remote_auth_password():
+        return _auth_error("REMOTE_AUTH_PASSWORD must be configured in remote mode.", 503)
+    return render_template("login.html")
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    if not _is_remote_mode():
+        session["remote_authenticated"] = True
+        return jsonify({"ok": True, "mode": "local"})
+    expected = _remote_auth_password()
+    if not expected:
+        return jsonify({"error": "REMOTE_AUTH_PASSWORD must be configured in remote mode."}), 503
+    data = request.get_json(silent=True) or request.form
+    supplied = (data.get("password") or "").strip()
+    if not secrets.compare_digest(supplied, expected):
+        return jsonify({"error": "Invalid password."}), 401
+    session["remote_authenticated"] = True
+    return jsonify({"ok": True})
+
+
+@app.route("/logout", methods=["POST", "GET"])
+def logout():
+    session.pop("remote_authenticated", None)
+    if request.method == "POST" or _is_api_request():
+        return jsonify({"ok": True})
+    return redirect(url_for("login_page"))
 
 
 # ---- Jeton CSRF léger -------------------------------------------------------

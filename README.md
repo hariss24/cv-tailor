@@ -37,6 +37,32 @@ python -m playwright install chromium
 python app.py
 ```
 
+## Local and remote modes
+
+The default mode is local and open source friendly: no login is required,
+the server binds to `127.0.0.1`, and generated documents are archived under
+`~/Documents/CV-Archive/`.
+
+Remote deployments must be protected with a password. Enable remote mode with:
+
+```bash
+APP_MODE=remote
+REMOTE_AUTH_PASSWORD=change-me
+SECRET_KEY=replace-with-a-long-random-string
+```
+
+When remote mode is active, the app protects the UI, conversion endpoints,
+AI endpoints, and history endpoints behind `/login`. If `APP_MODE=remote`
+is set without `REMOTE_AUTH_PASSWORD`, protected routes return a setup error
+instead of exposing private documents.
+
+Vercel deployments are treated as remote automatically. For persistent remote
+history, configure `MONGODB_URI`. For persisted generated PDF/HTML files,
+configure `BLOB_READ_WRITE_TOKEN`. Without those, serverless archives fall
+back to temporary storage and may disappear between invocations.
+
+See `.env.example` for the recommended environment variables.
+
 Your browser opens on http://127.0.0.1:5050. A small Tk control window
 also appears — close it (or click "Quitter") to stop the server.
 
