@@ -1,8 +1,6 @@
-// Injecté via meta tag par Flask
-const IS_SERVERLESS = JSON.parse(
-  document.querySelector('meta[name="is-serverless"]')?.content || 'false'
-);
 const HISTORY_KEY = 'cv-history';
+const IDB_DB      = 'html-to-pdf-snapshots';
+const IDB_HTML    = 'cv-html-store';
 let entries = [];
 
 function fmtDate(iso) {
@@ -28,23 +26,70 @@ function el(tag, attrs, children) {
   return node;
 }
 
-function buildRow(e) {
-  const id       = e.id;
-  const pdfHref  = e.pdf_url || e.pdf_blob_url || ('/api/history/' + encodeURIComponent(id) + '/pdf');
-  const reloadBase = '/?load=' + encodeURIComponent(id);
-  const htmlSrc  = e.html_url || e.html_blob_url || '';
-  const reloadHref = htmlSrc
-    ? (reloadBase + '&htmlUrl=' + encodeURIComponent(htmlSrc))
-    : reloadBase;
+// ---- IndexedDB helpers (autonomes, sans dépendance à app.js) ---------------
 
+function _openHistoryIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_DB, 2);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('snapshots')) {
+        db.createObjectStore('snapshots', { keyPath: 'ts' });
+      }
+      if (!db.objectStoreNames.contains(IDB_HTML)) {
+        db.createObjectStore(IDB_HTML, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function _deleteHtmlFromIDB(id) {
+  try {
+    const db = await _openHistoryIDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_HTML, 'readwrite');
+      tx.objectStore(IDB_HTML).delete(id);
+      tx.oncomplete = res;
+      tx.onerror    = e => rej(e.target.error);
+    });
+  } catch (_) {}
+}
+
+async function _loadHtmlFromIDB(id) {
+  try {
+    const db = await _openHistoryIDB();
+    return await new Promise((res, rej) => {
+      const tx  = db.transaction(IDB_HTML, 'readonly');
+      const req = tx.objectStore(IDB_HTML).get(id);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = e => rej(e.target.error);
+    });
+  } catch (_) { return null; }
+}
+
+async function _getAllHtmlFromIDB() {
+  try {
+    const db = await _openHistoryIDB();
+    return await new Promise((res, rej) => {
+      const tx  = db.transaction(IDB_HTML, 'readonly');
+      const req = tx.objectStore(IDB_HTML).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror   = e => rej(e.target.error);
+    });
+  } catch (_) { return []; }
+}
+
+// ---- Rendu ----------------------------------------------------------------
+
+function buildRow(e) {
+  const id         = e.id;
+  const reloadHref = '/?load=' + encodeURIComponent(id);
   const actions = [
-    el('a',      { class: 'btn',          href: pdfHref,    target: '_blank', text: 'Voir PDF' }),
-    el('a',      { class: 'btn',          href: reloadHref,                   text: 'Recharger' }),
-    !IS_SERVERLESS
-      ? el('button', { class: 'ghost', onclick: () => openLocal(id), text: 'Ouvrir local' })
-      : null,
+    el('a',      { class: 'btn',          href: reloadHref, text: 'Recharger' }),
     el('button', { class: 'ghost danger', onclick: () => del(id), text: 'Supprimer' }),
-  ].filter(Boolean);
+  ];
 
   return el('tr', { 'data-id': id }, [
     el('td', { text: fmtDate(e.created_at) }),
@@ -91,58 +136,61 @@ function showError(msg) {
   root.appendChild(el('div', { class: 'error', text: msg }));
 }
 
+// ---- Chargement -----------------------------------------------------------
+
 async function load() {
   try {
-    const r = await fetch('/api/history');
-    if (r.ok) {
-      entries = await r.json();
-      render(document.getElementById('search').value);
-      return;
-    }
-  } catch (_) {}
-
-  try {
-    const raw    = localStorage.getItem(HISTORY_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed !== null) {
-      entries = parsed;
-      render(document.getElementById('search').value);
-      return;
-    }
-  } catch (_) {}
-
-  showError('Historique vide ou impossible à charger.');
-}
-
-async function del(id) {
-  if (!confirm('Supprimer cette entrée ?')) return;
-
-  try {
     const raw = localStorage.getItem(HISTORY_KEY);
-    if (raw) {
-      const hist = JSON.parse(raw).filter(e => e.id !== id);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
-    }
-  } catch (_) {}
-
-  try {
-    await fetch('/api/history/' + encodeURIComponent(id), { method: 'DELETE' });
-  } catch (_) {}
-
-  await load();
-}
-
-async function openLocal(id) {
-  try {
-    const r = await fetch('/api/history/' + encodeURIComponent(id) + '/open', { method: 'POST' });
-    if (!r.ok) {
-      const body = await r.json().catch(() => ({}));
-      alert("Impossible d'ouvrir le fichier : " + (body.error || r.status));
-    }
-  } catch (err) {
-    alert('Erreur réseau : ' + err.message);
+    entries = raw ? JSON.parse(raw) : [];
+    render(document.getElementById('search').value);
+  } catch (_) {
+    showError("Impossible de lire l'historique.");
   }
 }
 
+// ---- Suppression ----------------------------------------------------------
+
+async function del(id) {
+  if (!confirm('Supprimer cette entrée ?')) return;
+  try {
+    const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]').filter(e => e.id !== id);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  } catch (_) {}
+  await _deleteHtmlFromIDB(id);
+  await load();
+}
+
+// ---- Export ---------------------------------------------------------------
+
+async function exportData() {
+  const meta = [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (raw) meta.push(...JSON.parse(raw));
+  } catch (_) {}
+
+  const htmlEntries = await _getAllHtmlFromIDB();
+  const htmlMap = {};
+  for (const h of htmlEntries) htmlMap[h.id] = { html: h.html, css: h.css };
+
+  const payload = {
+    exported_at: new Date().toISOString(),
+    entries: meta.map(e => ({ ...e, ...(htmlMap[e.id] || {}) })),
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `cv-archive-export-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+// ---- Événements -----------------------------------------------------------
+
 document.getElementById('search').addEventListener('input', e => render(e.target.value));
+document.getElementById('btn-export').addEventListener('click', exportData);
 load();
