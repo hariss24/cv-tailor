@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 # Forcer le mode local (pas serverless) pour tous les tests
-os.environ.pop("VERCEL", None)
+os.environ.pop("RENDER", None)
 os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
 os.environ.pop("MONGODB_URI", None)
 os.environ["PDF_ENGINE"] = ""  # pas weasyprint → pas serverless via ce flag
@@ -145,13 +145,6 @@ def test_delete_document_not_found():
     assert archive.delete_document("no-such-id") is False
 
 
-def test_update_document_blob_urls():
-    entry = archive.save_document(_fake_html(), _fake_pdf())
-    archive.update_document_blob_urls(entry["id"], "https://blob/a.pdf", "https://blob/a.html")
-    found = archive.get_document(entry["id"])
-    assert found["pdf_blob_url"]  == "https://blob/a.pdf"
-    assert found["html_blob_url"] == "https://blob/a.html"
-
 
 def test_list_documents_limit():
     for i in range(5):
@@ -207,7 +200,7 @@ def test_migrate_from_json(tmp_path, monkeypatch):
             "id": str(uuid.uuid4()), "created_at": "2024-01-01T10:00:00",
             "doc_type": "CV", "company": "Migré", "role": "Dev",
             "notes": "", "job_desc": "", "filename": "CV_Migré.pdf",
-            "pdf_path": "", "html_path": "", "pdf_blob_url": "", "html_blob_url": "",
+            "pdf_path": "", "html_path": "",
         },
     ]
     hist_file.write_text(json.dumps(entries))

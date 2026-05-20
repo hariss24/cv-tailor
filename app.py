@@ -94,7 +94,7 @@ def _is_remote_mode() -> bool:
     app_mode = os.environ.get("APP_MODE", "").strip().lower()
     return (
         app_mode in _TRUE_VALUES
-        or bool(os.environ.get("VERCEL"))
+        or bool(os.environ.get("RENDER"))
         or bool(_remote_auth_password())
     )
 
@@ -269,21 +269,6 @@ def convert():
             "created_at": _dt.now().isoformat(timespec="seconds"),
         }
 
-    # Upload Vercel Blob (optionnel)
-    pdf_blob_url  = ""
-    html_blob_url = ""
-    if archive._BLOB_TOKEN:
-        try:
-            pdf_blob_url  = archive.upload_to_blob(pdf_bytes, entry["filename"], "application/pdf")
-            html_filename = Path(entry["filename"]).stem + ".html"
-            html_blob_url = archive.upload_to_blob(html.encode("utf-8"), html_filename, "text/html")
-            try:
-                archive.update_document_blob_urls(entry["id"], pdf_blob_url, html_blob_url)
-            except Exception:
-                pass
-        except Exception:
-            pass
-
     response = send_file(
         io.BytesIO(pdf_bytes),
         mimetype="application/pdf",
@@ -295,11 +280,7 @@ def convert():
         "filename":   entry.get("filename", "document.pdf"),
         "created_at": entry.get("created_at", ""),
     })
-    response.headers["X-Blob-PDF-URL"]  = pdf_blob_url
-    response.headers["X-Blob-HTML-URL"] = html_blob_url
-    response.headers["Access-Control-Expose-Headers"] = (
-        "X-Archive-Entry, X-Blob-PDF-URL, X-Blob-HTML-URL"
-    )
+    response.headers["Access-Control-Expose-Headers"] = "X-Archive-Entry"
     return response
 
 
@@ -328,9 +309,6 @@ def api_history_html(doc_id):
     html_path = Path(entry.get("html_path", ""))
     if html_path.exists():
         return html_path.read_text(encoding="utf-8"), 200, {"Content-Type": "text/plain; charset=utf-8"}
-    blob_url = entry.get("html_blob_url", "")
-    if blob_url:
-        return redirect(blob_url)
     abort(404)
 
 
@@ -342,9 +320,6 @@ def api_history_pdf(doc_id):
     pdf_path = Path(entry.get("pdf_path", ""))
     if pdf_path.exists():
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=entry["filename"])
-    blob_url = entry.get("pdf_blob_url", "")
-    if blob_url:
-        return redirect(blob_url)
     abort(404)
 
 

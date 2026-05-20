@@ -1,8 +1,7 @@
 """Archive des PDFs générés et de leurs sources HTML.
 
 Backend local : SQLite (history.db) — thread-safe, transactionnel.
-Backend serverless : MongoDB ou SQLite dans /tmp.
-Blob Storage optionnel : Vercel Blob via BLOB_READ_WRITE_TOKEN.
+Backend remote : MongoDB ou SQLite dans /tmp (Render, AWS Lambda).
 """
 
 import json
@@ -11,8 +10,6 @@ import re
 import sqlite3
 import threading
 import unicodedata
-import urllib.parse
-import urllib.request as _urllib_req
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -20,8 +17,7 @@ from typing import Iterable
 
 OWNER = "Hariss"
 
-# ---- MongoDB & Vercel Blob Storage ------------------------------------------
-_BLOB_TOKEN: str | None = os.environ.get("BLOB_READ_WRITE_TOKEN")
+# ---- MongoDB ----------------------------------------------------------------
 _MONGO_URI: str | None = os.environ.get("MONGODB_URI")
 
 _mongo_client = None
@@ -35,9 +31,9 @@ if _MONGO_URI:
         print("Erreur d'initialisation MongoDB :", e)
         _history_collection = None
 
-# ---- Détection de l'environnement serverless --------------------------------
+# ---- Détection de l'environnement sans disque persistant -------------------
 _IS_SERVERLESS: bool = bool(
-    os.environ.get("VERCEL")
+    os.environ.get("RENDER")
     or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
     or os.environ.get("PDF_ENGINE", "").lower() == "weasyprint"
     or _MONGO_URI
@@ -61,18 +57,16 @@ _db_initialized = False
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS documents (
-    id           TEXT PRIMARY KEY,
-    created_at   TEXT NOT NULL,
-    doc_type     TEXT DEFAULT 'CV',
-    company      TEXT DEFAULT '',
-    role         TEXT DEFAULT '',
-    notes        TEXT DEFAULT '',
-    job_desc     TEXT DEFAULT '',
-    filename     TEXT DEFAULT '',
-    pdf_path     TEXT DEFAULT '',
-    html_path    TEXT DEFAULT '',
-    pdf_blob_url TEXT DEFAULT '',
-    html_blob_url TEXT DEFAULT ''
+    id         TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    doc_type   TEXT DEFAULT 'CV',
+    company    TEXT DEFAULT '',
+    role       TEXT DEFAULT '',
+    notes      TEXT DEFAULT '',
+    job_desc   TEXT DEFAULT '',
+    filename   TEXT DEFAULT '',
+    pdf_path   TEXT DEFAULT '',
+    html_path  TEXT DEFAULT ''
 )
 """
 
@@ -104,7 +98,7 @@ def _migrate_from_json() -> None:
             with _get_db() as conn:
                 for e in entries:
                     conn.execute(
-                        "INSERT OR IGNORE INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                        "INSERT OR IGNORE INTO documents VALUES (?,?,?,?,?,?,?,?,?,?)",
                         (
                             e.get("id", ""),
                             e.get("created_at", ""),
@@ -116,8 +110,6 @@ def _migrate_from_json() -> None:
                             e.get("filename", ""),
                             e.get("pdf_path", ""),
                             e.get("html_path", ""),
-                            e.get("pdf_blob_url", ""),
-                            e.get("html_blob_url", ""),
                         ),
                     )
                 conn.commit()
@@ -197,14 +189,13 @@ def _unique_path(directory: Path, filename: str) -> Path:
 def _local_save(entry: dict) -> None:
     with _get_db() as conn:
         conn.execute(
-            "INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 entry["id"], entry["created_at"], entry.get("doc_type", "CV"),
                 entry.get("company", ""), entry.get("role", ""),
                 entry.get("notes", ""), entry.get("job_desc", ""),
                 entry.get("filename", ""), entry.get("pdf_path", ""),
-                entry.get("html_path", ""), entry.get("pdf_blob_url", ""),
-                entry.get("html_blob_url", ""),
+                entry.get("html_path", ""),
             ),
         )
         conn.commit()
@@ -232,17 +223,6 @@ def _local_get(doc_id: str) -> dict | None:
     except Exception:
         return None
 
-
-def _local_update_blobs(doc_id: str, pdf_url: str, html_url: str) -> None:
-    try:
-        with _get_db() as conn:
-            conn.execute(
-                "UPDATE documents SET pdf_blob_url=?, html_blob_url=? WHERE id=?",
-                (pdf_url, html_url, doc_id),
-            )
-            conn.commit()
-    except Exception as e:
-        print(f"Erreur update SQLite : {e}")
 
 
 def _local_delete(doc_id: str) -> dict | None:
@@ -315,8 +295,6 @@ def save_document(
         "filename": pdf_path.name,
         "pdf_path": str(pdf_path),
         "html_path": str(html_path),
-        "pdf_blob_url": "",
-        "html_blob_url": "",
     }
 
     if _history_collection is not None:
@@ -330,19 +308,6 @@ def save_document(
 
     return entry
 
-
-def update_document_blob_urls(doc_id: str, pdf_blob_url: str, html_blob_url: str) -> None:
-    if _history_collection is not None:
-        try:
-            _history_collection.update_one(
-                {"id": doc_id},
-                {"$set": {"pdf_blob_url": pdf_blob_url, "html_blob_url": html_blob_url}},
-            )
-            return
-        except Exception as e:
-            print("Erreur update MongoDB :", e)
-    else:
-        _local_update_blobs(doc_id, pdf_blob_url, html_blob_url)
 
 
 def list_documents(limit: int | None = None) -> list[dict]:
@@ -367,14 +332,6 @@ def delete_document(doc_id: str) -> bool:
             found = _history_collection.find_one({"id": doc_id})
             if not found:
                 return False
-            if _BLOB_TOKEN:
-                for key in ("pdf_blob_url", "html_blob_url"):
-                    url = found.get(key, "")
-                    if url:
-                        try:
-                            _delete_blob(url)
-                        except Exception:
-                            pass
             _history_collection.delete_one({"id": doc_id})
             return True
         except Exception as e:
@@ -394,59 +351,6 @@ def delete_document(doc_id: str) -> bool:
             except OSError:
                 pass
 
-    if _BLOB_TOKEN:
-        for key in ("pdf_blob_url", "html_blob_url"):
-            url = found.get(key, "")
-            if url:
-                try:
-                    _delete_blob(url)
-                except Exception:
-                    pass
-
     return True
 
 
-# ---- Vercel Blob Storage ----------------------------------------------------
-
-def upload_to_blob(data: bytes, filename: str, content_type: str = "application/octet-stream") -> str:
-    if not _BLOB_TOKEN:
-        raise RuntimeError("BLOB_READ_WRITE_TOKEN non défini")
-
-    safe_name = urllib.parse.quote(filename, safe="-_.")
-    req = _urllib_req.Request(
-        f"https://blob.vercel-storage.com/{safe_name}",
-        data=data,
-        method="PUT",
-        headers={
-            "Authorization": f"Bearer {_BLOB_TOKEN}",
-            "x-api-version": "7",
-            "Content-Type": content_type,
-        },
-    )
-    try:
-        with _urllib_req.urlopen(req, timeout=30) as resp:
-            body = json.loads(resp.read())
-    except Exception as exc:
-        raise RuntimeError(f"Upload Blob échoué : {exc}") from exc
-
-    url = body.get("url")
-    if not url:
-        raise RuntimeError(f"Réponse Blob invalide (pas de 'url') : {body}")
-    return url
-
-
-def _delete_blob(blob_url: str) -> None:
-    if not _BLOB_TOKEN:
-        return
-    req = _urllib_req.Request(
-        "https://blob.vercel-storage.com/delete",
-        data=json.dumps({"urls": [blob_url]}).encode(),
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {_BLOB_TOKEN}",
-            "x-api-version": "7",
-            "Content-Type": "application/json",
-        },
-    )
-    with _urllib_req.urlopen(req, timeout=10) as _:
-        pass

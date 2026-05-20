@@ -6,7 +6,7 @@ def test_local_mode_leaves_history_api_open(client, monkeypatch):
     monkeypatch.delenv("APP_MODE", raising=False)
     monkeypatch.delenv("REMOTE_AUTH_PASSWORD", raising=False)
     monkeypatch.delenv("AUTH_PASSWORD", raising=False)
-    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.delenv("RENDER", raising=False)
 
     with patch("app.archive.list_documents", return_value=[]):
         resp = client.get("/api/history")

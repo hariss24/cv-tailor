@@ -56,10 +56,9 @@ AI endpoints, and history endpoints behind `/login`. If `APP_MODE=remote`
 is set without `REMOTE_AUTH_PASSWORD`, protected routes return a setup error
 instead of exposing private documents.
 
-Vercel deployments are treated as remote automatically. For persistent remote
-history, configure `MONGODB_URI`. For persisted generated PDF/HTML files,
-configure `BLOB_READ_WRITE_TOKEN`. Without those, serverless archives fall
-back to temporary storage and may disappear between invocations.
+Render deployments are treated as remote automatically. For persistent remote
+history, configure `MONGODB_URI`. Without it, archives fall back to temporary
+storage and may disappear between container restarts.
 
 See `.env.example` for the recommended environment variables.
 
