@@ -459,16 +459,44 @@ button.ghost:active {
 #btn-settings:hover { color: var(--text); box-shadow: var(--neu-raised); }
 #btn-settings:active { box-shadow: var(--neu-inset); }
 
-/* ---- Bouton thème (soleil/lune) ---- */
+/* ---- Toggle thème pill neumorphique ---- */
 #btn-theme {
-  background: var(--bg); border: none;
-  color: var(--muted); cursor: pointer; padding: 6px 10px; border-radius: 10px;
-  display: inline-flex; align-items: center; gap: 5px; font-size: 13px;
-  box-shadow: var(--neu-raised-sm);
-  transition: color 150ms, box-shadow 150ms;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 68px; height: 32px;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: var(--neu-inset);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  outline: none;
 }
-#btn-theme:hover { color: var(--text); box-shadow: var(--neu-raised); }
-#btn-theme:active { box-shadow: var(--neu-inset); }
+.toggle-icon {
+  position: relative; z-index: 2;
+  width: 34px; height: 32px;
+  display: grid; place-items: center;
+  transition: color 250ms;
+  pointer-events: none;
+}
+.toggle-sun  { color: var(--orange); }
+.toggle-moon { color: var(--muted); }
+[data-theme="dark"] .toggle-sun  { color: var(--muted); }
+[data-theme="dark"] .toggle-moon { color: var(--orange); }
+.toggle-knob {
+  position: absolute;
+  width: 28px; height: 28px;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: var(--neu-raised-sm);
+  left: 2px; top: 2px; z-index: 1;
+  pointer-events: none;
+  transform: translateX(0);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="dark"] .toggle-knob { transform: translateX(36px); }
 
 /* ---- Topbar buttons generic ---- */
 .btn-nav {
