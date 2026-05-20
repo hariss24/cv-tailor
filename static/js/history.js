@@ -189,8 +189,70 @@ async function exportData() {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+// ---- Import ---------------------------------------------------------------
+
+async function importData(file) {
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+  } catch (_) {
+    alert("Fichier invalide : JSON mal formé.");
+    return;
+  }
+  if (!Array.isArray(payload.entries)) {
+    alert("Fichier invalide : clé « entries » manquante.");
+    return;
+  }
+
+  // Fusionner les métadonnées dans localStorage (déduplique par id)
+  const existing = [];
+  try { existing.push(...JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')); } catch (_) {}
+  const existingIds = new Set(existing.map(e => e.id));
+  let imported = 0;
+
+  for (const entry of payload.entries) {
+    if (!entry.id) continue;
+    if (!existingIds.has(entry.id)) {
+      const { html, css, ...meta } = entry;
+      existing.push(meta);
+      existingIds.add(entry.id);
+      imported++;
+    }
+    // Toujours écrire le HTML dans IDB (même si les métadonnées existaient)
+    if (entry.html) {
+      await _saveHtmlToIDB(entry.id, entry.html || '', entry.css || '');
+    }
+  }
+
+  existing.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(existing.slice(0, 100))); } catch (_) {}
+
+  await load();
+  alert(`Import terminé : ${imported} nouvelle(s) entrée(s) ajoutée(s).`);
+}
+
+async function _saveHtmlToIDB(id, html, css) {
+  try {
+    const db = await _openHistoryIDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(IDB_HTML, 'readwrite');
+      tx.objectStore(IDB_HTML).put({ id, html, css });
+      tx.oncomplete = res;
+      tx.onerror    = e => rej(e.target.error);
+    });
+  } catch (_) {}
+}
+
 // ---- Événements -----------------------------------------------------------
 
 document.getElementById('search').addEventListener('input', e => render(e.target.value));
 document.getElementById('btn-export').addEventListener('click', exportData);
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('file-import').click();
+});
+document.getElementById('file-import').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) importData(file);
+  e.target.value = '';
+});
 load();
