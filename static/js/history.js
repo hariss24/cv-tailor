@@ -181,6 +181,17 @@ async function exportData() {
   const htmlMap = {};
   for (const h of htmlEntries) htmlMap[h.id] = { html: h.html, css: h.css };
 
+  // Fallback serveur pour les entrées pré-migration (HTML sur disque, pas dans IDB)
+  await Promise.all(meta.filter(e => !htmlMap[e.id]).map(async e => {
+    try {
+      const r = await fetch(`/api/history/${encodeURIComponent(e.id)}/html`);
+      if (!r.ok) return;
+      const html = await r.text();
+      htmlMap[e.id] = { html, css: '' };
+      await _saveHtmlToIDB(e.id, html, '');
+    } catch (_) {}
+  }));
+
   const payload = {
     exported_at: new Date().toISOString(),
     entries: meta.map(e => ({ ...e, ...(htmlMap[e.id] || {}) })),

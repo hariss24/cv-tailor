@@ -759,8 +759,7 @@ require(['vs/editor/editor.main'], function () {
       $('company').value     = localEntry.company  || '';
       $('role').value        = localEntry.role     || '';
       $('notes').value       = localEntry.notes    || '';
-      $('ia-job-desc').value = localEntry.job_desc || '';
-      if (typeof updatePrompt === 'function') updatePrompt();
+      _syncJobDesc(localEntry.job_desc || '');
       refreshFilenamePreview();
     }
 
@@ -824,6 +823,7 @@ document.querySelectorAll('.template-card').forEach(card => {
     if (cssModel)  cssModel.setValue(tpl.css);
 
     ['company', 'role', 'filename', 'notes'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+    _syncJobDesc('');
     refreshFilenamePreview();
 
     modalNewCv.style.display = 'none';
