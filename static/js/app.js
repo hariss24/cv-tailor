@@ -625,6 +625,13 @@ require(['vs/editor/editor.main'], function () {
     scrollBeyondLastLine: false,
   });
 
+  // Auto-replier la région Photo_Base64 si déjà présente au chargement
+  if (htmlModel.getValue().includes('<!-- #region Photo_Base64 -->')) {
+    setTimeout(function() {
+      if (editor) editor.trigger('fold', 'editor.foldAllMarkerRegions');
+    }, 400);
+  }
+
   htmlModel.onDidChangeContent(() => {
     try { localStorage.setItem(STORAGE_KEY_HTML, htmlModel.getValue()); flashAutosave(); } catch (_) {}
     schedulePreview();
@@ -998,6 +1005,7 @@ const chatInput   = $('chat-input');
 
 let _chatHistory    = [];
 let _chatPreviewing = false;
+let _lastBase64Data = null; // conserve le base64 photo retiré avant envoi à l'IA
 
 function openChatPanel() {
   chatPanel.classList.add('open');
@@ -1102,6 +1110,22 @@ function _appendProposals(proposals) {
   });
 }
 
+function _stripBase64ForChat(html) {
+  // Retire les données base64 avant envoi à l'IA et les mémorise pour restauration
+  var match = html.match(/src="(data:image\/[^"]{20,})"/);
+  _lastBase64Data = match ? match[1] : null;
+  return html.replace(/src="data:image\/[^"]{20,}"/g, 'src="[IMAGE_BASE64]"');
+}
+
+function _restoreBase64InProposals(proposals) {
+  if (!_lastBase64Data || !proposals) return proposals;
+  return proposals.map(function(p) {
+    return Object.assign({}, p, {
+      html: p.html ? p.html.replace('src="[IMAGE_BASE64]"', 'src="' + _lastBase64Data + '"') : p.html,
+    });
+  });
+}
+
 async function _sendChat() {
   var text = chatInput.value.trim();
   if (!text) return;
@@ -1112,7 +1136,7 @@ async function _sendChat() {
 
   _appendMsg('user', text);
   _chatHistory.push({ role: 'user', content: text });
-  var loading = _appendMsg('assistant', 'L’IA génère une proposition');
+  var loading = _appendMsg('assistant', "L’IA génère une proposition");
   loading.classList.add('chat-loading');
 
   var controller = new AbortController();
@@ -1125,7 +1149,7 @@ async function _sendChat() {
       headers: Object.assign({ 'Content-Type': 'application/json' }, getApiHeaders()),
       body: JSON.stringify({
         messages:   _chatHistory,
-        html:       htmlModel.getValue(),
+        html:       _stripBase64ForChat(htmlModel.getValue()),
         css:        cssModel ? cssModel.getValue() : '',
         doc_type:   ($('doc_type') || {}).value || 'CV',
         job_desc:   (($('job-desc-input') || {}).value || '').trim(),
@@ -1142,12 +1166,12 @@ async function _sendChat() {
     }
     _appendMsg('assistant', data.reply);
     _chatHistory.push({ role: 'assistant', content: data.reply });
-    if (data.proposals && data.proposals.length) _appendProposals(data.proposals);
+    if (data.proposals && data.proposals.length) _appendProposals(_restoreBase64InProposals(data.proposals));
   } catch (e) {
     clearTimeout(timeoutId);
     loading.remove();
     var msg = e.name === 'AbortError'
-      ? 'Délai dépassé (> 2 min). L’IA n’a pas répondu. Réessayez.'
+      ? "Délai dépassé (> 2 min). L'IA n'a pas répondu. Réessayez."
       : 'Erreur : ' + e.message;
     _appendMsg('assistant', msg);
     _chatHistory.pop();
