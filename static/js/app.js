@@ -1603,35 +1603,96 @@ $('btn-tailor').addEventListener('click', async () => {
 // ============================================================
 
 const _ATS_STOP_WORDS = new Set([
-  'le','la','les','de','du','des','un','une','et','ou','à','au','aux',
+  'le','la','les','de','du','des','un','une','et','ou','au','aux',
   'en','dans','sur','pour','par','avec','sans','que','qui','quoi','dont',
   'il','elle','ils','elles','je','tu','nous','vous','on','ce','se','sa',
   'son','ses','mon','ton','notre','votre','leur','leurs','est','sont',
-  'être','avoir','faire','plus','très','bien','tout','tous','aussi',
+  'etre','avoir','faire','plus','tres','bien','tout','tous','aussi',
+  'mais','donc','car','cela','ceci','cette','comme','afin','ainsi',
+  'lors','entre','autre','selon','notamment','quand','alors','meme',
+  'poste','profil','candidat','equipe','rejoindre','mission','contrat',
+  'recherche','entreprise','societe','contexte','offre','emploi',
+  'travail','collaborateur','collaboratrice','ambiance','bienveillance',
+  'dynamique','croissance','locaux','babyfoot','avantage','mutuelle',
+  'remuneration','salaire','teletravail','sein','assurer','suivre',
+  'gerer','piloter','participer','contribuer','accompagner','definir',
+  'animer','mettre','garantir','optimiser','permettre','favoriser',
+  'proposer','construire','travailler','niveau','type','domaine',
+  'secteur','annee','mois','service','besoin','client','produit',
+  'solution','projet','fort','forte','ideal','atout','sens','envie',
+  'capacite','aisance','aptitude','qualite','valeur','recrutement',
+  'cadre','structure','challenge','defis','hybride','bureau',
+  'bonne','bon','bonnes','bons','bref','ici','voici','ainsi','notamment',
+  'cherchons','recherchons','attendons','souhaitons','proposons',
+  'rejoindrez','rejoindront','rejoindra','rejoindrons',
+  'travaillerez','travaillerons','travaillez','travaillerait',
+  'passionne','passionnee','requis','requise','requis',
+  'bienveillant','bienveillante','bienveillants','bienveillantes',
+  'dynamiques','passionnes','passionnees','motivees','motivee',
   'the','of','and','or','to','a','an','in','on','for','with','be','is',
   'are','was','were','will','have','has','do','does','that','this','it',
+  'you','we','they','he','she','not','but','if','as','at','from','by',
+  'your','our','their','its','which','when','who','how','what','where',
+  'team','company','work','role','join','position','experience','strong',
+  'knowledge','ability','excellent','good','great','working','looking',
+  'must','should','can','including','such','based','environment',
+  'opportunity','culture','office','hybrid','remote','candidate',
+  'profile','contract','enterprise','ideally','salary','benefits',
+  'level','years','months','help','build','make','grow','ensure',
+  'manage','lead','support','provide','deliver','create','drive','take',
 ]);
 
+const _ATS_COMPOUNDS = [
+  ['intelligence artificielle',   'ia'],
+  ['natural language processing', 'nlp'],
+  ['machine learning',            'machine-learning'],
+  ['deep learning',               'deep-learning'],
+  ['gestion de projet',           'gestion-projet'],
+  ['base de donnees',             'base-donnees'],
+  ['react native',                'react-native'],
+  ['spring boot',                 'spring-boot'],
+  ['power bi',                    'powerbi'],
+  ['rest api',                    'rest-api'],
+  ['react js',                    'react'],
+  ['node js',                     'nodejs'],
+  ['vue js',                      'vuejs'],
+  ['next js',                     'nextjs'],
+  ['ci/cd',                       'cicd'],
+  ['ci cd',                       'cicd'],
+  ['node.js',                     'nodejs'],
+];
+
 function _extractKeywords(text) {
+  let clean = text
+    .replace(/<[^>]+>/g, ' ')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^\w\s+#.\/-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  for (const [phrase, replacement] of _ATS_COMPOUNDS) {
+    clean = clean.split(phrase).join(replacement);
+  }
+  clean = clean.replace(/(\w)\/(\w)/g, "$1 $2");
+
   return [...new Set(
-    text.toLowerCase()
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/[^a-zàâäéèêëïîôùûüœç\s-]/gi, ' ')
-        .split(/\s+/)
-        .map(w => w.replace(/^-+|-+$/g, ''))
-        .filter(w => w.length >= 4 && !_ATS_STOP_WORDS.has(w))
+    clean.split(/\s+/)
+      .map(w => w.replace(/^[-\/.]+|[-\/.]+$/g, ''))
+      .filter(w => w.length >= 3 && !_ATS_STOP_WORDS.has(w))
   )];
 }
 
 function _detectSections(html) {
-  const lower = html.toLowerCase();
+  const heading = (terms) =>
+    new RegExp('<h[1-6][^>]*>[^<]*(' + terms + ')[^<]*<\/h[1-6]>', 'i');
   return {
-    'Résumé / Accroche': /(résumé|accroche|profil|summary|about|à propos)/i.test(html),
-    'Expériences':       /(expérience|experience|emploi|poste|travail)/i.test(html),
-    'Compétences':       /(compétence|competence|skill|technologie|technique)/i.test(html),
-    'Langues':           /(langue|langu|language|anglais|français|allemand|espagnol|english|french)/i.test(html),
-    'Formation':         /(formation|diplôme|diplome|école|ecole|université|universite|education|degree)/i.test(html),
-    "Centres d'intérêt": /(intérêt|interêt|loisir|hobby|centre d|passion)/i.test(html),
+    'Résumé / Accroche': heading('r[eé]sum[eé]|accroche|profil|summary|about').test(html),
+    'Expériences':       heading('exp[eé]rience|emploi|poste|travail|parcours').test(html),
+    'Compétences':       heading('comp[eé]tence|skill|technolog|technique|savoir').test(html),
+    'Langues':           heading('langue|language|anglais|fran[cç]ais|english').test(html),
+    'Formation':         heading('formation|dipl[oô]me|[ée]cole|universit[ée]|education|degree|cursus').test(html),
+    "Centres d'intérêt": heading('int[ée]r[êe]t|loisir|hobby|passion|activit[ée]').test(html),
   };
 }
 
@@ -1640,35 +1701,47 @@ function _renderAts(cvHtml, jobDesc) {
   if (!panel) return;
 
   const jobKw  = _extractKeywords(jobDesc);
-  const cvText = cvHtml.toLowerCase().replace(/<[^>]+>/g, ' ');
-  const matched = jobKw.filter(kw => cvText.includes(kw));
-  const missing = jobKw.filter(kw => !cvText.includes(kw)).slice(0, 20);
-  const score   = jobKw.length ? Math.round((matched.length / jobKw.length) * 100) : 0;
-  const cls     = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
-  const barColor= score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
-  const sections = _detectSections(cvHtml);
+  const cvNorm = cvHtml
+    .replace(/<[^>]+>/g, ' ')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-  const matchedTop = matched.slice(0, 20);
-  const pillsMatched = matchedTop.map(k => `<span class="ats-pill match">${k}</span>`).join('');
-  const pillsMissing = missing.map(k  => `<span class="ats-pill missing">${k}</span>`).join('');
-  const sectBadges = Object.entries(sections).map(([name, ok]) =>
-    `<span class="ats-section-badge ${ok ? 'found' : 'missing'}">${ok ? '✓' : '✗'} ${name}</span>`
+  const isMatched = (kw) => {
+    if (cvNorm.includes(kw)) return true;
+    if ((kw.endsWith('s') || kw.endsWith('x')) && kw.length > 4)
+      return cvNorm.includes(kw.slice(0, -1));
+    return false;
+  };
+
+  const matched    = jobKw.filter(isMatched);
+  const missing    = jobKw.filter(kw => !isMatched(kw)).slice(0, 20);
+  const score      = jobKw.length ? Math.round((matched.length / jobKw.length) * 100) : 0;
+  const cls        = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
+  const barColor   = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
+  const sections   = _detectSections(cvHtml);
+
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const matchedTop   = matched.slice(0, 20);
+  const pillsMatched = matchedTop.map(k => '<span class="ats-pill match">' + esc(k) + '</span>').join('');
+  const pillsMissing = missing.map(k  => '<span class="ats-pill missing">' + esc(k) + '</span>').join('');
+  const sectBadges   = Object.entries(sections).map(([name, ok]) =>
+    '<span class="ats-section-badge ' + (ok ? 'found' : 'missing') + '">' + (ok ? '✓' : '✗') + ' ' + name + '</span>'
   ).join('');
 
-  panel.innerHTML = `
-    <div class="ats-score-row">
-      <div class="ats-score-circle ${cls}">${score}</div>
-      <div class="ats-score-label">
-        Score ATS estimé
-        <span>${matched.length} / ${jobKw.length} mots-clés détectés</span>
-      </div>
-    </div>
-    <div class="ats-bar"><div class="ats-bar-fill" style="width:0%;background:${barColor}" data-target="${score}"></div></div>
-    ${matchedTop.length ? `<div class="ats-keywords-title">Mots-clés présents</div><div class="ats-pills">${pillsMatched}</div>` : ''}
-    ${missing.length    ? `<div class="ats-keywords-title">Mots-clés absents</div><div class="ats-pills">${pillsMissing}</div>` : ''}
-    <div class="ats-keywords-title">Sections détectées</div>
-    <div class="ats-sections">${sectBadges}</div>
-  `;
+  panel.innerHTML = [
+    '<div class="ats-score-row">',
+    '  <div class="ats-score-circle ' + cls + '">' + score + '</div>',
+    '  <div class="ats-score-label">',
+    '    Score ATS estimé',
+    '    <span>' + matched.length + ' / ' + jobKw.length + ' mots-clés détectés</span>',
+    '  </div>',
+    '</div>',
+    '<div class="ats-bar"><div class="ats-bar-fill" style="width:0%;background:' + barColor + '" data-target="' + score + '"></div></div>',
+    matchedTop.length ? '<div class="ats-keywords-title">Mots-clés présents</div><div class="ats-pills">' + pillsMatched + '</div>' : '',
+    missing.length    ? '<div class="ats-keywords-title">Mots-clés absents</div><div class="ats-pills">' + pillsMissing + '</div>' : '',
+    '<div class="ats-keywords-title">Sections détectées</div>',
+    '<div class="ats-sections">' + sectBadges + '</div>',
+  ].join('');
   panel.style.display = 'block';
 
   // Animate bar
