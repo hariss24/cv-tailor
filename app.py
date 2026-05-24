@@ -402,8 +402,7 @@ _TAILOR_SYSTEMS = {
         "modifier les descriptions de postes ou les listes à puces des expériences, "
         "supprimer ou modifier les langues, les centres d'intérêt, la formation, "
         "les dates, les entreprises du parcours, les intitulés de poste. "
-        "Le CV doit rester à 95% identique à l'original. "
-        "Retourne uniquement le HTML complet, sans commentaire, sans markdown."
+        "Le CV doit rester à 95% identique à l'original."
     ),
     "adapte": (
         "Tu reçois un CV en HTML et une offre d'emploi. "
@@ -423,8 +422,7 @@ _TAILOR_SYSTEMS = {
         "INTERDIT : inventer ou supprimer des compétences, "
         "toucher à la section langues (doit rester intacte avec TOUTES les langues listées), "
         "toucher à la section centres d'intérêt (doit rester intacte), "
-        "modifier les dates, entreprises du parcours, intitulés de poste ou diplômes. "
-        "Retourne uniquement le HTML complet, sans commentaire, sans markdown."
+        "modifier les dates, entreprises du parcours, intitulés de poste ou diplômes."
     ),
     "hyper": (
         "Tu reçois un CV en HTML et une offre d'emploi. "
@@ -444,10 +442,28 @@ _TAILOR_SYSTEMS = {
         "supprimer la section langues ou retirer une seule langue (toutes doivent rester), "
         "supprimer ou modifier la section centres d'intérêt, "
         "inventer des compétences absentes du CV original, "
-        "modifier les dates, entreprises du parcours, intitulés de poste, diplômes ou noms propres. "
-        "Retourne uniquement le HTML complet, sans commentaire, sans markdown."
+        "modifier les dates, entreprises du parcours, intitulés de poste, diplômes ou noms propres."
     ),
 }
+
+_COMMON_HTML_RULES = (
+    "\n\nRÈGLES TECHNIQUES STRICTES (NON NÉGOCIABLES) :\n"
+    "1. STRUCTURE HTML : Conserve intégralement la balise <html> (avec son attribut lang), "
+    "<head>, toutes les balises <meta> et <link>. Ne déplace, ne supprime ni ne crée aucune "
+    "balise structurelle.\n"
+    "2. CSS INTOUCHABLE : Conserve la balise <style> et son contenu pixel pour pixel. "
+    "Ne modifie AUCUNE classe CSS, AUCUN id, et aucun attribut style=\"...\". "
+    "Le rendu visuel doit être identique à l'original.\n"
+    "3. PHOTO DE PROFIL : Ne modifie jamais l'attribut src d'une balise <img>. "
+    "Les images base64 sont très longues — copie-les telles quelles, sans tronquer ni recoder.\n"
+    "4. INTÉGRALITÉ DU CONTENU : Ne supprime AUCUNE expérience, compétence, langue, "
+    "formation ou centre d'intérêt. Si le CV est long, reformule — n'efface JAMAIS. "
+    "Chaque section présente dans le CV original doit exister dans ta réponse.\n"
+    "5. ATTRIBUTS HTML : Conserve tous les attributs data-*, aria-* et autres attributs "
+    "personnalisés exactement tels qu'ils sont dans le HTML reçu.\n"
+    "6. FORMAT DE SORTIE : Retourne UNIQUEMENT le code HTML complet, du <!DOCTYPE html> "
+    "jusqu'à </html>. Zéro bloc markdown (```html), zéro commentaire, zéro texte avant ou après."
+)
 
 
 def _stream_ai(generator_fn):
@@ -568,7 +584,7 @@ def api_tailor():
     if err:
         return err
 
-    system_prompt = _TAILOR_SYSTEMS[level]
+    system_prompt = _TAILOR_SYSTEMS[level] + _COMMON_HTML_RULES
     prompt = f"CV HTML :\n{html}\n\nOffre d'emploi :\n{job_desc}"
 
     def generate():
