@@ -530,6 +530,7 @@ function restoreSnapshot(snap) {
   if (!confirm(`Restaurer le snapshot "${snap.label}" ? Le contenu actuel sera remplacé.`)) return;
   htmlModel.setValue(snap.html || '');
   if (cssModel) cssModel.setValue(snap.css || '');
+  _resetTailorDiff();
   if (snap.doc_type && $('doc_type')) $('doc_type').value = snap.doc_type;
   if (snap.company  && $('company'))  $('company').value  = snap.company;
   if (snap.role     && $('role'))     $('role').value     = snap.role;
@@ -828,6 +829,7 @@ document.querySelectorAll('.template-card').forEach(card => {
 
     if (htmlModel) htmlModel.setValue(tpl.html);
     if (cssModel)  cssModel.setValue(tpl.css);
+    _resetTailorDiff();
 
     ['company', 'role', 'filename', 'notes'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     _syncJobDesc('');
@@ -848,6 +850,7 @@ $('clear').onclick = () => {
   saveSnapshot('Avant effacement');
   if (htmlModel) htmlModel.setValue('');
   if (cssModel)  cssModel.setValue('');
+  _resetTailorDiff();
   ['company', 'role', 'filename', 'notes'].forEach(id => $(id).value = '');
   refreshFilenamePreview();
   try {
@@ -982,6 +985,36 @@ $('go').onclick = async () => {
 // Chat IA
 // ============================================================
 let _tailorLevel = 'adapte';
+let _tailorBeforeHtml = null;
+let _tailorBeforeCss  = null;
+let _tailorBase64Map  = {};
+
+function _resetTailorDiff() {
+  _tailorBeforeHtml = null;
+  _tailorBeforeCss  = null;
+  const btn = $('btn-show-diff');
+  if (btn) btn.style.display = 'none';
+}
+
+function _stripBase64ForTailor(html) {
+  _tailorBase64Map = {};
+  let i = 0;
+  return html.replace(/src="data:image\/[^"]{20,}"/g, (match) => {
+    const placeholder = '[IMAGE_BASE64_' + i + ']';
+    _tailorBase64Map[placeholder] = match;
+    i++;
+    return 'src="' + placeholder + '"';
+  });
+}
+
+function _restoreBase64InTailor(html) {
+  if (!html) return html;
+  let out = html;
+  for (const placeholder in _tailorBase64Map) {
+    out = out.split('src="' + placeholder + '"').join(_tailorBase64Map[placeholder]);
+  }
+  return out;
+}
 
 function _initLevelSelector(selectorId, onChange) {
   const el = $(selectorId);
@@ -1563,20 +1596,25 @@ $('btn-tailor').addEventListener('click', async () => {
     showToast("Charge d'abord un CV dans l'éditeur.", 'err'); return;
   }
 
+  _tailorBeforeHtml = htmlModel.getValue();
+  _tailorBeforeCss  = cssModel ? cssModel.getValue() : '';
   saveSnapshot('Avant tailoring');
 
   const btn    = $('btn-tailor');
   const status = $('tailor-status');
   const atsPanel = $('ats-panel');
+  const btnDiff = $('btn-show-diff');
   btn.disabled = true;
   atsPanel.style.display = 'none';
+  btnDiff.style.display = 'none';
   status.textContent = 'Adaptation en cours';
   status.className   = 'tailor-status status-busy';
 
   try {
+    const strippedHtml = _stripBase64ForTailor(htmlModel.getValue());
     const adapted = await streamToMonaco(
       '/api/tailor',
-      { html: htmlModel.getValue(), job_desc: jobDesc, level: _tailorLevel },
+      { html: strippedHtml, job_desc: jobDesc, level: _tailorLevel },
       getApiHeaders(),
       (partial) => {
         if (htmlModel) htmlModel.setValue(partial);
@@ -1584,11 +1622,13 @@ $('btn-tailor').addEventListener('click', async () => {
         status.className   = 'tailor-status status-busy';
       }
     );
-    if (htmlModel) htmlModel.setValue(adapted);
+    const restoredAdapted = _restoreBase64InTailor(adapted);
+    if (htmlModel) htmlModel.setValue(restoredAdapted);
     showToast('CV adapté avec succès.', 'ok');
     status.textContent = '';
     status.className   = 'tailor-status';
-    _renderAts(adapted, jobDesc);
+    btnDiff.style.display = 'block';
+    _renderAts(restoredAdapted, jobDesc);
   } catch (err) {
     showToast(err.message, 'err');
     status.textContent = err.message;
@@ -1750,3 +1790,34 @@ function _renderAts(cvHtml, jobDesc) {
     if (fill) fill.style.width = fill.dataset.target + '%';
   });
 }
+
+// ============================================================
+// Diff visuel avant/après adaptation
+// ============================================================
+function _openDiffModal() {
+  if (!_tailorBeforeHtml) return;
+  const afterHtml = htmlModel ? htmlModel.getValue() : '';
+  const afterCss  = cssModel ? cssModel.getValue() : '';
+  const beforeCss = _tailorBeforeCss != null ? _tailorBeforeCss : afterCss;
+  const modal  = $('modal-diff');
+  const before = $('diff-frame-before');
+  const after  = $('diff-frame-after');
+  modal.style.display = 'flex';
+  // Wait for layout so clientWidth is correct, then inject zoomed srcdoc.
+  requestAnimationFrame(() => {
+    const w = before.clientWidth || 793;
+    const zoom = Math.min(1, Math.max(0.3, (w - 10) / 793));
+    const injectZoom = (html) => {
+      if (zoom >= 1) return html;
+      return html.replace(/<\/head>/i, '<style>html,body{zoom:' + zoom.toFixed(3) + ';}</style></head>');
+    };
+    before.srcdoc = injectZoom(_buildPreviewHtml(_tailorBeforeHtml, beforeCss));
+    after.srcdoc  = injectZoom(_buildPreviewHtml(afterHtml,         afterCss));
+  });
+}
+
+$('btn-show-diff').addEventListener('click', _openDiffModal);
+$('close-modal-diff').addEventListener('click', () => { $('modal-diff').style.display = 'none'; });
+$('modal-diff').addEventListener('click', (e) => {
+  if (e.target === $('modal-diff')) $('modal-diff').style.display = 'none';
+});
