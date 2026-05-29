@@ -279,3 +279,214 @@ def complete_chat(
         "reply":     str(result.get("reply", ""))[:1000],
         "proposals": proposals,
     }
+
+
+# ---------------------------------------------------------------------------
+# Score ATS piloté par l'IA — réponse JSON non-streaming
+# ---------------------------------------------------------------------------
+
+_SYSTEM_ATS_SCORE = (
+    "Tu es un moteur d'analyse ATS (Applicant Tracking System) expert en recrutement.\n"
+    "Tu reçois le HTML d'un CV et le texte d'une offre d'emploi.\n\n"
+    "TÂCHE :\n"
+    "1. Extrais de l'OFFRE les vraies exigences, en distinguant :\n"
+    "   - hard skills REQUIS (compétences techniques/métier indispensables) ;\n"
+    "   - compétences 'nice-to-have' (souhaitées mais non bloquantes).\n"
+    "   Ignore le bruit RH (ambiance, avantages, culture, soft skills génériques).\n"
+    "2. Vérifie lesquelles sont réellement présentes dans le CV (synonymes et "
+    "variantes acceptés : 'JS' = 'JavaScript', 'CI/CD' = 'intégration continue', etc.).\n"
+    "3. Calcule un score d'adéquation 0-100 : pondère fortement les hard skills requis "
+    "présents, faiblement les nice-to-have.\n\n"
+    "FORMAT DE RÉPONSE OBLIGATOIRE — JSON PUR, RIEN D'AUTRE :\n"
+    '{"score": 0-100, "matched_skills": ["..."], '
+    '"missing_hard_skills": ["..."], "missing_nice_to_have": ["..."]}\n\n'
+    "CONTRAINTES :\n"
+    "- 'matched_skills' : compétences de l'offre RÉELLEMENT trouvées dans le CV.\n"
+    "- 'missing_hard_skills' : hard skills REQUIS absents du CV (les plus importants à combler).\n"
+    "- 'missing_nice_to_have' : compétences souhaitées absentes du CV.\n"
+    "- Chaque compétence = libellé court (1-4 mots), sans phrase.\n"
+    "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON."
+)
+
+
+def _coerce_skill_list(value, limit: int = 40) -> list[str]:
+    """Normalise une liste de compétences : strings non vides, tronquées, dédupliquées."""
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        label = str(item).strip()[:80]
+        if label and label.lower() not in seen:
+            seen.add(label.lower())
+            out.append(label)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def score_ats(
+    cv_html: str,
+    job_desc: str,
+    api_key: str | None = None,
+) -> dict:
+    """Analyse l'adéquation CV/offre via l'IA et retourne un score ATS structuré.
+
+    Returns:
+        {"score": int 0-100, "matched_skills": [...],
+         "missing_hard_skills": [...], "missing_nice_to_have": [...]}
+
+    Raises:
+        ValueError: clé manquante, JSON invalide, ou structure incorrecte.
+        RuntimeError: quota épuisé.
+    """
+    import json as _json
+
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        raise ValueError(
+            "Aucune clé API configurée. "
+            "Ajoutez GEMINI_API_KEY dans les variables d'environnement "
+            "ou une clé personnelle dans ⚙️ Paramètres."
+        )
+
+    messages = [{
+        "role": "user",
+        "content": f"CV (HTML) :\n{cv_html}\n\nOffre d'emploi :\n{job_desc}",
+    }]
+
+    if _is_anthropic_key(key):
+        raw = _complete_anthropic(messages, _SYSTEM_ATS_SCORE, key)
+    else:
+        raw = _complete_gemini(messages, _SYSTEM_ATS_SCORE, key)
+
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```\s*$", "", raw.strip()).strip()
+
+    try:
+        result = _json.loads(raw)
+    except _json.JSONDecodeError as exc:
+        raise ValueError(f"Réponse IA invalide (JSON malformé) : {exc}") from None
+
+    if not isinstance(result, dict) or "score" not in result:
+        raise ValueError("Réponse IA invalide : champ 'score' attendu.")
+
+    try:
+        score = int(round(float(result.get("score", 0))))
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(100, score))
+
+    return {
+        "score":                score,
+        "matched_skills":       _coerce_skill_list(result.get("matched_skills")),
+        "missing_hard_skills":  _coerce_skill_list(result.get("missing_hard_skills")),
+        "missing_nice_to_have": _coerce_skill_list(result.get("missing_nice_to_have")),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Pack Candidature — lettre de motivation + email, cohérents avec le CV
+# ---------------------------------------------------------------------------
+
+_SYSTEM_PACK = (
+    "Tu es un expert en candidatures. Tu reçois le HTML et le CSS d'un CV adapté à une offre, "
+    "ainsi que le texte de l'offre d'emploi. Tu produis un PACK CANDIDATURE composé de deux "
+    "livrables COHÉRENTS avec le CV : une lettre de motivation et un email d'accroche.\n\n"
+    "ÉTAPE 1 — ANALYSE DU CV :\n"
+    "- Identifie le candidat : prénom + nom, titre/poste, et toutes ses coordonnées "
+    "(ville, email, téléphone, LinkedIn) telles qu'écrites dans le CV.\n"
+    "- Identifie le STYLE VISUEL du CV : la 'font-family' principale, la couleur d'accent "
+    "(souvent une variable CSS comme --resume-template-customization-color), les couleurs de texte, "
+    "et la façon dont le header (nom + coordonnées) est présenté.\n\n"
+    "ÉTAPE 2 — LETTRE DE MOTIVATION (champs 'letter_html' + 'letter_css') :\n"
+    "- 'letter_html' = un FRAGMENT HTML (PAS de <html>, <head>, <body> ni <style>) contenant :\n"
+    "  un header qui reprend l'identité visuelle du CV (nom + coordonnées du candidat, et le bloc "
+    "destinataire/date), puis l'objet, l'appel ('Madame, Monsieur,'), un corps de 3 paragraphes "
+    "(accroche, argumentaire appuyé sur les expériences réelles du CV, conclusion), une formule de "
+    "politesse et la signature (nom du candidat).\n"
+    "- 'letter_css' = le CSS COMPLET de la lettre. Il DOIT réutiliser la MÊME 'font-family', la MÊME "
+    "couleur d'accent et les mêmes couleurs de texte que le CV, pour une cohérence visuelle parfaite. "
+    "Inclus '@page { size: A4; margin: 0; }' et un padding confortable sur le conteneur.\n"
+    "- N'invente AUCUN fait : utilise uniquement les expériences, compétences et formations réellement "
+    "présentes dans le CV.\n"
+    "- La lettre s'adresse NOMMÉMENT à l'entreprise et au poste visés (déduis-les de l'offre ou des "
+    "informations 'Entreprise'/'Poste' fournies). Si l'entreprise est inconnue, écris "
+    "'À l'attention du responsable du recrutement'.\n\n"
+    "ÉTAPE 3 — EMAIL D'ACCROCHE (champ 'email') :\n"
+    "- Texte BRUT (pas de HTML), prêt à coller dans un client mail.\n"
+    "- Première ligne = 'Objet : ...'. Puis un corps court (5-8 lignes) : accroche, 2-3 atouts clés "
+    "tirés du CV, renvoi au CV/lettre en pièce jointe, formule de politesse et signature.\n"
+    "- Nomme l'entreprise et le poste visés.\n\n"
+    "FORMAT DE RÉPONSE OBLIGATOIRE — JSON PUR, RIEN D'AUTRE :\n"
+    '{"letter_html": "...", "letter_css": "...", "email": "..."}\n\n'
+    "CONTRAINTES :\n"
+    "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.\n"
+    "- 'letter_html' est un fragment sans balise <style> : tout le style va dans 'letter_css'.\n"
+    "- N'intègre aucune image base64 : si une photo apparaît dans le CV, ignore-la pour la lettre."
+)
+
+
+def generate_pack(
+    cv_html: str,
+    cv_css: str,
+    job_desc: str,
+    company: str = "",
+    role: str = "",
+    api_key: str | None = None,
+) -> dict:
+    """Génère un pack candidature (lettre + email) cohérent avec le CV adapté.
+
+    Returns:
+        {"letter_html": str, "letter_css": str, "email": str}
+
+    Raises:
+        ValueError: clé manquante, JSON invalide, ou structure incorrecte.
+        RuntimeError: quota épuisé.
+    """
+    import json as _json
+
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        raise ValueError(
+            "Aucune clé API configurée. "
+            "Ajoutez GEMINI_API_KEY dans les variables d'environnement "
+            "ou une clé personnelle dans ⚙️ Paramètres."
+        )
+
+    content = f"CV (HTML) :\n{cv_html}"
+    if cv_css:
+        content += f"\n\nCV (CSS) :\n{cv_css}"
+    content += f"\n\nOffre d'emploi :\n{job_desc}"
+    if company:
+        content += f"\n\nEntreprise visée : {company}"
+    if role:
+        content += f"\n\nPoste visé : {role}"
+
+    messages = [{"role": "user", "content": content}]
+
+    if _is_anthropic_key(key):
+        raw = _complete_anthropic(messages, _SYSTEM_PACK, key)
+    else:
+        raw = _complete_gemini(messages, _SYSTEM_PACK, key)
+
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```\s*$", "", raw.strip()).strip()
+
+    try:
+        result = _json.loads(raw)
+    except _json.JSONDecodeError as exc:
+        raise ValueError(f"Réponse IA invalide (JSON malformé) : {exc}") from None
+
+    if not isinstance(result, dict) or "letter_html" not in result or "email" not in result:
+        raise ValueError("Réponse IA invalide : champs 'letter_html' et 'email' attendus.")
+
+    return {
+        "letter_html": str(result.get("letter_html", "")).strip(),
+        "letter_css":  str(result.get("letter_css", "")).strip(),
+        "email":       str(result.get("email", "")).strip(),
+    }

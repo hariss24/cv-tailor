@@ -136,9 +136,10 @@ def ensure_archive_dir() -> Path:
 def _slug(value: str) -> str:
     if not value:
         return ""
+    value = re.sub(r"['’]", "_", value)
     normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     cleaned = re.sub(r"[^\w\s-]", "", normalized).strip()
-    return re.sub(r"[\s_-]+", "", cleaned)
+    return re.sub(r"[\s_]+", "_", cleaned)
 
 
 def _safe_filename(name: str) -> str:

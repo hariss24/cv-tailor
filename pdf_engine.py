@@ -49,6 +49,47 @@ def html_to_pdf_bytes(
     return _playwright_render(html, page_format, margin, background)
 
 
+# ---- protection anti-SSRF du rendu ------------------------------------------
+# Le HTML fourni par l'utilisateur peut référencer des ressources externes
+# (<img>, <iframe>, <link>…). Chromium les charge pendant le rendu : sans
+# filtre, un document malveillant pourrait atteindre le réseau interne ou les
+# métadonnées cloud (169.254.169.254) et en exfiltrer le contenu dans le PDF.
+
+def _resolves_to_blocked(hostname: str) -> bool:
+    """True si l'hôte résout vers une IP interne/privée (anti-SSRF)."""
+    import ipaddress
+    import socket
+
+    if not hostname:
+        return False  # data:, about:, etc. — pas de réseau
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except OSError:
+        return True  # hôte non résolvable → on bloque par prudence
+    cgnat = ipaddress.ip_network("100.64.0.0/10")
+    for info in infos:
+        addr = ipaddress.ip_address(info[4][0])
+        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+            addr = addr.ipv4_mapped
+        if (addr.is_private or addr.is_loopback or addr.is_link_local
+                or addr.is_multicast or addr.is_reserved or addr.is_unspecified
+                or addr in cgnat):
+            return True
+    return False
+
+
+def _block_internal_resources(route) -> None:
+    from urllib.parse import urlparse
+    try:
+        host = urlparse(route.request.url).hostname or ""
+        if _resolves_to_blocked(host):
+            route.abort()
+            return
+    except Exception:
+        pass
+    route.continue_()
+
+
 # ---- backends privés --------------------------------------------------------
 
 def _playwright_render(html: str, page_format: str, margin: str, background: bool) -> bytes:
@@ -57,6 +98,7 @@ def _playwright_render(html: str, page_format: str, margin: str, background: boo
         browser = p.chromium.launch()
         try:
             page = browser.new_page()
+            page.route("**/*", _block_internal_resources)  # anti-SSRF
             # Timeout de 30 s pour le chargement + 60 s pour la génération PDF
             page.set_content(html, wait_until="networkidle", timeout=30_000)
             return page.pdf(

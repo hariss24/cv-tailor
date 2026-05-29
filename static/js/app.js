@@ -290,6 +290,45 @@ strong { font-weight: 600; }`,
   },
 };
 
+const _TYPE_STORE_PREFIX = 'html-to-pdf:type:';
+function _docTypeKey(type) { return _TYPE_STORE_PREFIX + type.toLowerCase(); }
+const STORAGE_KEY_LAST_TYPE = 'html-to-pdf:last-doc-type';
+let _activeDocType = 'CV';
+
+const _LETTRE_SKELETON = `<div style="font-family: Georgia, 'Times New Roman', serif; max-width: 680px; margin: 40px auto; color: #222; line-height: 1.7; font-size: 14px;">
+
+  <div style="text-align: right; margin-bottom: 48px;">
+    <p style="margin: 0;">Prénom Nom<br>
+    Adresse, Ville<br>
+    email@example.com &middot; +33 6 00 00 00 00</p>
+    <p style="margin: 16px 0 0;">Ville, le JJ/MM/AAAA</p>
+  </div>
+
+  <div style="margin-bottom: 32px;">
+    <p style="margin: 0;"><strong>Nom de l'entreprise</strong><br>
+    Service Recrutement<br>
+    Adresse de l'entreprise</p>
+  </div>
+
+  <p><strong>Objet : Candidature au poste de [Intitulé du poste]</strong></p>
+
+  <p>Madame, Monsieur,</p>
+
+  <p>[Accroche : présentez-vous brièvement et expliquez pourquoi ce poste et cette entreprise vous intéressent particulièrement.]</p>
+
+  <p>[Argumentaire : décrivez vos compétences et expériences les plus pertinentes, avec des exemples concrets.]</p>
+
+  <p>[Conclusion : réaffirmez votre motivation, mentionnez votre disponibilité pour un entretien et remerciez pour l'attention portée à votre candidature.]</p>
+
+  <p>Dans l'attente de votre réponse, je reste à votre disposition pour tout échange.</p>
+
+  <p>Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.</p>
+
+  <br><br>
+  <p>Prénom Nom</p>
+
+</div>`;
+
 // ============================================================
 // Variables globales Monaco
 // ============================================================
@@ -297,13 +336,19 @@ let editor;
 let htmlModel;
 let cssModel;
 let activeTab = 'html';
+let _isPreviewPrintMode = false;
 
 // ============================================================
 // Fusion HTML + CSS avec échappement anti-injection de balise
 // ============================================================
 function mergedHtml() {
   const html = htmlModel ? htmlModel.getValue() : '';
-  const css  = cssModel  ? cssModel.getValue()  : '';
+  let css  = cssModel  ? cssModel.getValue()  : '';
+  
+  if (_isPreviewPrintMode) {
+    css = css.replace(/@media\s+print\b/gi, '@media screen');
+  }
+
   if (!css.trim()) return html;
   // Empêcher la fermeture prématurée du bloc <style> par du CSS malformé.
   const safeCss = css.replace(/<\/style\s*>/gi, '<\\/style>');
@@ -339,9 +384,10 @@ function slug(s) {
   if (!s) return '';
   return s.normalize('NFKD')
           .replace(/[̀-ͯ]/g, '')
+          .replace(/['’]/g, '_')
           .replace(/[^\w\s-]/gu, '')
           .trim()
-          .replace(/[\s_-]+/g, '');
+          .replace(/[\s_]+/g, '_');
 }
 
 function autoFilename() {
@@ -389,8 +435,36 @@ function updatePageCount() {
 }
 
 // ============================================================
-// Prévisualisation avec debounce
+// Prévisualisation et estimation de tokens avec debounce
 // ============================================================
+function estimateTokens() {
+  if (typeof htmlModel === 'undefined' || !htmlModel) return;
+  let html = htmlModel.getValue() || '';
+  html = html.replace(/src="data:image\/[^"]{20,}"/g, 'src="[IMAGE_BASE64]"');
+  const css = typeof cssModel !== 'undefined' && cssModel ? (cssModel.getValue() || '') : '';
+  
+  const jobEl = $('job-desc-input');
+  const jobDesc = jobEl ? jobEl.value.trim() : '';
+  const tailorTokens = Math.ceil((html.length + css.length + jobDesc.length) / 4);
+  
+  const elTailor = $('token-count-tailor');
+  if (elTailor) elTailor.textContent = `≈ ${tailorTokens.toLocaleString('fr-FR')} tokens`;
+  const elPack = $('token-count-pack');
+  if (elPack) elPack.textContent = `≈ ${tailorTokens.toLocaleString('fr-FR')} tokens`;
+  
+  const chatEl = $('chat-input');
+  const chatInput = chatEl ? chatEl.value.trim() : '';
+  const chatTokens = Math.ceil((html.length + css.length + chatInput.length) / 4);
+  
+  const elChat = $('token-count-chat');
+  if (elChat) elChat.textContent = `≈ ${chatTokens.toLocaleString('fr-FR')} tokens`;
+}
+
+['job-desc-input', 'chat-input'].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('input', estimateTokens);
+});
+
 let previewTimer;
 function schedulePreview() {
   clearTimeout(previewTimer);
@@ -398,10 +472,22 @@ function schedulePreview() {
     $('preview').srcdoc = mergedHtml();
     // Mettre à jour le compteur après un délai pour laisser l'iframe charger
     setTimeout(updatePageCount, 600);
+    estimateTokens();
   }, 400);
 }
 
-$('preview').addEventListener('load', updatePageCount);
+$('preview').addEventListener('load', () => {
+  updatePageCount();
+  estimateTokens();
+});
+
+if ($('btn-print-mode')) {
+  $('btn-print-mode').addEventListener('click', (e) => {
+    _isPreviewPrintMode = !_isPreviewPrintMode;
+    e.currentTarget.classList.toggle('active', _isPreviewPrintMode);
+    schedulePreview();
+  });
+}
 
 // ============================================================
 // Snapshots IndexedDB
@@ -528,11 +614,17 @@ async function deleteSnapshot(ts) {
 function restoreSnapshot(snap) {
   if (!htmlModel) return;
   if (!confirm(`Restaurer le snapshot "${snap.label}" ? Le contenu actuel sera remplacé.`)) return;
+  // Mettre à jour le type AVANT setValue : l'autosave (onDidChangeContent) sauve
+  // sous _activeDocType, sinon le contenu restauré écrase le brouillon de l'ancien type.
+  if (snap.doc_type) {
+    _activeDocType = snap.doc_type;
+    if ($('doc_type')) $('doc_type').value = _activeDocType;
+    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) {}
+  }
   htmlModel.setValue(snap.html || '');
   if (cssModel) cssModel.setValue(snap.css || '');
   _resetTailorDiff();
-  setTimeout(_foldStyleBlocks, 300);
-  if (snap.doc_type && $('doc_type')) $('doc_type').value = snap.doc_type;
+  _foldStyleBlocks();
   if (snap.company  && $('company'))  $('company').value  = snap.company;
   if (snap.role     && $('role'))     $('role').value     = snap.role;
   refreshFilenamePreview();
@@ -606,15 +698,48 @@ $('btn-save-snapshot-now').onclick = async () => {
 // ============================================================
 require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
 require(['vs/editor/editor.main'], function () {
-  const storedHtml = localStorage.getItem(STORAGE_KEY_HTML);
-  const storedCss  = localStorage.getItem(STORAGE_KEY_CSS);
-  const wantTab    = localStorage.getItem(STORAGE_KEY_TAB) || 'html';
-  const fallback   = TEMPLATES.sobre;
+  _activeDocType = localStorage.getItem(STORAGE_KEY_LAST_TYPE);
+  if (!_activeDocType || !['CV', 'Lettre', 'Maître', 'Autre'].includes(_activeDocType)) {
+    _activeDocType = $('doc_type') ? $('doc_type').value : 'CV';
+  }
+  if ($('doc_type')) $('doc_type').value = _activeDocType;
 
-  htmlModel = monaco.editor.createModel(
-    storedHtml !== null ? storedHtml : fallback.html, 'html');
-  cssModel  = monaco.editor.createModel(
-    storedCss  !== null ? storedCss  : fallback.css,  'css');
+  let initialHtml = null;
+  let initialCss = null;
+
+  const raw = localStorage.getItem(_docTypeKey(_activeDocType));
+  if (raw) {
+    try {
+      const saved = JSON.parse(raw);
+      initialHtml = saved.html;
+      initialCss = saved.css;
+    } catch (_) {}
+  }
+
+  if (initialHtml === null) {
+    if (_activeDocType === 'CV' || _activeDocType === 'Maître') {
+      const legacyHtml = localStorage.getItem(STORAGE_KEY_HTML);
+      const legacyCss = localStorage.getItem(STORAGE_KEY_CSS);
+      if (legacyHtml !== null) {
+        initialHtml = legacyHtml;
+        initialCss = legacyCss || '';
+      } else {
+        initialHtml = TEMPLATES.sobre.html;
+        initialCss = TEMPLATES.sobre.css;
+      }
+    } else if (_activeDocType === 'Lettre') {
+      initialHtml = _LETTRE_SKELETON;
+      initialCss = '';
+    } else {
+      initialHtml = '';
+      initialCss = '';
+    }
+  }
+
+  const wantTab = localStorage.getItem(STORAGE_KEY_TAB) || 'html';
+
+  htmlModel = monaco.editor.createModel(initialHtml || '', 'html');
+  cssModel  = monaco.editor.createModel(initialCss || '', 'css');
 
   editor = monaco.editor.create($('editor'), {
     model: htmlModel,
@@ -635,12 +760,24 @@ require(['vs/editor/editor.main'], function () {
     _foldStyleBlocks();
   }, 400);
 
+  function _saveCurrentState() {
+    if (!htmlModel) return;
+    try {
+      localStorage.setItem(_docTypeKey(_activeDocType), JSON.stringify({
+        html: htmlModel.getValue(),
+        css: cssModel ? cssModel.getValue() : '',
+      }));
+      localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType);
+      flashAutosave();
+    } catch (_) {}
+  }
+
   htmlModel.onDidChangeContent(() => {
-    try { localStorage.setItem(STORAGE_KEY_HTML, htmlModel.getValue()); flashAutosave(); } catch (_) {}
+    _saveCurrentState();
     schedulePreview();
   });
   cssModel.onDidChangeContent(() => {
-    try { localStorage.setItem(STORAGE_KEY_CSS, cssModel.getValue()); flashAutosave(); } catch (_) {}
+    _saveCurrentState();
     schedulePreview();
   });
 
@@ -671,85 +808,44 @@ require(['vs/editor/editor.main'], function () {
     if (!tpl) return;
     const dirty = htmlModel.getValue().trim() || cssModel.getValue().trim();
     if (dirty && !confirm(`Charger le template "${key}" et ecraser le contenu actuel ?`)) return;
+    // Les templates sont des mises en page de CV. Aligner le type AVANT setValue
+    // pour ne pas écraser le brouillon d'un autre type (ex. Lettre) via l'autosave.
+    if (_activeDocType !== 'CV' && _activeDocType !== 'Maître') {
+      _activeDocType = 'CV';
+      if ($('doc_type')) $('doc_type').value = 'CV';
+      try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'CV'); } catch (_) {}
+    }
     htmlModel.setValue(tpl.html);
     cssModel.setValue(tpl.css);
   };
 
   // ---- Sélecteur de type de document (CV / Lettre) -------------------------
-  const _TYPE_STORE_PREFIX = 'html-to-pdf:type:';
-
-  const _LETTRE_SKELETON = `<div style="font-family: Georgia, 'Times New Roman', serif; max-width: 680px; margin: 40px auto; color: #222; line-height: 1.7; font-size: 14px;">
-
-  <div style="text-align: right; margin-bottom: 48px;">
-    <p style="margin: 0;">Prénom Nom<br>
-    Adresse, Ville<br>
-    email@example.com &middot; +33 6 00 00 00 00</p>
-    <p style="margin: 16px 0 0;">Ville, le JJ/MM/AAAA</p>
-  </div>
-
-  <div style="margin-bottom: 32px;">
-    <p style="margin: 0;"><strong>Nom de l'entreprise</strong><br>
-    Service Recrutement<br>
-    Adresse de l'entreprise</p>
-  </div>
-
-  <p><strong>Objet : Candidature au poste de [Intitulé du poste]</strong></p>
-
-  <p>Madame, Monsieur,</p>
-
-  <p>[Accroche : présentez-vous brièvement et expliquez pourquoi ce poste et cette entreprise vous intéressent particulièrement.]</p>
-
-  <p>[Argumentaire : décrivez vos compétences et expériences les plus pertinentes, avec des exemples concrets.]</p>
-
-  <p>[Conclusion : réaffirmez votre motivation, mentionnez votre disponibilité pour un entretien et remerciez pour l'attention portée à votre candidature.]</p>
-
-  <p>Dans l'attente de votre réponse, je reste à votre disposition pour tout échange.</p>
-
-  <p>Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.</p>
-
-  <br><br>
-  <p>Prénom Nom</p>
-
-</div>`;
-
-  function _docTypeKey(type) { return _TYPE_STORE_PREFIX + type.toLowerCase(); }
-
-  function _saveContentForType(type) {
-    if (!htmlModel) return;
-    try {
-      localStorage.setItem(_docTypeKey(type), JSON.stringify({
-        html: htmlModel.getValue(),
-        css: cssModel ? cssModel.getValue() : '',
-      }));
-    } catch (_) {}
-  }
-
-  function _loadContentForType(type) {
-    if (!htmlModel) return;
-    const raw = localStorage.getItem(_docTypeKey(type));
+  $('doc_type').addEventListener('change', function () {
+    const newType = this.value;
+    if (newType === _activeDocType) return;
+    
+    _activeDocType = newType;
+    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) {}
+    
+    const raw = localStorage.getItem(_docTypeKey(newType));
     if (raw) {
       try {
         const saved = JSON.parse(raw);
         htmlModel.setValue(saved.html || '');
         if (cssModel) cssModel.setValue(saved.css || '');
-        return;
       } catch (_) {}
+    } else {
+      if (newType === 'Lettre') {
+        htmlModel.setValue(_LETTRE_SKELETON);
+        if (cssModel) cssModel.setValue('');
+      } else if (newType === 'CV' || newType === 'Maître') {
+        htmlModel.setValue(TEMPLATES.sobre.html);
+        if (cssModel) cssModel.setValue(TEMPLATES.sobre.css);
+      } else {
+        htmlModel.setValue('');
+        if (cssModel) cssModel.setValue('');
+      }
     }
-    if (type === 'Lettre') {
-      htmlModel.setValue(_LETTRE_SKELETON);
-      if (cssModel) cssModel.setValue('');
-    }
-  }
-
-  let _activeDocType = $('doc_type').value || 'CV';
-  _saveContentForType(_activeDocType);
-
-  $('doc_type').addEventListener('change', function () {
-    const newType = this.value;
-    if (newType === _activeDocType) return;
-    _saveContentForType(_activeDocType);
-    _activeDocType = newType;
-    _loadContentForType(newType);
     refreshFilenamePreview();
   });
 
@@ -765,7 +861,9 @@ require(['vs/editor/editor.main'], function () {
     } catch (_) {}
 
     if (localEntry) {
-      $('doc_type').value    = localEntry.doc_type || 'CV';
+      _activeDocType = localEntry.doc_type || 'CV';
+      if ($('doc_type')) $('doc_type').value = _activeDocType;
+      try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) {}
       $('company').value     = localEntry.company  || '';
       $('role').value        = localEntry.role     || '';
       $('notes').value       = localEntry.notes    || '';
@@ -829,10 +927,14 @@ document.querySelectorAll('.template-card').forEach(card => {
 
     saveSnapshot('Avant nouveau CV');
 
+    _activeDocType = 'CV';
+    if ($('doc_type')) $('doc_type').value = 'CV';
+    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'CV'); } catch (_) {}
+
     if (htmlModel) htmlModel.setValue(tpl.html);
     if (cssModel)  cssModel.setValue(tpl.css);
     _resetTailorDiff();
-    setTimeout(_foldStyleBlocks, 300);
+    _foldStyleBlocks();
 
     ['company', 'role', 'filename', 'notes'].forEach(id => { const el = $(id); if (el) el.value = ''; });
     _syncJobDesc('');
@@ -854,12 +956,13 @@ $('clear').onclick = () => {
   if (htmlModel) htmlModel.setValue('');
   if (cssModel)  cssModel.setValue('');
   _resetTailorDiff();
-  setTimeout(_foldStyleBlocks, 300);
+  _foldStyleBlocks();
   ['company', 'role', 'filename', 'notes'].forEach(id => $(id).value = '');
   refreshFilenamePreview();
   try {
     localStorage.removeItem(STORAGE_KEY_HTML);
     localStorage.removeItem(STORAGE_KEY_CSS);
+    localStorage.removeItem(_docTypeKey(_activeDocType));
   } catch (_) {}
 };
 
@@ -1020,28 +1123,46 @@ function _restoreBase64InTailor(html) {
   return out;
 }
 
-// Fold tous les blocs <style> dans l'éditeur HTML (réduit le bruit visuel).
-function _foldStyleBlocks() {
-  if (!editor || !htmlModel) return;
-  const count = htmlModel.getLineCount();
-  const lines = [];
-  for (let i = 1; i <= count; i++) {
-    if (/<style[\s>]/i.test(htmlModel.getLineContent(i))) lines.push(i);
-  }
-  if (lines.length) editor.trigger('api', 'editor.fold', { selectionLines: lines });
-}
-
-// Construit le HTML complet à envoyer à Gemini en y intégrant le CSS de l'éditeur.
-// Si le HTML est un fragment sans <head>, le wrapper dans un document minimal.
+// Intègre le CSS dans le HTML avant envoi à Gemini (fragment ou document complet).
+// Si le HTML a déjà un <style>, on fusionne pour éviter un double bloc qui perturbe Gemini.
 function _buildTailorPayload(html, css) {
   if (!css || !css.trim()) return html;
   const safeCss = css.replace(/<\/style\s*>/gi, '<\\/style>');
   if (/<\/head>/i.test(html)) {
+    if (/<style[\s>]/i.test(html)) {
+      // Fusionner dans le <style> existant
+      return html.replace(/<\/style>/i, '\n' + safeCss + '\n</style>');
+    }
     return html.replace(/<\/head>/i, '<style>\n' + safeCss + '\n</style>\n</head>');
   }
   return '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>\n'
     + safeCss + '\n</style></head><body>\n' + html + '\n</body></html>';
 }
+
+// Extrait le contenu de la 1re balise <style> du HTML et renvoie {html, css}.
+// Le HTML retourné n'a plus de balise <style> inline.
+function _extractCssFromHtml(html) {
+  const m = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  if (!m) return { html, css: null };
+  return {
+    html: html.replace(/<style[^>]*>[\s\S]*?<\/style>\n?/i, '').trim(),
+    css:  m[1].trim(),
+  };
+}
+
+// Fold tous les blocs <style> dans l'éditeur HTML (réduit le bruit visuel).
+function _foldStyleBlocks() {
+  if (!editor || !htmlModel) return;
+  const doFold = () => {
+    if (!editor || !htmlModel) return;
+    const matches = htmlModel.findMatches(/<style[\s>]/i.source, false, true, false, null, true);
+    const lines = matches.map(m => m.range.startLineNumber);
+    if (lines.length) editor.trigger('api', 'editor.fold', { selectionLines: lines });
+  };
+  if (window.requestIdleCallback) requestIdleCallback(doFold, { timeout: 1000 });
+  else setTimeout(doFold, 100);
+}
+
 
 function _initLevelSelector(selectorId, onChange) {
   const el = $(selectorId);
@@ -1150,9 +1271,10 @@ function _appendProposals(proposals) {
 
     btnApply.onclick = async function() {
       await saveSnapshot('Avant chat IA');
-      htmlModel.setValue(p.html);
-      if (cssModel && p.css) cssModel.setValue(p.css);
-      setTimeout(_foldStyleBlocks, 300);
+      const { html: applyHtml, css: applyCss } = _extractCssFromHtml(p.html || '');
+      htmlModel.setValue(applyHtml);
+      if (cssModel) cssModel.setValue(applyCss !== null ? applyCss : (p.css || ''));
+      _foldStyleBlocks();
       _chatPreviewing = false;
       schedulePreview();
       btnPreview.disabled = true;
@@ -1607,6 +1729,50 @@ $('btn-delete-offer').addEventListener('click', () => {
 });
 
 // ============================================================
+// Extracteur d'offre d'emploi (URL → textarea)
+// ============================================================
+$('btn-extract-url').addEventListener('click', async () => {
+  const url = ($('job-url-input').value || '').trim();
+  if (!url) { showToast('Colle une URL d\'offre d\'emploi.', 'err'); return; }
+
+  const btn    = $('btn-extract-url');
+  const status = $('url-extract-status');
+  btn.disabled = true;
+  status.textContent = 'Extraction en cours…';
+  status.className   = 'url-extract-status busy';
+
+  try {
+    const resp = await fetch('/api/extract-job', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ url }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      status.textContent = data.error || 'Erreur lors de l\'extraction.';
+      status.className   = 'url-extract-status err';
+      return;
+    }
+    _syncJobDesc(data.text);
+    if (data.title) {
+      status.textContent = `✓ Extrait : ${data.title.slice(0, 60)}`;
+    } else {
+      status.textContent = `✓ ${data.text.length.toLocaleString()} caractères extraits`;
+    }
+    status.className = 'url-extract-status ok';
+    $('job-url-input').value = '';
+    // Ouvrir le panneau tailor si fermé
+    const tailorBody = $('tailor-body');
+    if (tailorBody && !tailorBody.classList.contains('open')) $('tailor-toggle').click();
+  } catch (e) {
+    status.textContent = 'Erreur réseau : ' + e.message;
+    status.className   = 'url-extract-status err';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ============================================================
 // Tailoring — adapter à une offre
 // ============================================================
 $('tailor-toggle').addEventListener('click', () => {
@@ -1620,12 +1786,36 @@ $('tailor-toggle').addEventListener('click', () => {
 $('btn-tailor').addEventListener('click', async () => {
   const jobDesc = $('job-desc-input').value.trim();
   if (!jobDesc) { showToast("Colle d'abord une offre d'emploi.", 'err'); return; }
-  if (!htmlModel || !htmlModel.getValue().trim()) {
-    showToast("Charge d'abord un CV dans l'éditeur.", 'err'); return;
+
+  const useMaster = $('tailor-use-master') && $('tailor-use-master').checked;
+  let sourceHtml = htmlModel ? htmlModel.getValue() : '';
+  let sourceCss = cssModel ? cssModel.getValue() : '';
+
+  if (useMaster) {
+    const rawMaster = localStorage.getItem(_docTypeKey('Maître'));
+    if (rawMaster) {
+      try {
+        const parsed = JSON.parse(rawMaster);
+        if (parsed.html && parsed.html.trim()) {
+          sourceHtml = parsed.html;
+          sourceCss = parsed.css || '';
+        } else {
+          showToast("Le CV Maître est vide.", 'err');
+          return;
+        }
+      } catch (_) {}
+    } else {
+      showToast("Aucun CV Maître trouvé.", 'err');
+      return;
+    }
   }
 
-  _tailorBeforeHtml = htmlModel.getValue();
-  _tailorBeforeCss  = cssModel ? cssModel.getValue() : '';
+  if (!sourceHtml || !sourceHtml.trim()) {
+    showToast("Charge d'abord un CV dans l'éditeur ou crée un CV Maître.", 'err'); return;
+  }
+
+  _tailorBeforeHtml = sourceHtml;
+  _tailorBeforeCss  = sourceCss;
   saveSnapshot('Avant tailoring');
 
   const btn    = $('btn-tailor');
@@ -1639,11 +1829,11 @@ $('btn-tailor').addEventListener('click', async () => {
   status.className   = 'tailor-status status-busy';
 
   try {
-    const strippedHtml = _stripBase64ForTailor(htmlModel.getValue());
-    const payloadHtml  = _buildTailorPayload(strippedHtml, cssModel ? cssModel.getValue() : '');
+    const strippedHtml = _stripBase64ForTailor(sourceHtml);
+    const payloadHtml  = _buildTailorPayload(strippedHtml, sourceCss);
     const adapted = await streamToMonaco(
       '/api/tailor',
-      { html: payloadHtml, job_desc: jobDesc, level: _tailorLevel },
+      { html: payloadHtml, job_desc: jobDesc, level: _tailorLevel, is_master: useMaster },
       getApiHeaders(),
       (partial) => {
         if (htmlModel) htmlModel.setValue(partial);
@@ -1651,20 +1841,112 @@ $('btn-tailor').addEventListener('click', async () => {
         status.className   = 'tailor-status status-busy';
       }
     );
-    const restoredAdapted = _restoreBase64InTailor(adapted);
-    if (htmlModel) htmlModel.setValue(restoredAdapted);
-    setTimeout(_foldStyleBlocks, 300);
+    const restored = _restoreBase64InTailor(adapted);
+    const { html: finalHtml, css: finalCss } = _extractCssFromHtml(restored);
+    if (htmlModel) htmlModel.setValue(finalHtml);
+    if (finalCss !== null && cssModel) cssModel.setValue(finalCss);
+    _foldStyleBlocks();
     showToast('CV adapté avec succès.', 'ok');
     status.textContent = '';
     status.className   = 'tailor-status';
     btnDiff.style.display = 'block';
-    _renderAts(restoredAdapted, jobDesc);
+    _renderAts(finalHtml, jobDesc);
   } catch (err) {
     showToast(err.message, 'err');
     status.textContent = err.message;
     status.className   = 'tailor-status status-err';
   } finally {
     btn.disabled = false;
+  }
+});
+
+// ============================================================
+// Pack candidature (lettre + email cohérents avec le CV)
+// ============================================================
+let _packLetterHtml = '';
+let _packLetterCss  = '';
+
+function _openPackModal() { $('modal-pack').classList.add('open'); }
+function _closePackModal() { $('modal-pack').classList.remove('open'); }
+
+$('close-modal-pack').addEventListener('click', _closePackModal);
+$('btn-pack-close').addEventListener('click', _closePackModal);
+$('modal-pack').addEventListener('click', (e) => { if (e.target === $('modal-pack')) _closePackModal(); });
+
+$('btn-pack-copy-email').addEventListener('click', async () => {
+  const txt = $('pack-email-text').value;
+  try {
+    await navigator.clipboard.writeText(txt);
+    showToast('Email copié dans le presse-papier.', 'ok');
+  } catch (_) {
+    $('pack-email-text').select();
+    showToast("Copie automatique impossible : sélectionne et copie manuellement.", 'err');
+  }
+});
+
+$('btn-pack-load-letter').addEventListener('click', async () => {
+  if (!htmlModel) return;
+  await saveSnapshot('Avant pack candidature');
+  _activeDocType = 'Lettre';
+  if ($('doc_type')) $('doc_type').value = 'Lettre';
+  try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'Lettre'); } catch (_) {}
+  htmlModel.setValue(_packLetterHtml);
+  if (cssModel) cssModel.setValue(_packLetterCss);
+  switchTab('html');
+  refreshFilenamePreview();
+  schedulePreview();
+  _closePackModal();
+  showToast('Lettre chargée dans l’éditeur (type « Lettre »).', 'ok');
+});
+
+$('btn-create-pack').addEventListener('click', async () => {
+  const jobDesc = $('job-desc-input').value.trim();
+  if (!jobDesc) { showToast("Colle d'abord une offre d'emploi.", 'err'); return; }
+
+  const sourceHtml = htmlModel ? htmlModel.getValue() : '';
+  if (!sourceHtml.trim()) { showToast("Charge d'abord un CV dans l'éditeur.", 'err'); return; }
+
+  const btn = $('btn-create-pack');
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Génération du pack…';
+
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 120000);
+
+  try {
+    // Retire le base64 (photo) pour alléger la requête : la lettre ne l'utilise pas.
+    const cleanHtml = sourceHtml.replace(/src="data:image\/[^"]{20,}"/g, 'src="[IMAGE_BASE64]"');
+    const resp = await fetch('/api/generate-pack', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: Object.assign({ 'Content-Type': 'application/json' }, getApiHeaders()),
+      body: JSON.stringify({
+        html:     cleanHtml,
+        css:      cssModel ? cssModel.getValue() : '',
+        job_desc: jobDesc,
+        company:  ($('company') || {}).value || '',
+        role:     ($('role') || {}).value || '',
+      }),
+    });
+    if (!resp.ok) {
+      let msg = 'Erreur serveur';
+      try { msg = (await resp.json()).error || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    const data = await resp.json();
+    _packLetterHtml = data.letter_html || '';
+    _packLetterCss  = data.letter_css || '';
+    $('pack-letter-frame').srcdoc = _buildPreviewHtml(_packLetterHtml, _packLetterCss);
+    $('pack-email-text').value = data.email || '';
+    _openPackModal();
+    showToast('Pack candidature généré.', 'ok');
+  } catch (err) {
+    showToast(err.name === 'AbortError' ? "Délai dépassé, réessaie." : err.message, 'err');
+  } finally {
+    clearTimeout(timeoutId);
+    btn.disabled = false;
+    btn.innerHTML = original;
   }
 });
 
@@ -1811,6 +2093,7 @@ function _renderAts(cvHtml, jobDesc) {
     missing.length    ? '<div class="ats-keywords-title">Mots-clés absents</div><div class="ats-pills">' + pillsMissing + '</div>' : '',
     '<div class="ats-keywords-title">Sections détectées</div>',
     '<div class="ats-sections">' + sectBadges + '</div>',
+    '<button type="button" class="ats-ai-btn" id="btn-ats-ai">🤖 Analyser avec l\'IA</button>',
   ].join('');
   panel.style.display = 'block';
 
@@ -1819,6 +2102,79 @@ function _renderAts(cvHtml, jobDesc) {
     const fill = panel.querySelector('.ats-bar-fill');
     if (fill) fill.style.width = fill.dataset.target + '%';
   });
+
+  const aiBtn = panel.querySelector('#btn-ats-ai');
+  if (aiBtn) aiBtn.addEventListener('click', _runAtsAI);
+}
+
+// ---- Score ATS piloté par l'IA (côté serveur, optionnel) ----
+
+async function _runAtsAI() {
+  const jobDesc = ($('job-desc-input') ? $('job-desc-input').value : '').trim();
+  const cvHtml  = htmlModel ? htmlModel.getValue() : '';
+  if (!cvHtml.trim()) { showToast("Charge d'abord un CV dans l'éditeur.", 'err'); return; }
+  if (!jobDesc)       { showToast("Colle l'offre d'emploi pour l'analyse IA.", 'err'); return; }
+
+  const btn = $('btn-ats-ai');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyse IA en cours...'; }
+
+  try {
+    const stripped = _stripBase64ForTailor(cvHtml);
+    const resp = await fetch('/api/ats-score', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, getApiHeaders()),
+      body: JSON.stringify({ html: stripped, job_desc: jobDesc }),
+    });
+    if (!resp.ok) {
+      let msg = 'Erreur serveur';
+      try { msg = (await resp.json()).error || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    _renderAtsAI(await resp.json());
+  } catch (err) {
+    showToast(err.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = "🤖 Analyser avec l'IA"; }
+  }
+}
+
+function _renderAtsAI(result) {
+  const panel = $('ats-panel');
+  if (!panel) return;
+
+  const score       = Math.max(0, Math.min(100, parseInt(result.score, 10) || 0));
+  const matched     = Array.isArray(result.matched_skills)       ? result.matched_skills       : [];
+  const missingHard = Array.isArray(result.missing_hard_skills)  ? result.missing_hard_skills  : [];
+  const missingNice = Array.isArray(result.missing_nice_to_have) ? result.missing_nice_to_have : [];
+
+  const cls      = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
+  const barColor = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
+  const esc      = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const pills    = (arr, klass) => arr.map(k => '<span class="ats-pill ' + klass + '">' + esc(k) + '</span>').join('');
+
+  panel.innerHTML = [
+    '<div class="ats-ai-badge">✨ Analyse IA</div>',
+    '<div class="ats-score-row">',
+    '  <div class="ats-score-circle ' + cls + '">' + score + '</div>',
+    '  <div class="ats-score-label">',
+    '    Score ATS (IA)',
+    '    <span>Adéquation réelle CV / offre</span>',
+    '  </div>',
+    '</div>',
+    '<div class="ats-bar"><div class="ats-bar-fill" style="width:0%;background:' + barColor + '" data-target="' + score + '"></div></div>',
+    missingHard.length ? '<div class="ats-keywords-title">⚠️ Compétences clés manquantes</div><div class="ats-pills">' + pills(missingHard, 'missing') + '</div>' : '',
+    missingNice.length ? '<div class="ats-keywords-title">Atouts bonus manquants</div><div class="ats-pills">' + pills(missingNice, 'bonus') + '</div>' : '',
+    matched.length     ? '<div class="ats-keywords-title">Compétences présentes</div><div class="ats-pills">' + pills(matched, 'match') + '</div>' : '',
+    '<button type="button" class="ats-ai-btn" id="btn-ats-ai">🔄 Relancer l\'analyse IA</button>',
+  ].join('');
+  panel.style.display = 'block';
+
+  requestAnimationFrame(() => {
+    const fill = panel.querySelector('.ats-bar-fill');
+    if (fill) fill.style.width = fill.dataset.target + '%';
+  });
+
+  const aiBtn = panel.querySelector('#btn-ats-ai');
+  if (aiBtn) aiBtn.addEventListener('click', _runAtsAI);
 }
 
 // ============================================================

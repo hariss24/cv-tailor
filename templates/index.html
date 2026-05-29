@@ -12,6 +12,27 @@
 <script>var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.css" />
 <style>
+/* ---- Extracteur URL offre ---- */
+.url-extract-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.url-extract-row input[type="url"]{
+  flex:1;padding:5px 8px;border-radius:7px;border:none;
+  background:var(--bg);color:var(--text);font-size:12px;font-family:inherit;
+  box-shadow:var(--neu-inset);min-width:0;
+}
+.url-extract-row input[type="url"]:focus{outline:none;box-shadow:var(--neu-inset),0 0 0 2px rgba(232,93,4,.2);}
+#btn-extract-url{
+  padding:5px 10px;border-radius:7px;border:1px solid rgba(128,128,128,.25);
+  background:var(--bg);color:var(--text);font-size:12px;font-family:inherit;
+  cursor:pointer;white-space:nowrap;box-shadow:var(--neu-raised-sm);flex-shrink:0;
+  transition:opacity .15s;
+}
+#btn-extract-url:hover{opacity:.8;}
+#btn-extract-url:disabled{opacity:.4;cursor:default;}
+.url-extract-status{font-size:11px;margin-bottom:4px;min-height:14px;}
+.url-extract-status.busy{color:var(--muted);}
+.url-extract-status.ok{color:#5dd39e;}
+.url-extract-status.err{color:#ff6b6b;}
+
 /* ---- Chat IA Panel ---- */
 .chat-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:900;}
 .chat-overlay.open{display:block;}
@@ -99,6 +120,35 @@
   .diff-modal-body{flex-direction:column;}
   .diff-pane-after{border-left:none;border-top:1px solid #2a3040;}
 }
+
+/* ===== Pack candidature modal ===== */
+.pack-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;align-items:center;justify-content:center;padding:3vh 3vw;box-sizing:border-box;}
+.pack-modal.open{display:flex;}
+.pack-modal-inner{background:#1a1f2e;border-radius:10px;width:100%;max-width:1100px;height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.pack-modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #2a3040;flex-shrink:0;}
+.pack-modal-title{font-size:14px;font-weight:600;color:#e8eaed;display:flex;align-items:center;gap:8px;}
+.pack-modal-close{cursor:pointer;font-size:26px;color:#9aa0a6;line-height:1;padding:0 6px;transition:color .15s;}
+.pack-modal-close:hover{color:#fff;}
+.pack-modal-body{display:flex;flex:1;overflow:hidden;min-height:0;}
+.pack-col{display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0;}
+.pack-col-letter{flex:1.4;}
+.pack-col-email{flex:1;border-left:1px solid #2a3040;}
+.pack-col-label{padding:7px 14px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#9aa0a6;background:#141824;border-bottom:1px solid #2a3040;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#pack-letter-frame{flex:1;border:none;width:100%;background:#fff;}
+#pack-email-text{flex:1;border:none;resize:none;width:100%;padding:14px;background:#0f1320;color:#e8eaed;font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.6;outline:none;}
+.pack-mini-btn{font-size:11px;padding:3px 9px;border-radius:6px;cursor:pointer;border:1px solid rgba(128,128,128,.35);background:transparent;color:#cfd2d6;font-family:inherit;transition:opacity .15s;}
+.pack-mini-btn:hover{opacity:.75;}
+.pack-modal-footer{display:flex;gap:10px;align-items:center;padding:12px 18px;border-top:1px solid #2a3040;flex-shrink:0;}
+.pack-btn{font-size:13px;padding:8px 16px;border-radius:8px;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s;}
+.pack-btn-primary{background:#1e8e6a;color:#fff;}
+.pack-btn-ghost{background:transparent;color:#9aa0a6;border:1px solid rgba(128,128,128,.35);}
+.pack-btn:hover{opacity:.85;}
+@media(max-width:900px){
+  .pack-modal{padding:0;}
+  .pack-modal-inner{border-radius:0;}
+  .pack-modal-body{flex-direction:column;}
+  .pack-col-email{border-left:none;border-top:1px solid #2a3040;}
+}
 </style>
 </head>
 <body>
@@ -142,6 +192,7 @@
       <select id="doc_type">
         <option value="CV" selected>CV</option>
         <option value="Lettre">Lettre</option>
+        <option value="Maître">CV Maître</option>
         <option value="Autre">Autre</option>
       </select>
     </div>
@@ -230,6 +281,7 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             Photo
           </button>
+          <button type="button" id="btn-print-mode" title="Simuler le rendu PDF (Aperçu impression)">@media print</button>
           <button type="button" id="refresh-preview">Rafraichir</button>
         </div>
       </div>
@@ -249,6 +301,12 @@
     </div>
     <div class="tailor-body" id="tailor-body">
       <div class="tailor-body-inner">
+        <div class="url-extract-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--muted)"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <input type="url" id="job-url-input" placeholder="URL de l'offre (Welcome to the Jungle, France Travail…)" autocomplete="off" />
+          <button type="button" id="btn-extract-url">Extraire</button>
+        </div>
+        <div class="url-extract-status" id="url-extract-status"></div>
         <div class="job-desc-toolbar">
           <select id="saved-offers-select" title="Charger une offre sauvegardée">
             <option value="">Offres sauvegardées...</option>
@@ -268,6 +326,15 @@
           <button type="button" class="level-btn active" data-level="adapte">Adapté</button>
           <button type="button" class="level-btn" data-level="hyper">Hyper-adapté</button>
         </div>
+        <div class="tailor-source-selector" style="margin-top: 8px; margin-bottom: 12px; font-size: 13px;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:var(--text);">
+            <input type="checkbox" id="tailor-use-master" checked />
+            Utiliser le CV Maître comme base (si disponible)
+          </label>
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: -4px;">
+          <span id="token-count-tailor" style="font-size: 10.5px; color: var(--muted);" title="Estimation des tokens consommés"></span>
+        </div>
         <button id="btn-tailor" class="tailor-btn" type="button">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           Adapter le CV
@@ -275,6 +342,13 @@
         <div class="tailor-status" id="tailor-status"></div>
         <button type="button" id="btn-show-diff" class="btn-show-diff">
           Voir les modifications
+        </button>
+        <div style="display: flex; justify-content: flex-end; margin-bottom: -4px; margin-top: 4px;">
+          <span id="token-count-pack" style="font-size: 10.5px; color: var(--muted);" title="Estimation des tokens consommés"></span>
+        </div>
+        <button id="btn-create-pack" class="tailor-btn" type="button" style="background:#1e8e6a;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
+          Créer le Pack candidature
         </button>
         <div class="ats-panel" id="ats-panel" style="display:none;"></div>
       </div>
@@ -358,8 +432,11 @@
       <p class="chat-examples">Ex : <em>Rends le CV plus senior</em> · <em>Corrige l'orthographe</em> · <em>Adapte pour chef de projet</em></p>
     </div>
   </div>
-  <div class="chat-input-area">
-    <textarea id="chat-input" placeholder="Ex : Rends ce CV plus professionnel…" rows="2"></textarea>
+  <div class="chat-input-area" style="flex-wrap: wrap; position: relative;">
+    <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 4px;">
+      <span id="token-count-chat" style="font-size: 10.5px; color: var(--muted);" title="Estimation des tokens consommés"></span>
+    </div>
+    <textarea id="chat-input" placeholder="Ex : Rends ce CV plus professionnel…" rows="2" style="flex:1;"></textarea>
     <button id="chat-send-btn" type="button" title="Envoyer (Entrée)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
     </button>
@@ -465,6 +542,36 @@
         <div class="diff-pane-label">Après</div>
         <iframe id="diff-frame-after" sandbox="allow-same-origin" class="diff-frame"></iframe>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Pack candidature -->
+<div id="modal-pack" class="pack-modal">
+  <div class="pack-modal-inner">
+    <div class="pack-modal-header">
+      <span class="pack-modal-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e8e6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>
+        Pack candidature
+      </span>
+      <span id="close-modal-pack" class="pack-modal-close" title="Fermer">&times;</span>
+    </div>
+    <div class="pack-modal-body">
+      <div class="pack-col pack-col-letter">
+        <div class="pack-col-label">Lettre de motivation</div>
+        <iframe id="pack-letter-frame" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="pack-col pack-col-email">
+        <div class="pack-col-label">
+          <span>Email d'accroche</span>
+          <button type="button" id="btn-pack-copy-email" class="pack-mini-btn">Copier</button>
+        </div>
+        <textarea id="pack-email-text" readonly></textarea>
+      </div>
+    </div>
+    <div class="pack-modal-footer">
+      <button type="button" id="btn-pack-load-letter" class="pack-btn pack-btn-primary">Charger la lettre dans l'éditeur</button>
+      <button type="button" id="btn-pack-close" class="pack-btn pack-btn-ghost">Fermer</button>
     </div>
   </div>
 </div>

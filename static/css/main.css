@@ -147,6 +147,10 @@ select:focus, input[type=text]:focus, textarea:focus {
 .pane-title .actions-mini button:active {
   box-shadow: var(--neu-inset);
 }
+.pane-title .actions-mini button.active {
+  color: var(--orange);
+  box-shadow: var(--neu-inset);
+}
 
 /* ---- Tabs ---- */
 .tabs {
@@ -420,7 +424,7 @@ button.ghost:active {
 .tailor-chevron { display: flex; align-items: center; transition: transform 0.25s ease; }
 .tailor-chevron.open { transform: rotate(180deg); }
 .tailor-body { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
-.tailor-body.open { max-height: 360px; }
+.tailor-body.open { max-height: 500px; }
 .tailor-body-inner { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 #job-desc-input { width: 100%; min-height: 80px; resize: vertical; font-size: 13px; }
 .tailor-btn {
@@ -609,6 +613,11 @@ button.ghost:active {
 .ats-section-badge { font-size: 11px; padding: 3px 9px; border-radius: 6px; box-shadow: var(--neu-raised-sm); }
 .ats-section-badge.found   { color: var(--success); }
 .ats-section-badge.missing { color: var(--error); }
+.ats-pill.bonus { color: var(--warning); }
+.ats-ai-badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--warning); margin-bottom: 8px; }
+.ats-ai-btn { width: 100%; margin-top: 12px; padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text); background: var(--bg); box-shadow: var(--neu-raised-sm); cursor: pointer; transition: color 0.2s; }
+.ats-ai-btn:hover:not(:disabled) { color: var(--warning); }
+.ats-ai-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* ---- Modal Nouveau CV — cartes de templates ---- */
 .template-cards { display: flex; gap: 14px; }

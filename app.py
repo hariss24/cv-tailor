@@ -9,8 +9,11 @@ Pour quitter :
 """
 
 import io
+import ipaddress
 import json as _json
+import logging as _logging
 import os
+import re as _re
 import secrets
 import socket
 import sys
@@ -20,6 +23,7 @@ import uuid
 import webbrowser
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote, urlparse, urlunparse
 
 try:
     import tkinter as tk
@@ -28,7 +32,7 @@ except ImportError:
     _HAS_TKINTER = False
 
 from flask import (
-    Flask, Response, abort, jsonify,
+    Flask, Response, abort, jsonify, redirect,
     render_template, request, send_file, session, stream_with_context,
 )
 
@@ -74,11 +78,101 @@ def _csrf_protect() -> None:
     ct = request.content_type or ""
     if "application/json" in ct:
         return  # safe : Content-Type non-simple bloque le CSRF cross-origin
-    if request.path.startswith("/api/pdf-to-html"):
-        client_token = request.headers.get("X-CSRF-Token", "")
-        server_token = session.get("_csrf", "")
-        if not server_token or not secrets.compare_digest(client_token, server_token):
-            abort(403)
+    # Tout autre Content-Type (multipart, form, text/plain) peut être envoyé
+    # cross-origin sans préflight : il DOIT présenter un jeton CSRF valide.
+    client_token = request.headers.get("X-CSRF-Token", "")
+    server_token = session.get("_csrf", "")
+    if not server_token or not secrets.compare_digest(client_token, server_token):
+        abort(403)
+
+
+# ---------------------------------------------------------------------------
+# Authentification (mode "remote" uniquement)
+# ---------------------------------------------------------------------------
+# En local (lancement desktop) : aucune authentification.
+# En remote (APP_MODE=remote ou variable RENDER présente) : tout est protégé
+# par un mot de passe unique (REMOTE_AUTH_PASSWORD), sauf la page de connexion.
+
+_PAGE_PATHS = {"/", "/history"}            # requêtes "navigateur" → redirige vers /login
+_AUTH_EXEMPT_PATHS = {"/login", "/logout"}
+
+_LOGIN_MAX_FAILURES = 10
+_LOGIN_WINDOW_S = 900  # 15 minutes
+_login_attempts: dict[str, list[float]] = {}
+_login_lock = threading.Lock()
+
+
+def _is_remote_mode() -> bool:
+    return os.environ.get("APP_MODE", "").lower() == "remote" or bool(os.environ.get("RENDER"))
+
+
+def _remote_password() -> str:
+    return os.environ.get("REMOTE_AUTH_PASSWORD") or os.environ.get("AUTH_PASSWORD") or ""
+
+
+def _login_rate_limit_ok() -> bool:
+    """True si l'IP courante n'a pas dépassé le nombre d'échecs autorisés."""
+    ip = request.remote_addr or "unknown"
+    now = time.time()
+    with _login_lock:
+        recent = [t for t in _login_attempts.get(ip, []) if now - t < _LOGIN_WINDOW_S]
+        _login_attempts[ip] = recent
+        return len(recent) < _LOGIN_MAX_FAILURES
+
+
+def _record_login_failure() -> None:
+    ip = request.remote_addr or "unknown"
+    with _login_lock:
+        _login_attempts.setdefault(ip, []).append(time.time())
+
+
+@app.before_request
+def _auth_protect():
+    if not _is_remote_mode():
+        return
+    if request.path.startswith("/static/") or request.path in _AUTH_EXEMPT_PATHS:
+        return
+    if session.get("_authed"):
+        return
+    if not _remote_password():
+        return jsonify({
+            "error": "Le serveur remote n'a pas de mot de passe configuré "
+                     "(REMOTE_AUTH_PASSWORD)."
+        }), 503
+    if request.method == "GET" and request.path in _PAGE_PATHS:
+        return redirect("/login?next=" + quote(request.path, safe="/"))
+    return jsonify({"error": "Authentication required."}), 401
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not _is_remote_mode():
+        return redirect("/")
+    if request.method == "GET":
+        return render_template("login.html")
+
+    password = _remote_password()
+    if not password:
+        return jsonify({
+            "error": "Le serveur remote n'a pas de mot de passe configuré "
+                     "(REMOTE_AUTH_PASSWORD)."
+        }), 503
+    if not _login_rate_limit_ok():
+        return jsonify({"error": "Trop de tentatives. Réessayez plus tard."}), 429
+
+    data = request.get_json(silent=True) or {}
+    if not secrets.compare_digest(str(data.get("password", "")), password):
+        _record_login_failure()
+        return jsonify({"error": "Invalid password."}), 401
+
+    session["_authed"] = True
+    return jsonify({"ok": True}), 200
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.pop("_authed", None)
+    return jsonify({"ok": True}), 200
 
 
 # ---------------------------------------------------------------------------
@@ -386,8 +480,27 @@ _SYSTEM_LETTRE_IMPORT = (
     "Squelette à remplir :\n" + _LETTRE_SKELETON
 )
 
+_PRESERVE_RULE = (
+    "RÈGLE PRIMORDIALE — PRÉSERVATION INTÉGRALE : "
+    "Tu dois retourner la TOTALITÉ du CV sans exception. "
+    "Il est ABSOLUMENT INTERDIT de supprimer, omettre ou masquer une seule section, "
+    "expérience, compétence, langue, formation ou centre d'intérêt présent dans le CV original. "
+    "Chaque section du CV original doit être présente dans ta réponse. "
+    "Tu adaptes le contenu — tu ne supprimes JAMAIS. "
+)
+
+_ELAGUE_RULE = (
+    "RÈGLE DE SÉLECTION (CV MAÎTRE) : "
+    "Tu reçois un CV 'Maître' exhaustif qui contient tout l'historique du candidat. "
+    "Ton rôle est d'ÉLAGUER et de SÉLECTIONNER uniquement ce qui est pertinent pour l'offre d'emploi. "
+    "Tu DOIS SUPPRIMER les expériences, compétences, ou projets qui n'ont aucun rapport avec le poste visé "
+    "pour que le CV final soit concis, percutant et tienne sur 1 à 2 pages maximum. "
+    "Conserve et mets en valeur ce qui est utile, retire le reste. "
+)
+
 _TAILOR_SYSTEMS = {
     "peu": (
+        _PRESERVE_RULE +
         "Tu reçois un CV en HTML et une offre d'emploi. "
         "Niveau d'adaptation : SUBTIL (peu adapté). "
         "Tu peux UNIQUEMENT modifier : "
@@ -405,6 +518,7 @@ _TAILOR_SYSTEMS = {
         "Le CV doit rester à 95% identique à l'original."
     ),
     "adapte": (
+        _PRESERVE_RULE +
         "Tu reçois un CV en HTML et une offre d'emploi. "
         "Niveau d'adaptation : MODÉRÉ (adapté). "
         "Tu peux : "
@@ -425,6 +539,7 @@ _TAILOR_SYSTEMS = {
         "modifier les dates, entreprises du parcours, intitulés de poste ou diplômes."
     ),
     "hyper": (
+        _PRESERVE_RULE +
         "Tu reçois un CV en HTML et une offre d'emploi. "
         "Niveau d'adaptation : MAXIMUM (hyper-adapté). "
         "Tu peux : "
@@ -510,7 +625,7 @@ def api_status():
 
 @app.route("/api/text-to-html", methods=["POST"])
 def api_text_to_html():
-    data     = request.get_json(force=True) or {}
+    data     = request.get_json(silent=True) or {}
     text     = (data.get("text") or "").strip()
     doc_type = (data.get("doc_type") or "CV").strip()
     if not text:
@@ -538,7 +653,7 @@ def api_pdf_to_html():
     if "file" not in request.files:
         return jsonify({"error": "Aucun fichier reçu."}), 400
     f = request.files["file"]
-    if not f.filename.lower().endswith(".pdf"):
+    if not f.filename or not f.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Le fichier doit être un PDF (.pdf)."}), 400
     pdf_bytes = f.read()
     if len(pdf_bytes) > MAX_PDF_BYTES:
@@ -582,10 +697,11 @@ def api_pdf_to_html():
 
 @app.route("/api/tailor", methods=["POST"])
 def api_tailor():
-    data     = request.get_json(force=True) or {}
+    data     = request.get_json(silent=True) or {}
     html     = (data.get("html") or "").strip()
     job_desc = (data.get("job_desc") or "").strip()
     level    = (data.get("level") or "adapte").strip()
+    is_master = bool(data.get("is_master", False))
     if level not in _TAILOR_SYSTEMS:
         level = "adapte"
     if not html or not job_desc:
@@ -597,6 +713,15 @@ def api_tailor():
         return err
 
     system_prompt = _TAILOR_SYSTEMS[level] + _COMMON_HTML_RULES
+    if is_master:
+        system_prompt = system_prompt.replace(_PRESERVE_RULE, _ELAGUE_RULE)
+        # Assouplir les interdictions strictes qui contredisent l'élagage
+        system_prompt = system_prompt.replace("INTERDIT : inventer ou supprimer des compétences,", "INTERDIT : inventer des compétences (mais tu peux en supprimer),")
+        system_prompt = system_prompt.replace("supprimer la section langues ou retirer une seule langue (toutes doivent rester),", "")
+        system_prompt = system_prompt.replace("supprimer ou modifier la section centres d'intérêt,", "")
+        system_prompt = system_prompt.replace("toucher à la section langues (doit rester intacte avec TOUTES les langues listées),", "")
+        system_prompt = system_prompt.replace("toucher à la section centres d'intérêt (doit rester intacte),", "")
+
     prompt = f"CV HTML :\n{html}\n\nOffre d'emploi :\n{job_desc}"
 
     def generate():
@@ -656,6 +781,330 @@ def api_editor_chat():
         return jsonify({"error": f"Erreur IA : {exc}"}), 500
 
     return jsonify(result)
+
+
+@app.route("/api/ats-score", methods=["POST"])
+def api_ats_score():
+    if request.content_length and request.content_length > _MAX_CHAT_PAYLOAD:
+        return jsonify({"error": "Payload trop grand (max 1 Mo)."}), 413
+
+    data     = request.get_json(silent=True) or {}
+    html     = (data.get("html") or "").strip()
+    job_desc = (data.get("job_desc") or "").strip()
+    if not html or not job_desc:
+        return jsonify({"error": "Le HTML du CV et la description du poste sont requis."}), 400
+
+    user_key = (request.headers.get("X-Api-Key") or "").strip() or None
+    err = _check_quota(user_key)
+    if err:
+        return err
+
+    try:
+        result = ai_engine.score_ats(cv_html=html, job_desc=job_desc, api_key=user_key)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 429
+    except Exception as exc:
+        return jsonify({"error": f"Erreur IA : {exc}"}), 500
+
+    return jsonify(result)
+
+
+@app.route("/api/generate-pack", methods=["POST"])
+def api_generate_pack():
+    if request.content_length and request.content_length > _MAX_CHAT_PAYLOAD:
+        return jsonify({"error": "Payload trop grand (max 1 Mo)."}), 413
+
+    data     = request.get_json(silent=True) or {}
+    html     = (data.get("html") or "").strip()
+    css      = (data.get("css") or "").strip()
+    job_desc = (data.get("job_desc") or "").strip()
+    company  = (data.get("company") or "").strip()
+    role     = (data.get("role") or "").strip()
+    if not html or not job_desc:
+        return jsonify({"error": "Le HTML du CV et la description du poste sont requis."}), 400
+    if len(html.encode()) + len(css.encode()) > _MAX_CHAT_PAYLOAD:
+        return jsonify({"error": "Document trop grand (max 1 Mo)."}), 413
+
+    user_key = (request.headers.get("X-Api-Key") or "").strip() or None
+    err = _check_quota(user_key)
+    if err:
+        return err
+
+    try:
+        result = ai_engine.generate_pack(
+            cv_html=html, cv_css=css, job_desc=job_desc,
+            company=company, role=role, api_key=user_key,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 429
+    except Exception as exc:
+        return jsonify({"error": f"Erreur IA : {exc}"}), 500
+
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
+# Extracteur d'offre d'emploi (scraping URL)
+# ---------------------------------------------------------------------------
+
+_logger = _logging.getLogger(__name__)
+
+_EXTRACT_MAX_CHARS = 15_000
+_EXTRACT_TIMEOUT_MS = 20_000
+_SCRAPE_SEMAPHORE = threading.Semaphore(2)
+
+# Toutes les plages IP à bloquer (SSRF) — RFC 1918, 6598, 3927, 5737, etc.
+_BLOCKED_NETWORKS: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = [
+    ipaddress.ip_network("0.0.0.0/8"),       # "This" network
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("100.64.0.0/10"),   # RFC 6598 CGN
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.0.0.0/24"),    # IETF protocol
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("198.18.0.0/15"),   # benchmarking RFC 2544
+    ipaddress.ip_network("224.0.0.0/4"),     # multicast
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
+    ipaddress.ip_network("::ffff:0:0/96"),   # IPv4-mapped IPv6
+]
+
+
+def _is_blocked_ip(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    # Normalise les adresses IPv4-mapped (::ffff:127.0.0.1 → 127.0.0.1)
+    # pour que le test d'appartenance aux réseaux IPv4 fonctionne correctement.
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_multicast or addr.is_unspecified:
+        return True
+    return any(addr in net for net in _BLOCKED_NETWORKS if addr.version == net.version)
+
+
+def _validate_url(url: str) -> tuple[str, str | None]:
+    """Valide l'URL et retourne (url_nettoyée, erreur_ou_None).
+
+    Supprime les credentials embarqués, vérifie le schéma et toutes les adresses
+    résolues (IPv4 + IPv6) contre la liste de plages bloquées.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return url, "URL invalide : seuls http et https sont autorisés."
+    hostname = parsed.hostname
+    if not hostname:
+        return url, "URL invalide : hôte manquant."
+
+    # Supprime les credentials (user:pass@host → host) avant de passer à Playwright
+    clean_netloc = hostname + (f":{parsed.port}" if parsed.port else "")
+    clean_url = urlunparse((parsed.scheme, clean_netloc, parsed.path, parsed.params, parsed.query, ""))
+
+    try:
+        # getaddrinfo couvre IPv4 et IPv6, contrairement à gethostbyname
+        results = socket.getaddrinfo(hostname, None)
+        for result in results:
+            addr = ipaddress.ip_address(result[4][0])
+            if _is_blocked_ip(addr):
+                return clean_url, "URL non autorisée."
+    except OSError:
+        return clean_url, "Impossible de résoudre l'hôte."
+
+    return clean_url, None
+
+
+def _make_route_guard():
+    """Retourne un handler Playwright qui re-valide l'IP au moment de chaque requête.
+
+    Défense en profondeur contre le DNS rebinding : la validation initiale peut
+    être contournée si le TTL DNS expire entre la vérification et la connexion.
+    """
+    def _guard(route, _request):
+        try:
+            req_host = urlparse(_request.url).hostname or ""
+            if req_host:
+                for result in socket.getaddrinfo(req_host, None):
+                    if _is_blocked_ip(ipaddress.ip_address(result[4][0])):
+                        route.abort("blockedbyclient")
+                        return
+        except Exception:
+            pass
+        route.continue_()
+    return _guard
+
+
+def _scrape_job_text(url: str) -> tuple[str, str]:
+    """Scrape une page d'offre d'emploi via Playwright. Retourne (texte, titre)."""
+    from playwright.sync_api import sync_playwright
+
+    if not _SCRAPE_SEMAPHORE.acquire(timeout=5):
+        raise RuntimeError("Trop de requêtes simultanées. Réessayez dans quelques secondes.")
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(
+                    user_agent="Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36"
+                )
+                page.route("**/*", _make_route_guard())
+                page.goto(url, wait_until="domcontentloaded", timeout=_EXTRACT_TIMEOUT_MS)
+                page.wait_for_timeout(1500)
+                title = page.title() or ""
+
+                page.evaluate("""() => {
+                    const noise = ['nav','header','footer','aside','script','style',
+                        '[class*="cookie"]','[class*="Cookie"]','[id*="cookie"]',
+                        '[class*="banner"]','[class*="modal"]','[class*="popup"]',
+                        '[class*="sidebar"]','[class*="Sidebar"]',
+                        '[role="navigation"]','[role="banner"]','[role="complementary"]'];
+                    noise.forEach(s => {
+                        try { document.querySelectorAll(s).forEach(el => el.remove()); } catch(_) {}
+                    });
+                }""")
+
+                text = page.evaluate("""() => {
+                    const candidates = [
+                        document.querySelector('[class*="job-description"]'),
+                        document.querySelector('[class*="offer-description"]'),
+                        document.querySelector('[class*="jobDescription"]'),
+                        document.querySelector('[class*="posting-description"]'),
+                        document.querySelector('[data-qa="job-description"]'),
+                        document.querySelector('article'),
+                        document.querySelector('main'),
+                        document.body,
+                    ];
+                    for (const el of candidates) {
+                        const t = el && el.innerText && el.innerText.trim();
+                        if (t && t.length > 100) return t;
+                    }
+                    return '';
+                }""")
+
+                text = _re.sub(r"\n{3,}", "\n\n", text or "").strip()
+                
+                is_blocked = (
+                    len(text) < 200 or 
+                    "Sign Up" in title or 
+                    "Connexion" in title or 
+                    "S'inscrire" in title or
+                    "Security" in title or 
+                    "Cloudflare" in title
+                )
+
+                if is_blocked:
+                    import urllib.request
+                    try:
+                        req = urllib.request.Request(
+                            f"https://r.jina.ai/{url}",
+                            headers={"User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36"}
+                        )
+                        jina_resp = urllib.request.urlopen(req, timeout=15).read().decode('utf-8')
+                        if len(jina_resp) > 500 and "Sign Up | LinkedIn" not in jina_resp and "Connexion | LinkedIn" not in jina_resp and "S'inscrire" not in jina_resp and "Requête bloquée" not in jina_resp and "Vous avez été bloqué" not in jina_resp:
+                            # Nettoyage du Markdown pour réduire le bruit (menus, images, listes d'autres offres)
+                            jina_resp = _re.sub(r'!\[[^\]]*\]\([^)]+\)', '', jina_resp) # Supprime les images
+                            jina_resp = _re.sub(r'\[([^\]]*)\]\([^)]+\)', r'\1', jina_resp) # Garde le texte des liens (même vides)
+                            
+                            footer_markers = [
+                                "annonces similaires", "offres similaires", "ces offres peuvent",
+                                "plan du site", "gestion des cookies", "mentions légales",
+                                "inscription à la newsletter", "politique de confidentialité"
+                            ]
+                            nav_noise = [
+                                "espace candidat", "espace entreprise", "déposer son cv", "nouvelle recherche",
+                                "qui sommes-nous", "répondre en ligne", "connexion inscription", "mot de passe oublié",
+                                "entreprises qui recrutent", "faq des", "enregistrer vos annonces", "nos tarifs",
+                                "inscriptionconnexion", "taille du texte"
+                            ]
+                            exact_noise = {
+                                "×", "menu", "offres d'emploi", "statistiques", "contact", 
+                                "news les dernières news", "aa+aa-", "imprimer", "site internet",
+                                "actualité", "vidéos", "défilés", "galeries", "podcasts", "agenda", "partenaires"
+                            }
+                            
+                            lines = []
+                            for line in jina_resp.split('\n'):
+                                line_clean = line.strip()
+                                content = line_clean.lstrip('*>- ').strip()
+                                line_lower = content.lower()
+                                
+                                # Coupe la fin du document dès qu'on tombe sur le footer ou les suggestions
+                                if any(marker in line_lower for marker in footer_markers) and len(lines) > 10:
+                                    break
+                                    
+                                # Ignore les puces très courtes typiques de menus ou annonces annexes
+                                if line_clean.startswith('*'):
+                                    words = content.split()
+                                    if len(words) < 5: # Puce très courte (Menu)
+                                        continue
+                                    if 'il y a' in line_lower or 'news' in line_lower or 'offre' in line_lower or 'dans quelques' in line_lower:
+                                        continue
+                                
+                                # Ignore les lignes de navigation pures
+                                if len(content) < 40 and any(nav in line_lower for nav in nav_noise):
+                                    continue
+                                    
+                                # Retire les lignes inutiles isolées
+                                if line_lower in exact_noise:
+                                    continue
+                                    
+                                # Ignorer les lignes de fil d'Ariane
+                                if '›' in line_clean and 'accueil' in line_lower:
+                                    continue
+                                    
+                                lines.append(line_clean)
+                                
+                            text = '\n'.join(lines)
+                            text = _re.sub(r'\n{3,}', '\n\n', text).strip()
+                            for line in text.split('\n')[:10]:
+                                if line.startswith("Title: "):
+                                    title = line[7:].strip()
+                                    break
+                    except Exception as e:
+                        _logger.warning("Jina Reader fallback failed: %s", str(e))
+                
+                # Ultime vérification : si le texte final est un message de blocage Cloudflare/Datadome
+                if "Requête bloquée" in text or "Vous avez été bloqué" in text or "Just a moment" in text or "Cloudflare" in text:
+                    raise ValueError("BLOCKED")
+
+                return text[:_EXTRACT_MAX_CHARS], title
+            finally:
+                browser.close()
+    finally:
+        _SCRAPE_SEMAPHORE.release()
+
+
+@app.route("/api/extract-job", methods=["POST"])
+def api_extract_job():
+    data = request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"error": "URL vide."}), 400
+
+    clean_url, err = _validate_url(url)
+    if err:
+        return jsonify({"error": err}), 400
+
+    try:
+        text, title = _scrape_job_text(clean_url)
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 429
+    except ValueError as e:
+        if str(e) == "BLOCKED":
+            domain = urlparse(clean_url).hostname or ""
+            domain = domain.replace("www.", "")
+            return jsonify({"error": f"La requête a été bloquée par le système de protection anti-bot de {domain}. Collez le contenu de l'offre directement dans le champ de texte."}), 422
+        return jsonify({"error": str(e)}), 400
+    except Exception:
+        _logger.exception("Erreur scraping url=%s", clean_url)
+        return jsonify({"error": "Impossible d'extraire la page."}), 502
+
+    if not text:
+        return jsonify({"error": "Aucun contenu trouvé. La page requiert peut-être une connexion."}), 422
+
+    return jsonify({"text": text, "title": title})
 
 
 # ---------------------------------------------------------------------------

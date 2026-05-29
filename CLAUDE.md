@@ -15,56 +15,121 @@ Run the web UI (opens browser on http://127.0.0.1:5050 + a tkinter control windo
 python app.py
 ```
 
-Run the MCP server standalone (it speaks stdio JSON-RPC, useful for debugging — Claude desktop spawns it on its own):
+Run the MCP server standalone:
 ```bash
 python mcp_server.py
 ```
 
-Quick syntax check across all Python modules:
+Run the test suite:
 ```bash
-python -m py_compile app.py mcp_server.py archive.py pdf_engine.py api/index.py
+pytest
 ```
 
-There is no test suite. When validating changes, write a temporary `test_*.py` script that exercises the relevant entry point (Flask via `urllib.request` against `http://127.0.0.1:5050`, MCP via `subprocess.Popen` + JSON-RPC over stdin/stdout), run it, then delete it.
+Quick syntax check across all Python modules:
+```bash
+python -m py_compile app.py mcp_server.py archive.py pdf_engine.py ai_engine.py quota.py
+```
 
 ## Architecture
 
-Two independent frontends and a Serverless API share a single rendering and archival backend:
+Three entry points share a common rendering/archive backend:
 
 ```text
-Browser ──HTTP──▶ app.py (Flask + tkinter)        ┐
-                                                   ├──▶ pdf_engine.html_to_pdf_bytes()  (sync Playwright)
-Claude desktop ──stdio MCP──▶ mcp_server.py       ┘   ──▶ archive.save_document()       (local fs + history.json)
-                                                                │
-Vercel Serverless ──HTTP──▶ api/index.py          ──────────────┼─▶ Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN)
+Browser ──HTTP──▶ app.py (Flask + tkinter)     ┐
+                                                ├──▶ pdf_engine.html_to_pdf_bytes()
+Claude desktop ──stdio MCP──▶ mcp_server.py    ┘   ──▶ archive.save_document()
+                                                          │
+                                               ┌──────────┘
+                                               ├── SQLite (local): ~/Documents/CV-Archive/history.db
+                                               └── MongoDB (serverless, if MONGODB_URI set)
 ```
 
-`pdf_engine.py` is the **only** place that talks to Playwright. It exposes one sync function `html_to_pdf_bytes(html, page_format, margin, background) -> bytes`. Anything that needs PDF rendering must go through it.
+> Note: `api/index.py` (Vercel serverless entry point) has been removed. The `api/` folder is empty.
 
-`archive.py` handles storage. 
-- In **Local Mode**: writes to disk under `~/Documents/CV-Archive/`. It owns `history.json`.
-- In **Serverless Mode** (Vercel / AWS Lambda): `/tmp` is read-only except for `/tmp/CV-Archive/`. It detects this via environment variables (`VERCEL`).
-- **Blob Storage**: If `BLOB_READ_WRITE_TOKEN` is present, it uploads generated PDFs and HTML to Vercel Blob Storage, returning permanent URLs (`pdf_blob_url`, `html_blob_url`).
+### Modules
 
-`app.py` is a single Flask file containing the local launcher and the UI.
-- The two HTML pages (`PAGE`, `HISTORY_PAGE`) are inline triple-quoted strings.
-- Uses Monaco editor on the left and a sandboxed `<iframe srcdoc>` preview on the right.
-- **Mobile Responsive**: The layout stacks vertically under 768px. The Javascript splitter (`initSplitter`) adapts dynamically to handle `touchmove` and vertical resizing.
-- **Photo Base64 Injection**: Local images are encoded to Base64 in JavaScript and injected into the editor using Monaco's `insertSnippet`. It targets `<!-- URL_DE_VOTRE_PHOTO_ICI -->` or inserts at the cursor. Large Base64 strings are wrapped in `<!-- #region Photo_Base64 --> ... <!-- #endregion -->` to allow native editor code folding.
-- **AI Assistant**: A modal that generates ChatGPT/Claude prompts based on the current template and job offer. The `job_desc` field is sent to `/convert` and permanently saved in the archive history.
+**`pdf_engine.py`** — PDF rendering. Two backends, auto-selected:
+- Playwright (default, local) — Chromium, high fidelity
+- WeasyPrint (serverless / forced via `PDF_ENGINE=weasyprint`) — pure Python, no Chromium
 
-`api/index.py` is the Vercel Serverless entry point. It wraps `app.py` using `werkzeug.middleware.dispatcher`.
+Exposes one public function: `html_to_pdf_bytes(html, page_format, margin, background) -> bytes`.
 
-`mcp_server.py` uses `FastMCP` and exposes PDF conversion tools.
+**`archive.py`** — storage abstraction.
+- **Local**: SQLite WAL (`~/Documents/CV-Archive/history.db`). One-shot migration from legacy `history.json` runs automatically on first start.
+- **Serverless** (`RENDER` or `AWS_LAMBDA_FUNCTION_NAME` env var): `/tmp/CV-Archive/history.db`.
+- **MongoDB** (`MONGODB_URI` env var): replaces SQLite entirely. Detected via `_IS_SERVERLESS`.
+- `OWNER = ""` in `archive.py` — add a name there if you want it in generated filenames.
+
+**`ai_engine.py`** — AI calls (Gemini + Anthropic), streaming and non-streaming.
+- Default model: `GEMINI_MODEL` env var, falls back to `gemini-3.1-flash-lite`.
+- Key routing: keys starting with `sk-ant-` → Anthropic (claude-haiku-4-5); otherwise → Gemini.
+- Anthropic does not support image input — PDF conversion requires a Gemini key.
+- Users can pass their own key via the `X-Api-Key` request header; otherwise the server `GEMINI_API_KEY` env var is used.
+
+**`quota.py`** — in-memory daily counter for server-key usage. Default limit: 50 req/day, overridable via `DAILY_QUOTA` env var. Thread-safe. Resets at midnight. User-supplied keys bypass the quota.
+
+**`app.py`** — Flask application + local launcher (tkinter control window).
+- Templates are in `templates/` (Jinja2): `index.html`, `history.html`, `login.html`.
+- Uses Monaco editor + sandboxed `<iframe srcdoc>` preview.
+- Mobile responsive: layout stacks vertically under 768 px.
+- Photo Base64 injection: targets `<!-- URL_DE_VOTRE_PHOTO_ICI -->` or inserts at cursor. Large base64 strings are wrapped in `<!-- #region Photo_Base64 -->` for editor code folding.
+
+**`mcp_server.py`** — FastMCP server. Tools: `convert_html_to_pdf`, `list_recent_documents`, `get_archive_dir`.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Main editor page |
+| GET | `/history` | History page |
+| POST | `/convert` | HTML → PDF download. Returns PDF + `X-Archive-Entry` header (JSON). Does **not** save to server — archive is client-side (IndexedDB). |
+| GET | `/api/history/<doc_id>/html` | Serve archived HTML from disk (legacy fallback for pre-IndexedDB entries). |
+| GET | `/api/status` | Quota and API key status. |
+| POST | `/api/text-to-html` | Text/CV → filled HTML skeleton. SSE streaming. |
+| POST | `/api/pdf-to-html` | PDF pages → filled HTML skeleton (Gemini only, multipart). SSE streaming. |
+| POST | `/api/tailor` | Adapt HTML CV to a job offer (3 levels: `peu`/`adapte`/`hyper`). SSE streaming. |
+| POST | `/api/editor-chat` | AI chat for CV editing. Returns `{ reply, proposals }` JSON (non-streaming). |
+
+## Security
+
+**CSRF**: JSON endpoints (`Content-Type: application/json`) are implicitly safe against CSRF. The multipart endpoint `/api/pdf-to-html` requires the `X-CSRF-Token` header matching the session token returned by `_get_csrf_token()`.
+
+**Input validation**: `VALID_FORMATS` and `VALID_MARGINS` whitelists in `pdf_engine.py` prevent CSS injection. `MAX_HTML_BYTES` = 8 MB, `MAX_PDF_BYTES` = 20 MB.
+
+**Filename sanitization**: `_safe_filename()` in `archive.py` prevents path traversal and Windows reserved names.
+
+## Tests
+
+Test suite uses pytest. Files in `tests/`:
+- `test_ai_engine.py` — streaming and non-streaming AI calls
+- `test_archive.py` — SQLite CRUD, migration from JSON
+- `test_auth.py` — CSRF protection
+- `test_editor_chat.py` — AI chat endpoint
+- `test_endpoints.py` — Flask routes
+- `test_pdf_engine.py` — Playwright and WeasyPrint backends
+- `test_quota.py` — daily counter, reset logic
 
 ## Conventions and gotchas
 
-- `PAGE` in `app.py` is a **raw string** (`r"""..."""`) because the inline JS contains regex literals with `\w` and `\s` — without `r`, Python 3.12+ emits `SyntaxWarning`.
-- The web UI's `/convert` endpoint always archives. Don't add a "skip archive" flag.
-- **History Fallback**: The frontend `load()` prioritizes `localStorage` over the `/api/history` route because the serverless environment loses local disk state between cold starts.
-- `OWNER = "Hariss"` in `archive.py` is hardcoded into filenames. Change it there if reusing the project for someone else.
-- `app.py` calls `os.startfile()` and `subprocess.run(["explorer", "/select,", ...])` — Windows-only. These are hidden from the UI when running on Vercel.
+- **Templates in `templates/`**: pages are Jinja2 files, not inline strings. The old `PAGE`/`HISTORY_PAGE` raw string approach has been replaced.
+- **SSE streaming**: AI endpoints yield `data: <json>\n\n` chunks; final chunk is `data: [DONE]\n\n`; errors are `data: [ERROR] <msg>\n\n`.
+- **History fallback**: `IndexedDB` is the source of truth in the browser. The `/api/history/<id>/html` route is only for documents created before the migration to 100%-browser storage.
+- **Archive does not save on `/convert`**: PDF conversion only returns the file as a download + a JSON header. The browser is responsible for persisting the entry in IndexedDB. `archive.save_document()` is only called by the MCP server.
+- **`OWNER`** in `archive.py` is an empty string — set it to inject a name into generated PDF filenames.
+- `app.py` calls `os.startfile()` and `subprocess.run(["explorer", ...])` — Windows-only.
+- After any change to `mcp_server.py`, restart Claude desktop fully.
 
 ## MCP integration
 
-Claude desktop config lives at `%APPDATA%\Claude\claude_desktop_config.json` (Windows). The `mcpServers.html-to-pdf` entry already points to `mcp_server.py`. After any change to `mcp_server.py`, restart Claude desktop fully to pick it up.
+Claude desktop config: `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+
+```json
+{
+  "mcpServers": {
+    "html-to-pdf": {
+      "command": "python",
+      "args": ["C:\\Users\\tahet\\projects\\html-to-pdf\\mcp_server.py"]
+    }
+  }
+}
+```

@@ -26,7 +26,13 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 
 ### Éditeur & UI
 - [x] Éditeur Monaco avec preview HTML en temps réel
+- [x] Toggle `@media print` sur la preview (simuler le rendu PDF sans exporter)
+- [x] Champ CSS séparé dans l'éditeur (onglets HTML / CSS)
+- [x] Diff visuel avant/après adaptation IA
+- [x] Historique de versions par CV (Snapshots automatiques/manuels)
+- [x] Toast notifications (remplace les statuts discrets)
 - [x] Auto-collapse des images base64 au chargement (évite de noyer l'éditeur)
+
 - [x] Strip base64 des payloads envoyés à l'IA (réduit les tokens consommés)
 - [x] Indicateur de chargement animé pendant les appels IA
 - [x] Timeout 120s sur les appels Gemini avec message d'erreur clair
@@ -41,27 +47,21 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 
 ## 🔵 Priorité haute — à faire
 
-- [ ] **Diff visuel avant/après adaptation IA**
-  Montrer côté à côté ce que l'IA a modifié. Indispensable pour valider rapidement une adaptation sans lire tout le CV.
+- [x] **Score ATS piloté par l'IA** (optionnel, côté serveur)
+  L'IA extrait les vrais prérequis du poste (hard skills, nice-to-have) et retourne un JSON `{ score, matched_skills, missing_hard_skills, missing_nice_to_have }`. Endpoint `POST /api/ats-score` (`ai_engine.score_ats`), bouton « 🤖 Analyser avec l'IA » dans le panneau ATS (le score lexical gratuit reste affiché par défaut).
 
-- [ ] **Score ATS piloté par l'IA** (optionnel, côté serveur)
-  L'IA extrait les vrais prérequis du poste (hard skills, nice-to-have) et retourne un JSON `{ score, matched_skills, missing_hard_skills }`. Beaucoup plus précis que le matching lexical actuel.
-
-- [ ] **Compteur de tokens estimé** avant envoi
+- [x] **Compteur de tokens estimé** avant envoi
   Les CVs avec photo base64 sont énormes. Afficher "≈ 12 000 tokens" aide l'utilisateur à comprendre sa consommation.
+
+- [x] **Tirets-bas dans les noms de fichier qui remplace les espaces et les apostrophes**
+  Par exemple: "CV de John Doe" -> "CV_de_John_Doe.pdf" dans les champs entreprise ou poste
 
 ---
 
 ## 🟡 Priorité moyenne — bonnes idées
 
-- [ ] **Historique de versions par CV**
-  Pouvoir revenir à une version antérieure sans chercher dans l'archive. Utile après une adaptation ratée.
-
 - [ ] **Raccourcis clavier**
   `Ctrl+Enter` = convertir PDF, `Ctrl+S` = sauvegarder brouillon, `Ctrl+Shift+A` = lancer ATS.
-
-- [ ] **Toast notifications**
-  Remplacer le `#status` discret par des toasts en bas de l'écran (succès / erreur / info).
 
 - [ ] **Modèle IA upgradeable**
   Permettre de choisir le modèle Gemini (Flash Lite / Flash / Pro) selon le besoin. Pro pour l'adaptation hyper, Lite pour le chat rapide.
@@ -75,11 +75,33 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 
 - [ ] Export `.docx` — certains recruteurs exigent encore Word
 - [ ] Présets de thème CSS (Moderne / Classique / Minimal) en un clic
-- [ ] Champ CSS séparé dans l'éditeur (onglets HTML / CSS)
 - [ ] Drag & drop d'un fichier `.html` ou `.md` dans l'éditeur
 - [ ] Sidebar "Récents" dans l'éditeur (5 derniers CVs)
-- [ ] Toggle `@media print` sur la preview (simuler le rendu PDF)
 - [ ] Import depuis LinkedIn (très complexe, dépend de l'API)
+
+---
+
+## 💡 Nouvelles features "Killer" (À évaluer)
+
+- [ ] **📏 L'Ajustement Magique (Auto-Fit Page)**
+  *Problème :* Le texte déborde légèrement sur une deuxième page, obligeant l'utilisateur à ajuster manuellement les marges et la police pendant de longues minutes.
+  *Solution :* Un algorithme qui calcule la hauteur réelle du contenu et ajuste dynamiquement des variables CSS globales (ex: `--base-font-size`) pour que le CV tienne parfaitement et automatiquement sur une seule page A4.
+
+- [ ] **🧲 Le "White-Fonting" Intelligent (Hack ATS)**
+  *Problème :* L'ATS signale des mots-clés manquants, mais l'utilisateur ne veut pas les forcer artificiellement dans le texte visible au risque d'alerter le recruteur.
+  *Solution :* Une option "Booster ATS invisible" qui injecte automatiquement les mots-clés manquants en police 1px, blanche sur fond blanc, à la fin du document lors de l'export PDF. L'ATS les lit, l'humain ne voit rien.
+
+- [x] **🎯 Génération du "Pack Candidature" (CV + Lettre + Mail unifiés)**
+  *Problème :* Le CV est beau, mais la lettre de motivation envoyée en parallèle est souvent un vieux document Word basique, cassant la cohérence visuelle.
+  *Solution :* Bouton « Créer le Pack candidature » dans le panneau d'adaptation. Génère via `POST /api/generate-pack` (`ai_engine.generate_pack`) une lettre de motivation reprenant la police/couleur d'accent/header du CV adapté + un brouillon d'email d'accroche. Modale d'aperçu : prévisualisation de la lettre, email copiable, et chargement de la lettre dans l'éditeur (type « Lettre »).
+
+- [ ] **🕵️ "Roast my CV" & Prépa Entretien**
+  *Problème :* Le candidat a passé le filtre RH grâce au CV, mais ne sait pas quelles questions pièges le recruteur prépare en voyant son profil.
+  *Solution :* Un onglet "Prépa Entretien" où l'IA croise le profil avec l'offre pour identifier les faiblesses perçues et générer des questions d'entretien probables avec des suggestions de défense.
+
+- [x] **🌐 Extracteur Magique d'Offre (Scraper URL)**
+  *Problème :* Le copier-coller d'offres LinkedIn ou Welcome to the Jungle ramène beaucoup de texte parasite (menus, boutons) qui perturbe l'IA.
+  *Solution :* Un champ pour coller directement l'URL de l'offre. L'outil scrape la page web, nettoie le bruit, et extrait uniquement les missions et prérequis structurés.
 
 ---
 
@@ -91,4 +113,4 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 
 ---
 
-*Dernière mise à jour : 2026-05-24*
+*Dernière mise à jour : 2026-05-29*
