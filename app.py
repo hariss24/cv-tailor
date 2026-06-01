@@ -847,6 +847,78 @@ def api_generate_pack():
     return jsonify(result)
 
 
+@app.route("/api/tailor-resume", methods=["POST"])
+def api_tailor_resume():
+    if request.content_length and request.content_length > _MAX_CHAT_PAYLOAD:
+        return jsonify({"error": "Payload trop grand (max 1 Mo)."}), 413
+
+    data     = request.get_json(silent=True) or {}
+    resume   = data.get("resume")
+    job_desc = (data.get("job_desc") or "").strip()
+    level    = (data.get("level") or "adapte").strip()
+    if level not in ("peu", "adapte", "hyper"):
+        level = "adapte"
+    if not isinstance(resume, dict) or not job_desc:
+        return jsonify({"error": "Le CV structuré (resume) et l'offre d'emploi sont requis."}), 400
+
+    user_key = (request.headers.get("X-Api-Key") or "").strip() or None
+    err = _check_quota(user_key)
+    if err:
+        return err
+
+    try:
+        result = ai_engine.tailor_resume(resume, job_desc, level, api_key=user_key)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 429
+    except Exception as exc:
+        return jsonify({"error": f"Erreur IA : {exc}"}), 500
+
+    return jsonify(result)
+
+
+@app.route("/api/pdf-to-resume", methods=["POST"])
+def api_pdf_to_resume():
+    if "file" not in request.files:
+        return jsonify({"error": "Aucun fichier reçu."}), 400
+    f = request.files["file"]
+    if not f.filename or not f.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Le fichier doit être un PDF (.pdf)."}), 400
+    pdf_bytes = f.read()
+    if len(pdf_bytes) > MAX_PDF_BYTES:
+        return jsonify({"error": "PDF trop volumineux (max 20 Mo)."}), 413
+
+    user_key = (request.headers.get("X-Api-Key") or "").strip() or None
+    err = _check_quota(user_key)
+    if err:
+        return err
+
+    import fitz
+    doc = None
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        images = [doc[i].get_pixmap(dpi=150).tobytes("png") for i in range(len(doc))]
+    except Exception as exc:
+        if doc is not None:
+            doc.close()
+        return jsonify({"error": f"PDF illisible : {exc}"}), 400
+    finally:
+        if doc is not None:
+            doc.close()
+
+    try:
+        result = ai_engine.pdf_to_resume(images, api_key=user_key)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 429
+    except Exception as exc:
+        return jsonify({"error": f"Erreur IA : {exc}"}), 500
+
+    return jsonify(result)
+
+
 # ---------------------------------------------------------------------------
 # Extracteur d'offre d'emploi (scraping URL)
 # ---------------------------------------------------------------------------

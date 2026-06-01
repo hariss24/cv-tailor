@@ -39,9 +39,9 @@ function flashAutosave() {
 // Constantes de stockage
 // ============================================================
 const STORAGE_KEY_HTML = 'html-to-pdf:draft:html';
-const STORAGE_KEY_CSS  = 'html-to-pdf:draft:css';
-const STORAGE_KEY_TAB  = 'html-to-pdf:draft:tab';
-const HISTORY_KEY      = 'cv-history';
+const STORAGE_KEY_CSS = 'html-to-pdf:draft:css';
+const STORAGE_KEY_TAB = 'html-to-pdf:draft:tab';
+const HISTORY_KEY = 'cv-history';
 
 // Jeton CSRF (pour les requêtes multipart/form-data)
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -78,7 +78,7 @@ const TEMPLATES = {
       <span class="entry-list__title">Poste occupe</span>
       <span class="entry-list__date">Jan 2024 - Present</span>
       <div class="entry-list__company-row">
-        <span class="entry-list__subtitle">Entreprise</span><span class="entry-list__location">Ville</span>
+        <span class="entry-list__subtitle">Entreprise</span> &mdash; <span class="entry-list__contract" style="color: #787673;">Stage</span> &mdash; <span class="entry-list__location" style="margin-left: 0;">Ville</span>
       </div>
       <div class="entry-list__description">
         <ul>
@@ -91,7 +91,7 @@ const TEMPLATES = {
       <span class="entry-list__title">Poste precedent</span>
       <span class="entry-list__date">2022 - 2023</span>
       <div class="entry-list__company-row">
-        <span class="entry-list__subtitle">Autre entreprise</span><span class="entry-list__location">Ville</span>
+        <span class="entry-list__subtitle">Autre entreprise</span> &mdash; <span class="entry-list__location" style="margin-left: 0;">Ville</span>
       </div>
       <div class="entry-list__description">
         <ul>
@@ -148,7 +148,7 @@ const TEMPLATES = {
 html, body {
   font-family: "Helvetica", "Arial", sans-serif;
   color: #555;
-  font-size: 9pt;
+  font-size: 10pt;
   line-height: 1.35;
 }
 
@@ -343,8 +343,8 @@ let _isPreviewPrintMode = false;
 // ============================================================
 function mergedHtml() {
   const html = htmlModel ? htmlModel.getValue() : '';
-  let css  = cssModel  ? cssModel.getValue()  : '';
-  
+  let css = cssModel ? cssModel.getValue() : '';
+
   if (_isPreviewPrintMode) {
     css = css.replace(/@media\s+print\b/gi, '@media screen');
   }
@@ -365,16 +365,46 @@ function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   const importPane = $('import-pane');
-  const editorDiv  = $('editor');
+  const editorDiv = $('editor');
+  const formPane = $('form-pane');
+  if (importPane) importPane.classList.remove('active');
+  if (formPane) formPane.classList.remove('active');
+  // Les outils d'édition de code ne servent que dans les onglets HTML / CSS.
+  const editorTools = $('editor-tools');
+  if (editorTools) editorTools.style.display = (tab === 'html' || tab === 'css') ? '' : 'none';
   if (tab === 'import') {
-    if (editorDiv)   editorDiv.style.display   = 'none';
-    if (importPane)  importPane.classList.add('active');
+    if (editorDiv) editorDiv.style.display = 'none';
+    if (importPane) importPane.classList.add('active');
+  } else if (tab === 'form') {
+    if (editorDiv) editorDiv.style.display = 'none';
+    if (formPane) formPane.classList.add('active');
+    if (window.ResumeForm && window.ResumeForm.onShow) window.ResumeForm.onShow();
   } else {
-    if (editorDiv)  editorDiv.style.display   = '';
-    if (importPane) importPane.classList.remove('active');
+    if (editorDiv) editorDiv.style.display = '';
     if (editor) editor.setModel(tab === 'css' ? cssModel : htmlModel);
   }
-  try { localStorage.setItem(STORAGE_KEY_TAB, tab); } catch (_) {}
+  try { localStorage.setItem(STORAGE_KEY_TAB, tab); } catch (_) { }
+}
+
+// Affiche/masque les outils du mode Expert (onglets code, snippets, options PDF).
+function applyExpertMode(exp) {
+  const expertTabs = $('expert-tabs');
+  const expertTools = $('expert-tools-snippets');
+  const advancedOpts = $('advanced-pdf-opts');
+  if (expertTabs) expertTabs.style.display = exp ? 'flex' : 'none';
+  if (expertTools) expertTools.style.display = exp ? 'inline-flex' : 'none';
+  if (advancedOpts) advancedOpts.style.display = exp ? 'block' : 'none';
+  if (!exp && ['html', 'css', 'import'].includes(activeTab)) {
+    switchTab('form');
+  }
+}
+
+// Force l'état du mode Expert (case à cocher + persistance + affichage).
+function setExpertMode(exp) {
+  const cb = $('expert-mode-checkbox');
+  if (cb) cb.checked = exp;
+  try { localStorage.setItem('html-to-pdf:expert-mode', exp); } catch (_) { }
+  applyExpertMode(exp);
 }
 
 // ============================================================
@@ -383,26 +413,28 @@ function switchTab(tab) {
 function slug(s) {
   if (!s) return '';
   return s.normalize('NFKD')
-          .replace(/[̀-ͯ]/g, '')
-          .replace(/['’]/g, '_')
-          .replace(/[^\w\s-]/gu, '')
-          .trim()
-          .replace(/[\s_]+/g, '_');
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/['’]/g, '_')
+    .replace(/[^\w\s-]/gu, '')
+    .trim()
+    .replace(/[\s_]+/g, '_');
 }
 
 function autoFilename() {
-  const today   = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
   const docType = $('doc_type').value || 'Document';
   const company = slug($('company').value);
-  const role    = slug($('role').value);
-  const tail    = company || role || '';
+  const role = slug($('role').value);
+  const tail = company || role || '';
   return tail ? `${docType}_${tail}_${today}.pdf` : `${docType}_${today}.pdf`;
 }
 
 function refreshFilenamePreview() {
   const custom = $('filename').value.trim();
-  const auto   = autoFilename();
+  const auto = autoFilename();
   $('filename_preview').textContent = custom ? `Nom : ${custom}` : `Nom auto : ${auto}`;
+  const pill = $('topbar-filename');
+  if (pill) pill.textContent = custom || auto;
 }
 
 ['doc_type', 'company', 'role', 'filename'].forEach(id =>
@@ -415,23 +447,23 @@ refreshFilenamePreview();
 // ============================================================
 function updatePageCount() {
   const iframe = $('preview');
-  const badge  = $('page-count-badge');
+  const badge = $('page-count-badge');
   if (!badge || !iframe) return;
   try {
     const doc = iframe.contentDocument;
     if (!doc || !doc.body) return;
     // A4 à 96 dpi ≈ 1122px (297mm × 96 / 25.4)
     const A4_H = 1122;
-    const h    = doc.body.scrollHeight;
+    const h = doc.body.scrollHeight;
     const pages = Math.max(1, Math.ceil(h / A4_H));
     if (pages === 1) {
       badge.textContent = '1 page ✓';
-      badge.className   = 'page-badge ok';
+      badge.className = 'page-badge ok';
     } else {
       badge.textContent = `${pages} pages ⚠`;
-      badge.className   = pages === 2 ? 'page-badge warn' : 'page-badge over';
+      badge.className = pages === 2 ? 'page-badge warn' : 'page-badge over';
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 // ============================================================
@@ -442,20 +474,20 @@ function estimateTokens() {
   let html = htmlModel.getValue() || '';
   html = html.replace(/src="data:image\/[^"]{20,}"/g, 'src="[IMAGE_BASE64]"');
   const css = typeof cssModel !== 'undefined' && cssModel ? (cssModel.getValue() || '') : '';
-  
+
   const jobEl = $('job-desc-input');
   const jobDesc = jobEl ? jobEl.value.trim() : '';
   const tailorTokens = Math.ceil((html.length + css.length + jobDesc.length) / 4);
-  
+
   const elTailor = $('token-count-tailor');
   if (elTailor) elTailor.textContent = `≈ ${tailorTokens.toLocaleString('fr-FR')} tokens`;
   const elPack = $('token-count-pack');
   if (elPack) elPack.textContent = `≈ ${tailorTokens.toLocaleString('fr-FR')} tokens`;
-  
+
   const chatEl = $('chat-input');
   const chatInput = chatEl ? chatEl.value.trim() : '';
   const chatTokens = Math.ceil((html.length + css.length + chatInput.length) / 4);
-  
+
   const elChat = $('token-count-chat');
   if (elChat) elChat.textContent = `≈ ${chatTokens.toLocaleString('fr-FR')} tokens`;
 }
@@ -492,7 +524,7 @@ if ($('btn-print-mode')) {
 // ============================================================
 // Snapshots IndexedDB
 // ============================================================
-const IDB_DB    = 'html-to-pdf-snapshots';
+const IDB_DB = 'html-to-pdf-snapshots';
 const IDB_STORE = 'snapshots';
 const MAX_SNAPS = 20;
 
@@ -511,30 +543,30 @@ function _openIDB() {
       }
     };
     req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
+    req.onerror = e => reject(e.target.error);
   });
 }
 
-async function saveHtmlToIDB(id, html, css) {
+async function saveHtmlToIDB(id, html, css, json, templateId) {
   try {
     const db = await _openIDB();
     await new Promise((res, rej) => {
       const tx = db.transaction(IDB_HTML_STORE, 'readwrite');
-      tx.objectStore(IDB_HTML_STORE).put({ id, html, css });
+      tx.objectStore(IDB_HTML_STORE).put({ id, html, css, json: json || null, templateId: templateId || null });
       tx.oncomplete = res;
-      tx.onerror    = e => rej(e.target.error);
+      tx.onerror = e => rej(e.target.error);
     });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 async function loadHtmlFromIDB(id) {
   try {
     const db = await _openIDB();
     return await new Promise((res, rej) => {
-      const tx  = db.transaction(IDB_HTML_STORE, 'readonly');
+      const tx = db.transaction(IDB_HTML_STORE, 'readonly');
       const req = tx.objectStore(IDB_HTML_STORE).get(id);
       req.onsuccess = () => res(req.result || null);
-      req.onerror   = e => rej(e.target.error);
+      req.onerror = e => rej(e.target.error);
     });
   } catch (_) { return null; }
 }
@@ -546,9 +578,9 @@ async function deleteHtmlFromIDB(id) {
       const tx = db.transaction(IDB_HTML_STORE, 'readwrite');
       tx.objectStore(IDB_HTML_STORE).delete(id);
       tx.oncomplete = res;
-      tx.onerror    = e => rej(e.target.error);
+      tx.onerror = e => rej(e.target.error);
     });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 async function saveSnapshot(label) {
@@ -556,20 +588,20 @@ async function saveSnapshot(label) {
   try {
     const db = await _openIDB();
     const snap = {
-      ts:       Date.now(),
-      label:    label || new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
-      html:     htmlModel.getValue(),
-      css:      cssModel ? cssModel.getValue() : '',
+      ts: Date.now(),
+      label: label || new Date().toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
+      html: htmlModel.getValue(),
+      css: cssModel ? cssModel.getValue() : '',
       doc_type: $('doc_type')?.value || 'CV',
-      company:  $('company')?.value  || '',
-      role:     $('role')?.value     || '',
+      company: $('company')?.value || '',
+      role: $('role')?.value || '',
     };
     await new Promise((res, rej) => {
       const tx = db.transaction(IDB_STORE, 'readwrite');
       const st = tx.objectStore(IDB_STORE);
       st.put(snap);
       tx.oncomplete = res;
-      tx.onerror    = e => rej(e.target.error);
+      tx.onerror = e => rej(e.target.error);
     });
     // Garder seulement les MAX_SNAPS derniers
     await _pruneSnapshots(db);
@@ -592,12 +624,12 @@ async function _pruneSnapshots(db) {
 }
 
 async function listSnapshots() {
-  const db  = await _openIDB();
+  const db = await _openIDB();
   return new Promise((res, rej) => {
-    const tx  = db.transaction(IDB_STORE, 'readonly');
+    const tx = db.transaction(IDB_STORE, 'readonly');
     const req = tx.objectStore(IDB_STORE).getAll();
     req.onsuccess = () => res(req.result.sort((a, b) => b.ts - a.ts));
-    req.onerror   = e => rej(e.target.error);
+    req.onerror = e => rej(e.target.error);
   });
 }
 
@@ -607,7 +639,7 @@ async function deleteSnapshot(ts) {
     const tx = db.transaction(IDB_STORE, 'readwrite');
     tx.objectStore(IDB_STORE).delete(ts);
     tx.oncomplete = res;
-    tx.onerror    = e => rej(e.target.error);
+    tx.onerror = e => rej(e.target.error);
   });
 }
 
@@ -619,14 +651,14 @@ function restoreSnapshot(snap) {
   if (snap.doc_type) {
     _activeDocType = snap.doc_type;
     if ($('doc_type')) $('doc_type').value = _activeDocType;
-    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) {}
+    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) { }
   }
   htmlModel.setValue(snap.html || '');
   if (cssModel) cssModel.setValue(snap.css || '');
   _resetTailorDiff();
   _foldStyleBlocks();
-  if (snap.company  && $('company'))  $('company').value  = snap.company;
-  if (snap.role     && $('role'))     $('role').value     = snap.role;
+  if (snap.company && $('company')) $('company').value = snap.company;
+  if (snap.role && $('role')) $('role').value = snap.role;
   refreshFilenamePreview();
   closeSnapshotsModal();
   showToast('Snapshot restauré.', 'ok');
@@ -660,9 +692,9 @@ async function renderSnapshotsList() {
     return;
   }
   snaps.forEach(s => {
-    const date   = new Date(s.ts).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-    const chars  = (s.html || '').length + (s.css || '').length;
-    const item   = document.createElement('div');
+    const date = new Date(s.ts).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+    const chars = (s.html || '').length + (s.css || '').length;
+    const item = document.createElement('div');
     item.className = 'snapshot-item';
     item.innerHTML = `
       <div>
@@ -674,13 +706,69 @@ async function renderSnapshotsList() {
         <button class="snap-delete">Suppr.</button>
       </div>`;
     item.querySelector('.snap-restore').onclick = () => restoreSnapshot(s);
-    item.querySelector('.snap-delete').onclick  = async () => {
+    item.querySelector('.snap-delete').onclick = async () => {
       await deleteSnapshot(s.ts);
       renderSnapshotsList();
     };
     list.appendChild(item);
   });
 }
+
+$('btn-copy-json').onclick = () => {
+  if (window.ResumeForm) {
+    const data = window.ResumeForm.getData();
+    if (data) {
+      const dataToCopy = { ...data };
+      delete dataToCopy.photo; // Ne pas polluer le presse-papiers avec la base64
+      navigator.clipboard.writeText(JSON.stringify(dataToCopy, null, 2))
+        .then(() => showToast('JSON copié !', 'ok'))
+        .catch(() => showToast('Erreur copie JSON', 'err'));
+    } else {
+      showToast('Aucun JSON dispo', 'err');
+    }
+  }
+};
+
+$('btn-import-json').onclick = async () => {
+  if (!window.ResumeForm || !window.ResumeForm.loadData) {
+    showToast('Mode formulaire non disponible', 'err');
+    return;
+  }
+  
+  let text = '';
+  // Tente de lire le presse-papier
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      text = await navigator.clipboard.readText();
+    }
+  } catch (err) {
+    console.warn("Lecture presse-papier impossible", err);
+  }
+  
+  // Vérifie si le texte est du JSON valide
+  let isValidJson = false;
+  if (text) {
+    try {
+      JSON.parse(text);
+      isValidJson = true;
+    } catch(e) {}
+  }
+  
+  // Si on n'a pas de JSON valide dans le presse-papier, on utilise le prompt
+  if (!isValidJson) {
+    text = prompt("Collez les données JSON de votre CV ici :");
+    if (!text) return; // Annulé par l'utilisateur
+  }
+  
+  try {
+    const data = JSON.parse(text);
+    window.ResumeForm.loadData(data);
+    showToast('JSON importé avec succès !', 'ok');
+    switchTab('form');
+  } catch (e) {
+    showToast('JSON invalide', 'err');
+  }
+};
 
 $('btn-snapshots').onclick = openSnapshotsModal;
 $('close-snapshots').onclick = closeSnapshotsModal;
@@ -706,6 +794,7 @@ require(['vs/editor/editor.main'], function () {
 
   let initialHtml = null;
   let initialCss = null;
+  let initialFormJson = null;
 
   const raw = localStorage.getItem(_docTypeKey(_activeDocType));
   if (raw) {
@@ -713,7 +802,8 @@ require(['vs/editor/editor.main'], function () {
       const saved = JSON.parse(raw);
       initialHtml = saved.html;
       initialCss = saved.css;
-    } catch (_) {}
+      initialFormJson = saved.json || null;
+    } catch (_) { }
   }
 
   if (initialHtml === null) {
@@ -736,10 +826,10 @@ require(['vs/editor/editor.main'], function () {
     }
   }
 
-  const wantTab = localStorage.getItem(STORAGE_KEY_TAB) || 'html';
+  const wantTab = 'form';
 
   htmlModel = monaco.editor.createModel(initialHtml || '', 'html');
-  cssModel  = monaco.editor.createModel(initialCss || '', 'css');
+  cssModel = monaco.editor.createModel(initialCss || '', 'css');
 
   editor = monaco.editor.create($('editor'), {
     model: htmlModel,
@@ -753,7 +843,7 @@ require(['vs/editor/editor.main'], function () {
   });
 
   // Auto-replier les <style> et la région Photo_Base64 au chargement
-  setTimeout(function() {
+  setTimeout(function () {
     if (htmlModel.getValue().includes('<!-- #region Photo_Base64 -->')) {
       editor.trigger('fold', 'editor.foldAllMarkerRegions');
     }
@@ -763,13 +853,21 @@ require(['vs/editor/editor.main'], function () {
   function _saveCurrentState() {
     if (!htmlModel) return;
     try {
+      // Si le CV affiché provient du formulaire, on persiste aussi son JSON
+      // structuré pour pouvoir reconstruire le formulaire au rechargement,
+      // même sans export PDF préalable.
+      let formJson = null;
+      if (window.ResumeForm && window.ResumeForm.matchesEditor && window.ResumeForm.matchesEditor()) {
+        formJson = window.ResumeForm.getData();
+      }
       localStorage.setItem(_docTypeKey(_activeDocType), JSON.stringify({
         html: htmlModel.getValue(),
         css: cssModel ? cssModel.getValue() : '',
+        json: formJson,
       }));
       localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType);
       flashAutosave();
-    } catch (_) {}
+    } catch (_) { }
   }
 
   htmlModel.onDidChangeContent(() => {
@@ -784,6 +882,12 @@ require(['vs/editor/editor.main'], function () {
   document.querySelectorAll('.tab').forEach(btn => {
     btn.onclick = () => switchTab(btn.dataset.tab);
   });
+  if (window.ResumeForm && window.ResumeForm.init) window.ResumeForm.init();
+  // Restaurer le formulaire depuis le brouillon (CV non encore exporté en PDF).
+  // loadData() reconstruit les champs ET réécrit htmlModel + l'aperçu.
+  if (initialFormJson && window.ResumeForm && window.ResumeForm.loadData) {
+    window.ResumeForm.loadData(initialFormJson);
+  }
   switchTab(wantTab);
 
   $('preview').srcdoc = mergedHtml();
@@ -800,6 +904,28 @@ require(['vs/editor/editor.main'], function () {
   };
   $('refresh-preview').onclick = () => { $('preview').srcdoc = mergedHtml(); };
 
+  // --- Expert Mode Toggle ---
+  const expertCheckbox = $('expert-mode-checkbox');
+
+  if (expertCheckbox) {
+    const isExpert = false;
+    expertCheckbox.checked = isExpert;
+    applyExpertMode(isExpert);
+
+    expertCheckbox.addEventListener('change', (e) => {
+      // Avertissement « Eject » : passer en Expert sur un CV issu du formulaire
+      // rompt la synchronisation avec celui-ci.
+      if (e.target.checked && window.ResumeForm && window.ResumeForm.matchesEditor
+          && window.ResumeForm.matchesEditor()) {
+        if (!confirm('⚠️ Si tu modifies le code HTML, tu perds la synchronisation avec le formulaire. Continuer ?')) {
+          e.target.checked = false;
+          return;
+        }
+      }
+      setExpertMode(e.target.checked);
+    });
+  }
+
   $('template-select').onchange = (e) => {
     const key = e.target.value;
     e.target.value = '';
@@ -813,7 +939,7 @@ require(['vs/editor/editor.main'], function () {
     if (_activeDocType !== 'CV' && _activeDocType !== 'Maître') {
       _activeDocType = 'CV';
       if ($('doc_type')) $('doc_type').value = 'CV';
-      try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'CV'); } catch (_) {}
+      try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'CV'); } catch (_) { }
     }
     htmlModel.setValue(tpl.html);
     cssModel.setValue(tpl.css);
@@ -823,17 +949,17 @@ require(['vs/editor/editor.main'], function () {
   $('doc_type').addEventListener('change', function () {
     const newType = this.value;
     if (newType === _activeDocType) return;
-    
+
     _activeDocType = newType;
-    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) {}
-    
+    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) { }
+
     const raw = localStorage.getItem(_docTypeKey(newType));
     if (raw) {
       try {
         const saved = JSON.parse(raw);
         htmlModel.setValue(saved.html || '');
         if (cssModel) cssModel.setValue(saved.css || '');
-      } catch (_) {}
+      } catch (_) { }
     } else {
       if (newType === 'Lettre') {
         htmlModel.setValue(_LETTRE_SKELETON);
@@ -858,23 +984,32 @@ require(['vs/editor/editor.main'], function () {
     try {
       const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
       localEntry = hist.find(e => e.id === loadId) || null;
-    } catch (_) {}
+    } catch (_) { }
 
     if (localEntry) {
       _activeDocType = localEntry.doc_type || 'CV';
       if ($('doc_type')) $('doc_type').value = _activeDocType;
-      try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) {}
-      $('company').value     = localEntry.company  || '';
-      $('role').value        = localEntry.role     || '';
-      $('notes').value       = localEntry.notes    || '';
+      try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) { }
+      $('company').value = localEntry.company || '';
+      $('role').value = localEntry.role || '';
+      $('notes').value = localEntry.notes || '';
       _syncJobDesc(localEntry.job_desc || '');
       refreshFilenamePreview();
     }
 
     loadHtmlFromIDB(loadId).then(stored => {
+      if (stored && stored.json && window.ResumeForm && window.ResumeForm.loadData) {
+        // CV issu du formulaire : on le rouvre en mode Formulaire.
+        // loadData() reconstruit le formulaire ET réécrit htmlModel + l'aperçu.
+        window.ResumeForm.loadData(stored.json);
+        switchTab('form');
+        return;
+      }
       if (stored) {
+        // HTML custom / éjecté / ancien : mode Expert (édition du code).
         htmlModel.setValue(stored.html || '');
         if (cssModel) cssModel.setValue(stored.css || '');
+        setExpertMode(true);
         switchTab('html');
         return;
       }
@@ -887,6 +1022,7 @@ require(['vs/editor/editor.main'], function () {
         .then(h => {
           htmlModel.setValue(h);
           if (cssModel) cssModel.setValue('');
+          setExpertMode(true);
           switchTab('html');
           // Migrer vers IDB pour les rechargements futurs
           saveHtmlToIDB(loadId, h, '');
@@ -929,10 +1065,10 @@ document.querySelectorAll('.template-card').forEach(card => {
 
     _activeDocType = 'CV';
     if ($('doc_type')) $('doc_type').value = 'CV';
-    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'CV'); } catch (_) {}
+    try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'CV'); } catch (_) { }
 
     if (htmlModel) htmlModel.setValue(tpl.html);
-    if (cssModel)  cssModel.setValue(tpl.css);
+    if (cssModel) cssModel.setValue(tpl.css);
     _resetTailorDiff();
     _foldStyleBlocks();
 
@@ -954,7 +1090,7 @@ $('clear').onclick = () => {
   if (hasContent && !confirm('Effacer tout le contenu ? Un snapshot automatique sera créé avant.')) return;
   saveSnapshot('Avant effacement');
   if (htmlModel) htmlModel.setValue('');
-  if (cssModel)  cssModel.setValue('');
+  if (cssModel) cssModel.setValue('');
   _resetTailorDiff();
   _foldStyleBlocks();
   ['company', 'role', 'filename', 'notes'].forEach(id => $(id).value = '');
@@ -963,7 +1099,7 @@ $('clear').onclick = () => {
     localStorage.removeItem(STORAGE_KEY_HTML);
     localStorage.removeItem(STORAGE_KEY_CSS);
     localStorage.removeItem(_docTypeKey(_activeDocType));
-  } catch (_) {}
+  } catch (_) { }
 };
 
 // ============================================================
@@ -992,15 +1128,15 @@ $('go').onclick = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         html,
-        doc_type:   $('doc_type').value,
-        company:    $('company').value.trim(),
-        role:       $('role').value.trim(),
-        notes:      $('notes').value.trim(),
-        job_desc:   $('job-desc-input').value.trim(),
-        format:     $('format').value,
-        margin:     $('margin').value,
+        doc_type: $('doc_type').value,
+        company: $('company').value.trim(),
+        role: $('role').value.trim(),
+        notes: $('notes').value.trim(),
+        job_desc: $('job-desc-input').value.trim(),
+        format: $('format').value,
+        margin: $('margin').value,
         background: $('bg').checked,
-        filename:   $('filename').value.trim(),
+        filename: $('filename').value.trim(),
       }),
     });
     if (!res.ok) {
@@ -1011,11 +1147,11 @@ $('go').onclick = async () => {
     const meta = JSON.parse(res.headers.get('X-Archive-Entry') || '{}');
     const entryId = meta.id || crypto.randomUUID();
 
-    const blob   = await res.blob();
+    const blob = await res.blob();
     const objUrl = URL.createObjectURL(blob);
-    const a      = document.createElement('a');
-    a.href       = objUrl;
-    a.download   = meta.filename || 'document.pdf';
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = meta.filename || 'document.pdf';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1027,18 +1163,25 @@ $('go').onclick = async () => {
     try {
       const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
       hist.unshift({
-        id:         entryId,
-        filename:   meta.filename,
+        id: entryId,
+        filename: meta.filename,
         created_at: meta.created_at,
-        doc_type:   $('doc_type').value,
-        company:    $('company').value.trim(),
-        role:       $('role').value.trim(),
-        notes:      $('notes').value.trim(),
-        job_desc:   $('job-desc-input').value.trim(),
+        doc_type: $('doc_type').value,
+        company: $('company').value.trim(),
+        role: $('role').value.trim(),
+        notes: $('notes').value.trim(),
+        job_desc: $('job-desc-input').value.trim(),
       });
       localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(0, 100)));
-    } catch (_) {}
-    await saveHtmlToIDB(entryId, htmlModel.getValue(), cssModel ? cssModel.getValue() : '');
+    } catch (_) { }
+    // Si le CV affiché provient du formulaire, on persiste aussi son JSON structuré
+    // (+ template) pour pouvoir le rouvrir en mode Formulaire au rechargement.
+    let resumeJson = null, resumeTemplate = null;
+    if (window.ResumeForm && window.ResumeForm.matchesEditor && window.ResumeForm.matchesEditor()) {
+      resumeJson = window.ResumeForm.getData();
+      resumeTemplate = window.ResumeForm.getTemplateId ? window.ResumeForm.getTemplateId() : null;
+    }
+    await saveHtmlToIDB(entryId, htmlModel.getValue(), cssModel ? cssModel.getValue() : '', resumeJson, resumeTemplate);
   } catch (e) {
     setStatus('Erreur réseau : ' + e.message, 'err');
   } finally {
@@ -1051,10 +1194,10 @@ $('go').onclick = async () => {
 // Splitter redimensionnable
 // ============================================================
 (function initSplitter() {
-  const split      = $('split');
-  const splitter   = $('splitter');
+  const split = $('split');
+  const splitter = $('splitter');
   const editorPane = $('editor-pane');
-  let dragging     = false;
+  let dragging = false;
 
   const onStart = (e) => {
     dragging = true;
@@ -1065,7 +1208,7 @@ $('go').onclick = async () => {
 
   const onMove = (e) => {
     if (!dragging) return;
-    const rect    = split.getBoundingClientRect();
+    const rect = split.getBoundingClientRect();
     const isMobile = window.innerWidth <= 768;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1093,12 +1236,12 @@ $('go').onclick = async () => {
 // ============================================================
 let _tailorLevel = 'adapte';
 let _tailorBeforeHtml = null;
-let _tailorBeforeCss  = null;
-let _tailorBase64Map  = {};
+let _tailorBeforeCss = null;
+let _tailorBase64Map = {};
 
 function _resetTailorDiff() {
   _tailorBeforeHtml = null;
-  _tailorBeforeCss  = null;
+  _tailorBeforeCss = null;
   const btn = $('btn-show-diff');
   if (btn) btn.style.display = 'none';
 }
@@ -1146,7 +1289,7 @@ function _extractCssFromHtml(html) {
   if (!m) return { html, css: null };
   return {
     html: html.replace(/<style[^>]*>[\s\S]*?<\/style>\n?/i, '').trim(),
-    css:  m[1].trim(),
+    css: m[1].trim(),
   };
 }
 
@@ -1179,12 +1322,12 @@ function _initLevelSelector(selectorId, onChange) {
 _initLevelSelector('tailor-level-selector', (lvl) => { _tailorLevel = lvl; });
 
 // ---- Chat panel -------------------------------------------------------
-const chatPanel   = $('chat-ia-panel');
+const chatPanel = $('chat-ia-panel');
 const chatOverlay = $('chat-overlay');
-const chatMsgs    = $('chat-messages');
-const chatInput   = $('chat-input');
+const chatMsgs = $('chat-messages');
+const chatInput = $('chat-input');
 
-let _chatHistory    = [];
+let _chatHistory = [];
 let _chatPreviewing = false;
 let _lastBase64Data = null; // conserve le base64 photo retiré avant envoi à l'IA
 
@@ -1216,7 +1359,7 @@ function _buildPreviewHtml(html, css) {
 }
 
 function _appendMsg(role, text) {
-  const wrap   = document.createElement('div');
+  const wrap = document.createElement('div');
   wrap.className = 'chat-message chat-message--' + role;
   const bubble = document.createElement('div');
   bubble.className = 'chat-bubble';
@@ -1228,7 +1371,7 @@ function _appendMsg(role, text) {
 }
 
 function _appendProposals(proposals) {
-  proposals.forEach(function(p) {
+  proposals.forEach(function (p) {
     var card = document.createElement('div');
     card.className = 'chat-proposal';
 
@@ -1264,12 +1407,12 @@ function _appendProposals(proposals) {
     chatMsgs.appendChild(card);
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
 
-    btnPreview.onclick = function() {
+    btnPreview.onclick = function () {
       _chatPreviewing = true;
       $('preview').srcdoc = _buildPreviewHtml(p.html, p.css);
     };
 
-    btnApply.onclick = async function() {
+    btnApply.onclick = async function () {
       await saveSnapshot('Avant chat IA');
       const { html: applyHtml, css: applyCss } = _extractCssFromHtml(p.html || '');
       htmlModel.setValue(applyHtml);
@@ -1278,16 +1421,16 @@ function _appendProposals(proposals) {
       _chatPreviewing = false;
       schedulePreview();
       btnPreview.disabled = true;
-      btnApply.disabled   = true;
-      btnReject.disabled  = true;
+      btnApply.disabled = true;
+      btnReject.disabled = true;
       card.classList.add('proposal--applied');
     };
 
-    btnReject.onclick = function() {
+    btnReject.onclick = function () {
       if (_chatPreviewing) { _chatPreviewing = false; schedulePreview(); }
       btnPreview.disabled = true;
-      btnApply.disabled   = true;
-      btnReject.disabled  = true;
+      btnApply.disabled = true;
+      btnReject.disabled = true;
       card.classList.add('proposal--rejected');
     };
   });
@@ -1302,7 +1445,7 @@ function _stripBase64ForChat(html) {
 
 function _restoreBase64InProposals(proposals) {
   if (!_lastBase64Data || !proposals) return proposals;
-  return proposals.map(function(p) {
+  return proposals.map(function (p) {
     return Object.assign({}, p, {
       html: p.html ? p.html.replace('src="[IMAGE_BASE64]"', 'src="' + _lastBase64Data + '"') : p.html,
     });
@@ -1323,7 +1466,7 @@ async function _sendChat() {
   loading.classList.add('chat-loading');
 
   var controller = new AbortController();
-  var timeoutId  = setTimeout(function() { controller.abort(); }, 120000);
+  var timeoutId = setTimeout(function () { controller.abort(); }, 120000);
 
   try {
     var resp = await fetch('/api/editor-chat', {
@@ -1331,11 +1474,11 @@ async function _sendChat() {
       signal: controller.signal,
       headers: Object.assign({ 'Content-Type': 'application/json' }, getApiHeaders()),
       body: JSON.stringify({
-        messages:   _chatHistory,
-        html:       _buildTailorPayload(_stripBase64ForChat(htmlModel.getValue()), cssModel ? cssModel.getValue() : ''),
-        css:        '',
-        doc_type:   ($('doc_type') || {}).value || 'CV',
-        job_desc:   (($('job-desc-input') || {}).value || '').trim(),
+        messages: _chatHistory,
+        html: _buildTailorPayload(_stripBase64ForChat(htmlModel.getValue()), cssModel ? cssModel.getValue() : ''),
+        css: '',
+        doc_type: ($('doc_type') || {}).value || 'CV',
+        job_desc: (($('job-desc-input') || {}).value || '').trim(),
         active_tab: activeTab || 'html',
       }),
     });
@@ -1366,7 +1509,7 @@ async function _sendChat() {
 }
 
 $('chat-send-btn').onclick = _sendChat;
-chatInput.addEventListener('keydown', function(e) {
+chatInput.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _sendChat(); }
 });
 
@@ -1410,7 +1553,7 @@ $('photo-upload').onchange = e => {
     const base64 = rev.target.result;
     if (!htmlModel) return;
     const currentHtml = htmlModel.getValue();
-    const photoCode   = `\n<!-- #region Photo_Base64 -->\n<img src="${base64}" alt="Photo de profil" style="width:80px; border-radius:4px;"/>\n<!-- #endregion -->\n`;
+    const photoCode = `\n<!-- #region Photo_Base64 -->\n<img src="${base64}" alt="Photo de profil" style="width:80px; border-radius:4px;"/>\n<!-- #endregion -->\n`;
 
     if (currentHtml.includes('URL_DE_VOTRE_PHOTO_ICI')) {
       let newHtml = currentHtml;
@@ -1477,7 +1620,7 @@ $('btn-settings-clear').addEventListener('click', () => {
 // Streaming SSE → Monaco
 // ============================================================
 async function _readSseStream(resp, onChunk) {
-  const reader  = resp.body.getReader();
+  const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buf = '';
   let accumulated = '';
@@ -1496,7 +1639,7 @@ async function _readSseStream(resp, onChunk) {
         const chunk = JSON.parse(data);
         accumulated += chunk;
         if (onChunk) onChunk(accumulated);
-      } catch (_) {}
+      } catch (_) { }
     }
   }
   return accumulated;
@@ -1510,7 +1653,7 @@ async function streamToMonaco(url, body, extraHeaders, onChunk) {
   });
   if (!resp.ok) {
     let msg = 'Erreur serveur';
-    try { msg = (await resp.json()).error || msg; } catch (_) {}
+    try { msg = (await resp.json()).error || msg; } catch (_) { }
     throw new Error(msg);
   }
   return _readSseStream(resp, onChunk);
@@ -1525,7 +1668,7 @@ async function streamFormToMonaco(url, formData, extraHeaders, onChunk) {
   });
   if (!resp.ok) {
     let msg = 'Erreur serveur';
-    try { msg = (await resp.json()).error || msg; } catch (_) {}
+    try { msg = (await resp.json()).error || msg; } catch (_) { }
     throw new Error(msg);
   }
   return _readSseStream(resp, onChunk);
@@ -1564,11 +1707,11 @@ $('btn-text-to-html').addEventListener('click', async () => {
   const text = $('cv-text-input').value.trim();
   if (!text) { showToast("Colle d'abord le contenu de ton CV.", 'err'); return; }
 
-  const btn    = $('btn-text-to-html');
+  const btn = $('btn-text-to-html');
   const status = $('import-text-status');
   btn.disabled = true;
   status.textContent = 'Conversion en cours';
-  status.className   = 'import-status status-busy';
+  status.className = 'import-status status-busy';
 
   const docType = ($('doc_type') && $('doc_type').value) || 'CV';
   try {
@@ -1583,11 +1726,11 @@ $('btn-text-to-html').addEventListener('click', async () => {
     markCvLoaded();
     showToast('CV converti en HTML avec succès.', 'ok');
     status.textContent = '';
-    status.className   = 'import-status';
+    status.className = 'import-status';
   } catch (err) {
     showToast(err.message, 'err');
     status.textContent = err.message;
-    status.className   = 'import-status status-err';
+    status.className = 'import-status status-err';
   } finally {
     btn.disabled = false;
   }
@@ -1604,19 +1747,66 @@ $('pdf-upload-input').addEventListener('change', (e) => {
   _selectedPdfFile = e.target.files[0] || null;
   $('pdf-filename').textContent = _selectedPdfFile ? _selectedPdfFile.name : '';
   $('btn-pdf-to-html').disabled = !_selectedPdfFile;
+  if (activeTab === 'form' && _selectedPdfFile) {
+    $('btn-pdf-to-html').click();
+  }
   e.target.value = '';
 });
+
+async function _pdfToResumeFields() {
+  const btn = $('btn-pdf-to-html');
+  const status = $('import-pdf-status');
+  btn.disabled = true;
+  status.textContent = 'Lecture du PDF et extraction des champs…';
+  status.className = 'import-status status-busy';
+
+  const formData = new FormData();
+  formData.append('file', _selectedPdfFile);
+
+  try {
+    const resp = await fetch('/api/pdf-to-resume', {
+      method: 'POST',
+      headers: Object.assign({ 'X-CSRF-Token': CSRF_TOKEN }, getApiHeaders()),
+      body: formData,
+    });
+    if (!resp.ok) {
+      let msg = 'Erreur serveur';
+      try { msg = (await resp.json()).error || msg; } catch (_) { }
+      throw new Error(msg);
+    }
+    const resume = await resp.json();
+    await saveSnapshot('Avant import PDF');
+    window.ResumeForm.loadData(resume);
+    switchTab('form');
+    showToast('CV importé dans le formulaire.', 'ok');
+    status.textContent = '';
+    status.className = 'import-status';
+  } catch (err) {
+    showToast(err.message, 'err');
+    status.textContent = err.message;
+    status.className = 'import-status status-err';
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 $('btn-pdf-to-html').addEventListener('click', async () => {
   if (!_selectedPdfFile) return;
 
-  const btn    = $('btn-pdf-to-html');
+  const docType = ($('doc_type') && $('doc_type').value) || 'CV';
+
+  // CV → champs structurés ; Lettre → HTML (comportement historique).
+  if ((docType === 'CV' || docType === 'Maître') && window.ResumeForm && window.ResumeForm.loadData) {
+    await _pdfToResumeFields();
+    return;
+  }
+
+  const btn = $('btn-pdf-to-html');
   const status = $('import-pdf-status');
   btn.disabled = true;
   status.textContent = 'Lecture du PDF';
-  status.className   = 'import-status status-busy';
+  status.className = 'import-status status-busy';
 
-  const docType = ($('doc_type') && $('doc_type').value) || 'CV';
   const formData = new FormData();
   formData.append('file', _selectedPdfFile);
   formData.append('doc_type', docType);
@@ -1629,7 +1819,7 @@ $('btn-pdf-to-html').addEventListener('click', async () => {
       (partial) => {
         if (htmlModel) htmlModel.setValue(partial);
         status.textContent = `${partial.length} car. générés`;
-        status.className   = 'import-status status-busy';
+        status.className = 'import-status status-busy';
       }
     );
     if (htmlModel) htmlModel.setValue(html);
@@ -1637,11 +1827,11 @@ $('btn-pdf-to-html').addEventListener('click', async () => {
     markCvLoaded();
     showToast('PDF converti en HTML avec succès.', 'ok');
     status.textContent = '';
-    status.className   = 'import-status';
+    status.className = 'import-status';
   } catch (err) {
     showToast(err.message, 'err');
     status.textContent = err.message;
-    status.className   = 'import-status status-err';
+    status.className = 'import-status status-err';
   } finally {
     btn.disabled = false;
   }
@@ -1650,7 +1840,7 @@ $('btn-pdf-to-html').addEventListener('click', async () => {
 // ============================================================
 // Offres d'emploi sauvegardées
 // ============================================================
-const STORAGE_KEY_JOB_DRAFT  = 'html-to-pdf:draft:job-desc';
+const STORAGE_KEY_JOB_DRAFT = 'html-to-pdf:draft:job-desc';
 const STORAGE_KEY_SAVED_OFFERS = 'html-to-pdf:saved-offers';
 
 function _getSavedOffers() {
@@ -1658,7 +1848,7 @@ function _getSavedOffers() {
 }
 
 function _setSavedOffers(list) {
-  try { localStorage.setItem(STORAGE_KEY_SAVED_OFFERS, JSON.stringify(list)); } catch (_) {}
+  try { localStorage.setItem(STORAGE_KEY_SAVED_OFFERS, JSON.stringify(list)); } catch (_) { }
 }
 
 function _refreshOffersSelect() {
@@ -1675,11 +1865,11 @@ function _saveCurrentOffer() {
   const content = ($('job-desc-input').value || '').trim();
   if (!content) { showToast("Aucune offre à sauvegarder.", 'err'); return; }
   const company = ($('company').value || '').trim();
-  const role    = ($('role').value || '').trim();
-  const date    = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
-  const label   = [company, role].filter(Boolean).join(' · ') || `Offre du ${date}`;
-  const offers  = _getSavedOffers();
-  const id      = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const role = ($('role').value || '').trim();
+  const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  const label = [company, role].filter(Boolean).join(' · ') || `Offre du ${date}`;
+  const offers = _getSavedOffers();
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   offers.unshift({ id, label, content, date: new Date().toISOString() });
   if (offers.length > 30) offers.pop();
   _setSavedOffers(offers);
@@ -1690,11 +1880,11 @@ function _saveCurrentOffer() {
 function _syncJobDesc(value) {
   const tailor = $('job-desc-input');
   if (tailor && tailor.value !== value) tailor.value = value;
-  try { localStorage.setItem(STORAGE_KEY_JOB_DRAFT, value); } catch (_) {}
+  try { localStorage.setItem(STORAGE_KEY_JOB_DRAFT, value); } catch (_) { }
 }
 
 // Restore draft job desc on load
-(function() {
+(function () {
   const draft = localStorage.getItem(STORAGE_KEY_JOB_DRAFT) || '';
   if (draft) { const t = $('job-desc-input'); if (t) t.value = draft; }
   _refreshOffersSelect();
@@ -1708,7 +1898,7 @@ $('btn-save-offer').addEventListener('click', _saveCurrentOffer);
 
 // Load saved offer on select change
 $('saved-offers-select').addEventListener('change', (e) => {
-  const id  = e.target.value;
+  const id = e.target.value;
   const del = $('btn-delete-offer');
   if (!id) { if (del) del.style.display = 'none'; return; }
   const offer = _getSavedOffers().find(o => o.id === id);
@@ -1735,22 +1925,22 @@ $('btn-extract-url').addEventListener('click', async () => {
   const url = ($('job-url-input').value || '').trim();
   if (!url) { showToast('Colle une URL d\'offre d\'emploi.', 'err'); return; }
 
-  const btn    = $('btn-extract-url');
+  const btn = $('btn-extract-url');
   const status = $('url-extract-status');
   btn.disabled = true;
   status.textContent = 'Extraction en cours…';
-  status.className   = 'url-extract-status busy';
+  status.className = 'url-extract-status busy';
 
   try {
     const resp = await fetch('/api/extract-job', {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ url }),
+      body: JSON.stringify({ url }),
     });
     const data = await resp.json();
     if (!resp.ok) {
       status.textContent = data.error || 'Erreur lors de l\'extraction.';
-      status.className   = 'url-extract-status err';
+      status.className = 'url-extract-status err';
       return;
     }
     _syncJobDesc(data.text);
@@ -1761,12 +1951,9 @@ $('btn-extract-url').addEventListener('click', async () => {
     }
     status.className = 'url-extract-status ok';
     $('job-url-input').value = '';
-    // Ouvrir le panneau tailor si fermé
-    const tailorBody = $('tailor-body');
-    if (tailorBody && !tailorBody.classList.contains('open')) $('tailor-toggle').click();
   } catch (e) {
     status.textContent = 'Erreur réseau : ' + e.message;
-    status.className   = 'url-extract-status err';
+    status.className = 'url-extract-status err';
   } finally {
     btn.disabled = false;
   }
@@ -1775,19 +1962,72 @@ $('btn-extract-url').addEventListener('click', async () => {
 // ============================================================
 // Tailoring — adapter à une offre
 // ============================================================
-$('tailor-toggle').addEventListener('click', () => {
-  const body    = $('tailor-body');
-  const chevron = $('tailor-chevron');
-  const isOpen  = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  chevron.classList.toggle('open', !isOpen);
-});
+const _modalTailor = $('modal-tailor');
+function openTailorModal() { _modalTailor.style.display = 'flex'; }
+function closeTailorModal() { _modalTailor.style.display = 'none'; }
+$('tailor-open-btn').addEventListener('click', openTailorModal);
+$('close-modal-tailor').addEventListener('click', closeTailorModal);
+_modalTailor.addEventListener('click', (e) => { if (e.target === _modalTailor) closeTailorModal(); });
+
+// Tailoring sur les champs structurés (CV généré par le formulaire).
+async function _tailorResumeFields(jobDesc) {
+  const resume = window.ResumeForm.getData();
+  if (!resume) { showToast("Aucune donnée de formulaire à adapter.", 'err'); return; }
+
+  const btn = $('btn-tailor');
+  const status = $('tailor-status');
+  const atsPanel = $('ats-panel');
+  const btnDiff = $('btn-show-diff');
+
+  _tailorBeforeHtml = htmlModel ? htmlModel.getValue() : '';
+  _tailorBeforeCss = cssModel ? cssModel.getValue() : '';
+  await saveSnapshot('Avant tailoring');
+
+  btn.disabled = true;
+  atsPanel.style.display = 'none';
+  btnDiff.style.display = 'none';
+  status.textContent = 'Adaptation des champs en cours…';
+  status.className = 'tailor-status status-busy';
+
+  try {
+    const resp = await fetch('/api/tailor-resume', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, getApiHeaders()),
+      body: JSON.stringify({ resume, job_desc: jobDesc, level: _tailorLevel }),
+    });
+    if (!resp.ok) {
+      let msg = 'Erreur serveur';
+      try { msg = (await resp.json()).error || msg; } catch (_) { }
+      throw new Error(msg);
+    }
+    const adapted = await resp.json();
+    window.ResumeForm.loadData(adapted); // reconstruit le formulaire + écrit dans htmlModel + aperçu
+    showToast('CV adapté avec succès.', 'ok');
+    status.textContent = '';
+    status.className = 'tailor-status';
+    btnDiff.style.display = 'block';
+    _renderAts(htmlModel ? htmlModel.getValue() : '', jobDesc);
+  } catch (err) {
+    showToast(err.message, 'err');
+    status.textContent = err.message;
+    status.className = 'tailor-status status-err';
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 $('btn-tailor').addEventListener('click', async () => {
   const jobDesc = $('job-desc-input').value.trim();
   if (!jobDesc) { showToast("Colle d'abord une offre d'emploi.", 'err'); return; }
 
   const useMaster = $('tailor-use-master') && $('tailor-use-master').checked;
+
+  // CV structuré (formulaire) + sans CV Maître HTML → adaptation sur les champs.
+  if (!useMaster && window.ResumeForm && window.ResumeForm.matchesEditor()) {
+    await _tailorResumeFields(jobDesc);
+    return;
+  }
+
   let sourceHtml = htmlModel ? htmlModel.getValue() : '';
   let sourceCss = cssModel ? cssModel.getValue() : '';
 
@@ -1803,7 +2043,7 @@ $('btn-tailor').addEventListener('click', async () => {
           showToast("Le CV Maître est vide.", 'err');
           return;
         }
-      } catch (_) {}
+      } catch (_) { }
     } else {
       showToast("Aucun CV Maître trouvé.", 'err');
       return;
@@ -1815,10 +2055,10 @@ $('btn-tailor').addEventListener('click', async () => {
   }
 
   _tailorBeforeHtml = sourceHtml;
-  _tailorBeforeCss  = sourceCss;
+  _tailorBeforeCss = sourceCss;
   saveSnapshot('Avant tailoring');
 
-  const btn    = $('btn-tailor');
+  const btn = $('btn-tailor');
   const status = $('tailor-status');
   const atsPanel = $('ats-panel');
   const btnDiff = $('btn-show-diff');
@@ -1826,11 +2066,11 @@ $('btn-tailor').addEventListener('click', async () => {
   atsPanel.style.display = 'none';
   btnDiff.style.display = 'none';
   status.textContent = 'Adaptation en cours';
-  status.className   = 'tailor-status status-busy';
+  status.className = 'tailor-status status-busy';
 
   try {
     const strippedHtml = _stripBase64ForTailor(sourceHtml);
-    const payloadHtml  = _buildTailorPayload(strippedHtml, sourceCss);
+    const payloadHtml = _buildTailorPayload(strippedHtml, sourceCss);
     const adapted = await streamToMonaco(
       '/api/tailor',
       { html: payloadHtml, job_desc: jobDesc, level: _tailorLevel, is_master: useMaster },
@@ -1838,7 +2078,7 @@ $('btn-tailor').addEventListener('click', async () => {
       (partial) => {
         if (htmlModel) htmlModel.setValue(partial);
         status.textContent = `${partial.length} car. générés`;
-        status.className   = 'tailor-status status-busy';
+        status.className = 'tailor-status status-busy';
       }
     );
     const restored = _restoreBase64InTailor(adapted);
@@ -1848,13 +2088,13 @@ $('btn-tailor').addEventListener('click', async () => {
     _foldStyleBlocks();
     showToast('CV adapté avec succès.', 'ok');
     status.textContent = '';
-    status.className   = 'tailor-status';
+    status.className = 'tailor-status';
     btnDiff.style.display = 'block';
     _renderAts(finalHtml, jobDesc);
   } catch (err) {
     showToast(err.message, 'err');
     status.textContent = err.message;
-    status.className   = 'tailor-status status-err';
+    status.className = 'tailor-status status-err';
   } finally {
     btn.disabled = false;
   }
@@ -1864,7 +2104,7 @@ $('btn-tailor').addEventListener('click', async () => {
 // Pack candidature (lettre + email cohérents avec le CV)
 // ============================================================
 let _packLetterHtml = '';
-let _packLetterCss  = '';
+let _packLetterCss = '';
 
 function _openPackModal() { $('modal-pack').classList.add('open'); }
 function _closePackModal() { $('modal-pack').classList.remove('open'); }
@@ -1889,7 +2129,7 @@ $('btn-pack-load-letter').addEventListener('click', async () => {
   await saveSnapshot('Avant pack candidature');
   _activeDocType = 'Lettre';
   if ($('doc_type')) $('doc_type').value = 'Lettre';
-  try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'Lettre'); } catch (_) {}
+  try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, 'Lettre'); } catch (_) { }
   htmlModel.setValue(_packLetterHtml);
   if (cssModel) cssModel.setValue(_packLetterCss);
   switchTab('html');
@@ -1912,7 +2152,7 @@ $('btn-create-pack').addEventListener('click', async () => {
   btn.textContent = 'Génération du pack…';
 
   const controller = new AbortController();
-  const timeoutId  = setTimeout(() => controller.abort(), 120000);
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
 
   try {
     // Retire le base64 (photo) pour alléger la requête : la lettre ne l'utilise pas.
@@ -1922,21 +2162,21 @@ $('btn-create-pack').addEventListener('click', async () => {
       signal: controller.signal,
       headers: Object.assign({ 'Content-Type': 'application/json' }, getApiHeaders()),
       body: JSON.stringify({
-        html:     cleanHtml,
-        css:      cssModel ? cssModel.getValue() : '',
+        html: cleanHtml,
+        css: cssModel ? cssModel.getValue() : '',
         job_desc: jobDesc,
-        company:  ($('company') || {}).value || '',
-        role:     ($('role') || {}).value || '',
+        company: ($('company') || {}).value || '',
+        role: ($('role') || {}).value || '',
       }),
     });
     if (!resp.ok) {
       let msg = 'Erreur serveur';
-      try { msg = (await resp.json()).error || msg; } catch (_) {}
+      try { msg = (await resp.json()).error || msg; } catch (_) { }
       throw new Error(msg);
     }
     const data = await resp.json();
     _packLetterHtml = data.letter_html || '';
-    _packLetterCss  = data.letter_css || '';
+    _packLetterCss = data.letter_css || '';
     $('pack-letter-frame').srcdoc = _buildPreviewHtml(_packLetterHtml, _packLetterCss);
     $('pack-email-text').value = data.email || '';
     _openPackModal();
@@ -1955,63 +2195,93 @@ $('btn-create-pack').addEventListener('click', async () => {
 // ============================================================
 
 const _ATS_STOP_WORDS = new Set([
-  'le','la','les','de','du','des','un','une','et','ou','au','aux',
-  'en','dans','sur','pour','par','avec','sans','que','qui','quoi','dont',
-  'il','elle','ils','elles','je','tu','nous','vous','on','ce','se','sa',
-  'son','ses','mon','ton','notre','votre','leur','leurs','est','sont',
-  'etre','avoir','faire','plus','tres','bien','tout','tous','aussi',
-  'mais','donc','car','cela','ceci','cette','comme','afin','ainsi',
-  'lors','entre','autre','selon','notamment','quand','alors','meme',
-  'poste','profil','candidat','equipe','rejoindre','mission','contrat',
-  'recherche','entreprise','societe','contexte','offre','emploi',
-  'travail','collaborateur','collaboratrice','ambiance','bienveillance',
-  'dynamique','croissance','locaux','babyfoot','avantage','mutuelle',
-  'remuneration','salaire','teletravail','sein','assurer','suivre',
-  'gerer','piloter','participer','contribuer','accompagner','definir',
-  'animer','mettre','garantir','optimiser','permettre','favoriser',
-  'proposer','construire','travailler','niveau','type','domaine',
-  'secteur','annee','mois','service','besoin','client','produit',
-  'solution','projet','fort','forte','ideal','atout','sens','envie',
-  'capacite','aisance','aptitude','qualite','valeur','recrutement',
-  'cadre','structure','challenge','defis','hybride','bureau',
-  'bonne','bon','bonnes','bons','bref','ici','voici','ainsi','notamment',
-  'cherchons','recherchons','attendons','souhaitons','proposons',
-  'rejoindrez','rejoindront','rejoindra','rejoindrons',
-  'travaillerez','travaillerons','travaillez','travaillerait',
-  'passionne','passionnee','requis','requise','requis',
-  'bienveillant','bienveillante','bienveillants','bienveillantes',
-  'dynamiques','passionnes','passionnees','motivees','motivee',
-  'the','of','and','or','to','a','an','in','on','for','with','be','is',
-  'are','was','were','will','have','has','do','does','that','this','it',
-  'you','we','they','he','she','not','but','if','as','at','from','by',
-  'your','our','their','its','which','when','who','how','what','where',
-  'team','company','work','role','join','position','experience','strong',
-  'knowledge','ability','excellent','good','great','working','looking',
-  'must','should','can','including','such','based','environment',
-  'opportunity','culture','office','hybrid','remote','candidate',
-  'profile','contract','enterprise','ideally','salary','benefits',
-  'level','years','months','help','build','make','grow','ensure',
-  'manage','lead','support','provide','deliver','create','drive','take',
+  // Articles et pronoms
+  'le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'et', 'ou', 'au', 'aux',
+  'en', 'dans', 'sur', 'pour', 'par', 'avec', 'sans', 'que', 'qui', 'quoi', 'dont',
+  'il', 'elle', 'ils', 'elles', 'je', 'tu', 'nous', 'vous', 'on', 'ce', 'se', 'sa',
+  'son', 'ses', 'mon', 'ton', 'notre', 'nos', 'votre', 'vos', 'leur', 'leurs', 'mes', 'tes', 'ces',
+  'celui', 'celle', 'ceux', 'celles', 'moi', 'toi', 'soi', 'eux', 'lui',
+  'quel', 'quelle', 'quels', 'quelles', 'quelque', 'quelques', 'plusieurs', 'aucun', 'aucune',
+  
+  // Verbes communs (être, avoir, faire, etc.)
+  'est', 'sont', 'etre', 'avoir', 'faire', 'fait', 'faits', 'faite', 'faites', 'fais', 'faisons', 'font',
+  'pouvoir', 'peut', 'peuvent', 'vouloir', 'veut', 'veulent', 'devoir', 'doit', 'doivent',
+  'aller', 'va', 'vont', 'vas', 'venir', 'vient', 'viennent', 'dire', 'dit', 'disent',
+  
+  // Adverbes et prépositions
+  'plus', 'tres', 'bien', 'tout', 'tous', 'toute', 'toutes', 'aussi', 'meme', 'memes',
+  'mais', 'donc', 'car', 'cela', 'ceci', 'cette', 'cet', 'comme', 'afin', 'ainsi',
+  'lors', 'entre', 'autre', 'autres', 'selon', 'notamment', 'quand', 'alors',
+  'ici', 'la', 'voici', 'voila', 'bref', 'depuis', 'vers', 'chez', 'sous', 'sauf', 'parmi',
+  'avant', 'apres', 'pendant', 'comment', 'combien', 'pourquoi', 'ailleurs', 'partout',
+  'jamais', 'toujours', 'souvent', 'parfois', 'rarement', 'bientot', 'deja', 'enfin',
+  'ensuite', 'puis', 'parce', 'puisque', 'lorsque', 'quoique', 'mal', 'mieux', 'pire',
+  'vite', 'lentement', 'trop', 'peu', 'beaucoup', 'assez', 'moins', 'autant', 'seulement',
+  'presque', 'surtout', 'environ', 'pres', 'loin', 'rien', 'personne', 'chacun', 'chacune',
+  'tel', 'telle', 'tels', 'telles', 'certain', 'certains', 'certaine', 'certaines',
+  'divers', 'diverses', 'differents', 'differentes', 'quelconque', 'chaque', 'maint', 'maints',
+  
+  // Mots courants / Vocabulaire entreprise non spécifique
+  'poste', 'profil', 'candidat', 'candidate', 'equipe', 'rejoindre', 'mission', 'missions', 'contrat',
+  'recherche', 'entreprise', 'societe', 'contexte', 'offre', 'emploi',
+  'travail', 'collaborateur', 'collaborateurs', 'collaboratrice', 'collaboratrices',
+  'ambiance', 'bienveillance', 'dynamique', 'croissance', 'locaux', 'babyfoot', 'avantage', 'avantages', 'mutuelle',
+  'remuneration', 'salaire', 'teletravail', 'sein', 'assurer', 'suivre', 'suit',
+  'gerer', 'piloter', 'participer', 'contribuer', 'accompagner', 'definir',
+  'animer', 'mettre', 'garantir', 'optimiser', 'permettre', 'favoriser',
+  'proposer', 'construire', 'travailler', 'niveau', 'type', 'domaine',
+  'secteur', 'annee', 'annees', 'mois', 'jour', 'jours', 'service', 'besoin', 'client', 'produit',
+  'solution', 'projet', 'fort', 'forte', 'ideal', 'atout', 'sens', 'envie',
+  'capacite', 'aisance', 'aptitude', 'qualite', 'valeur', 'recrutement',
+  'cadre', 'structure', 'challenge', 'defis', 'hybride', 'bureau',
+  'bonne', 'bon', 'bonnes', 'bons', 'mot', 'mots', 'titre', 'titres', 'sujet', 'sujets',
+  'oeuvre', 'œuvres', 'œuvre', 'uvre', 'uvres', 'concoit', 'concevoir', 'anime', 'diffuse', 'diffuser',
+  'contribue', 'garant', 'garante', 'garant.e', 'garants', 'garantes',
+  'engageant', 'engageants', 'engageante', 'engageantes', 'confie', 'confies', 'confiee', 'confiees',
+  
+  // Verbes conjugués fréquents dans les offres
+  'cherchons', 'recherchons', 'attendons', 'souhaitons', 'proposons',
+  'rejoindrez', 'rejoindront', 'rejoindra', 'rejoindrons',
+  'travaillerez', 'travaillerons', 'travaillez', 'travaillerait',
+  
+  // Adjectifs fréquents
+  'passionne', 'passionnee', 'passionnes', 'passionnees', 'requis', 'requise',
+  'bienveillant', 'bienveillante', 'bienveillants', 'bienveillantes',
+  'dynamiques', 'motivees', 'motivee', 'motive', 'motives', 'nouveau', 'nouvelle',
+  'nouveaux', 'nouvelles', 'vrai', 'vraie', 'vrais', 'vraies', 'faux', 'fausse',
+  
+  // English stop words
+  'the', 'of', 'and', 'or', 'to', 'a', 'an', 'in', 'on', 'for', 'with', 'be', 'is',
+  'are', 'was', 'were', 'will', 'have', 'has', 'do', 'does', 'that', 'this', 'it',
+  'you', 'we', 'they', 'he', 'she', 'not', 'but', 'if', 'as', 'at', 'from', 'by',
+  'your', 'our', 'their', 'its', 'which', 'when', 'who', 'how', 'what', 'where',
+  'team', 'company', 'work', 'role', 'join', 'position', 'experience', 'strong',
+  'knowledge', 'ability', 'excellent', 'good', 'great', 'working', 'looking',
+  'must', 'should', 'can', 'including', 'such', 'based', 'environment',
+  'opportunity', 'culture', 'office', 'hybrid', 'remote', 'candidate',
+  'profile', 'contract', 'enterprise', 'ideally', 'salary', 'benefits',
+  'level', 'years', 'months', 'help', 'build', 'make', 'grow', 'ensure',
+  'manage', 'lead', 'support', 'provide', 'deliver', 'create', 'drive', 'take',
 ]);
 
 const _ATS_COMPOUNDS = [
-  ['intelligence artificielle',   'ia'],
+  ['intelligence artificielle', 'ia'],
   ['natural language processing', 'nlp'],
-  ['machine learning',            'machine-learning'],
-  ['deep learning',               'deep-learning'],
-  ['gestion de projet',           'gestion-projet'],
-  ['base de donnees',             'base-donnees'],
-  ['react native',                'react-native'],
-  ['spring boot',                 'spring-boot'],
-  ['power bi',                    'powerbi'],
-  ['rest api',                    'rest-api'],
-  ['react js',                    'react'],
-  ['node js',                     'nodejs'],
-  ['vue js',                      'vuejs'],
-  ['next js',                     'nextjs'],
-  ['ci/cd',                       'cicd'],
-  ['ci cd',                       'cicd'],
-  ['node.js',                     'nodejs'],
+  ['machine learning', 'machine-learning'],
+  ['deep learning', 'deep-learning'],
+  ['gestion de projet', 'gestion-projet'],
+  ['base de donnees', 'base-donnees'],
+  ['react native', 'react-native'],
+  ['spring boot', 'spring-boot'],
+  ['power bi', 'powerbi'],
+  ['rest api', 'rest-api'],
+  ['react js', 'react'],
+  ['node js', 'nodejs'],
+  ['vue js', 'vuejs'],
+  ['next js', 'nextjs'],
+  ['ci/cd', 'cicd'],
+  ['ci cd', 'cicd'],
+  ['node.js', 'nodejs'],
 ];
 
 function _extractKeywords(text) {
@@ -2040,10 +2310,10 @@ function _detectSections(html) {
     new RegExp('<h[1-6][^>]*>[^<]*(' + terms + ')[^<]*<\/h[1-6]>', 'i');
   return {
     'Résumé / Accroche': heading('r[eé]sum[eé]|accroche|profil|summary|about').test(html),
-    'Expériences':       heading('exp[eé]rience|emploi|poste|travail|parcours').test(html),
-    'Compétences':       heading('comp[eé]tence|skill|technolog|technique|savoir').test(html),
-    'Langues':           heading('langue|language|anglais|fran[cç]ais|english').test(html),
-    'Formation':         heading('formation|dipl[oô]me|[ée]cole|universit[ée]|education|degree|cursus').test(html),
+    'Expériences': heading('exp[eé]rience|emploi|poste|travail|parcours').test(html),
+    'Compétences': heading('comp[eé]tence|skill|technolog|technique|savoir').test(html),
+    'Langues': heading('langue|language|anglais|fran[cç]ais|english').test(html),
+    'Formation': heading('formation|dipl[oô]me|[ée]cole|universit[ée]|education|degree|cursus').test(html),
     "Centres d'intérêt": heading('int[ée]r[êe]t|loisir|hobby|passion|activit[ée]').test(html),
   };
 }
@@ -2052,7 +2322,7 @@ function _renderAts(cvHtml, jobDesc) {
   const panel = $('ats-panel');
   if (!panel) return;
 
-  const jobKw  = _extractKeywords(jobDesc);
+  const jobKw = _extractKeywords(jobDesc);
   const cvNorm = cvHtml
     .replace(/<[^>]+>/g, ' ')
     .toLowerCase()
@@ -2065,18 +2335,18 @@ function _renderAts(cvHtml, jobDesc) {
     return false;
   };
 
-  const matched    = jobKw.filter(isMatched);
-  const missing    = jobKw.filter(kw => !isMatched(kw)).slice(0, 20);
-  const score      = jobKw.length ? Math.round((matched.length / jobKw.length) * 100) : 0;
-  const cls        = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
-  const barColor   = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
-  const sections   = _detectSections(cvHtml);
+  const matched = jobKw.filter(isMatched);
+  const missing = jobKw.filter(kw => !isMatched(kw)).slice(0, 20);
+  const score = jobKw.length ? Math.round((matched.length / jobKw.length) * 100) : 0;
+  const cls = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
+  const barColor = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
+  const sections = _detectSections(cvHtml);
 
-  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const matchedTop   = matched.slice(0, 20);
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const matchedTop = matched.slice(0, 20);
   const pillsMatched = matchedTop.map(k => '<span class="ats-pill match">' + esc(k) + '</span>').join('');
-  const pillsMissing = missing.map(k  => '<span class="ats-pill missing">' + esc(k) + '</span>').join('');
-  const sectBadges   = Object.entries(sections).map(([name, ok]) =>
+  const pillsMissing = missing.map(k => '<span class="ats-pill missing">' + esc(k) + '</span>').join('');
+  const sectBadges = Object.entries(sections).map(([name, ok]) =>
     '<span class="ats-section-badge ' + (ok ? 'found' : 'missing') + '">' + (ok ? '✓' : '✗') + ' ' + name + '</span>'
   ).join('');
 
@@ -2090,7 +2360,7 @@ function _renderAts(cvHtml, jobDesc) {
     '</div>',
     '<div class="ats-bar"><div class="ats-bar-fill" style="width:0%;background:' + barColor + '" data-target="' + score + '"></div></div>',
     matchedTop.length ? '<div class="ats-keywords-title">Mots-clés présents</div><div class="ats-pills">' + pillsMatched + '</div>' : '',
-    missing.length    ? '<div class="ats-keywords-title">Mots-clés absents</div><div class="ats-pills">' + pillsMissing + '</div>' : '',
+    missing.length ? '<div class="ats-keywords-title">Mots-clés absents</div><div class="ats-pills">' + pillsMissing + '</div>' : '',
     '<div class="ats-keywords-title">Sections détectées</div>',
     '<div class="ats-sections">' + sectBadges + '</div>',
     '<button type="button" class="ats-ai-btn" id="btn-ats-ai">🤖 Analyser avec l\'IA</button>',
@@ -2111,9 +2381,9 @@ function _renderAts(cvHtml, jobDesc) {
 
 async function _runAtsAI() {
   const jobDesc = ($('job-desc-input') ? $('job-desc-input').value : '').trim();
-  const cvHtml  = htmlModel ? htmlModel.getValue() : '';
+  const cvHtml = htmlModel ? htmlModel.getValue() : '';
   if (!cvHtml.trim()) { showToast("Charge d'abord un CV dans l'éditeur.", 'err'); return; }
-  if (!jobDesc)       { showToast("Colle l'offre d'emploi pour l'analyse IA.", 'err'); return; }
+  if (!jobDesc) { showToast("Colle l'offre d'emploi pour l'analyse IA.", 'err'); return; }
 
   const btn = $('btn-ats-ai');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyse IA en cours...'; }
@@ -2127,7 +2397,7 @@ async function _runAtsAI() {
     });
     if (!resp.ok) {
       let msg = 'Erreur serveur';
-      try { msg = (await resp.json()).error || msg; } catch (_) {}
+      try { msg = (await resp.json()).error || msg; } catch (_) { }
       throw new Error(msg);
     }
     _renderAtsAI(await resp.json());
@@ -2141,15 +2411,15 @@ function _renderAtsAI(result) {
   const panel = $('ats-panel');
   if (!panel) return;
 
-  const score       = Math.max(0, Math.min(100, parseInt(result.score, 10) || 0));
-  const matched     = Array.isArray(result.matched_skills)       ? result.matched_skills       : [];
-  const missingHard = Array.isArray(result.missing_hard_skills)  ? result.missing_hard_skills  : [];
+  const score = Math.max(0, Math.min(100, parseInt(result.score, 10) || 0));
+  const matched = Array.isArray(result.matched_skills) ? result.matched_skills : [];
+  const missingHard = Array.isArray(result.missing_hard_skills) ? result.missing_hard_skills : [];
   const missingNice = Array.isArray(result.missing_nice_to_have) ? result.missing_nice_to_have : [];
 
-  const cls      = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
+  const cls = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
   const barColor = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
-  const esc      = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const pills    = (arr, klass) => arr.map(k => '<span class="ats-pill ' + klass + '">' + esc(k) + '</span>').join('');
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const pills = (arr, klass) => arr.map(k => '<span class="ats-pill ' + klass + '">' + esc(k) + '</span>').join('');
 
   panel.innerHTML = [
     '<div class="ats-ai-badge">✨ Analyse IA</div>',
@@ -2163,7 +2433,7 @@ function _renderAtsAI(result) {
     '<div class="ats-bar"><div class="ats-bar-fill" style="width:0%;background:' + barColor + '" data-target="' + score + '"></div></div>',
     missingHard.length ? '<div class="ats-keywords-title">⚠️ Compétences clés manquantes</div><div class="ats-pills">' + pills(missingHard, 'missing') + '</div>' : '',
     missingNice.length ? '<div class="ats-keywords-title">Atouts bonus manquants</div><div class="ats-pills">' + pills(missingNice, 'bonus') + '</div>' : '',
-    matched.length     ? '<div class="ats-keywords-title">Compétences présentes</div><div class="ats-pills">' + pills(matched, 'match') + '</div>' : '',
+    matched.length ? '<div class="ats-keywords-title">Compétences présentes</div><div class="ats-pills">' + pills(matched, 'match') + '</div>' : '',
     '<button type="button" class="ats-ai-btn" id="btn-ats-ai">🔄 Relancer l\'analyse IA</button>',
   ].join('');
   panel.style.display = 'block';
@@ -2183,11 +2453,11 @@ function _renderAtsAI(result) {
 function _openDiffModal() {
   if (!_tailorBeforeHtml) return;
   const afterHtml = htmlModel ? htmlModel.getValue() : '';
-  const afterCss  = cssModel ? cssModel.getValue() : '';
+  const afterCss = cssModel ? cssModel.getValue() : '';
   const beforeCss = _tailorBeforeCss != null ? _tailorBeforeCss : afterCss;
-  const modal  = $('modal-diff');
+  const modal = $('modal-diff');
   const before = $('diff-frame-before');
-  const after  = $('diff-frame-after');
+  const after = $('diff-frame-after');
   modal.style.display = 'flex';
   // Wait for layout so clientWidth is correct, then inject zoomed srcdoc.
   requestAnimationFrame(() => {
@@ -2198,7 +2468,7 @@ function _openDiffModal() {
       return html.replace(/<\/head>/i, '<style>html,body{zoom:' + zoom.toFixed(3) + ';}</style></head>');
     };
     before.srcdoc = injectZoom(_buildPreviewHtml(_tailorBeforeHtml, beforeCss));
-    after.srcdoc  = injectZoom(_buildPreviewHtml(afterHtml,         afterCss));
+    after.srcdoc = injectZoom(_buildPreviewHtml(afterHtml, afterCss));
   });
 }
 

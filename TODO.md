@@ -43,6 +43,14 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 - [x] Archive locale + Vercel Blob Storage
 - [x] Historique des CVs avec job_desc associée
 
+### Migration JSON (source de vérité)
+- [x] Stockage du JSON + templateId dans IndexedDB à côté du HTML
+- [x] Capture du JSON à la génération du PDF
+- [x] Détection auto du mode au chargement (Formulaire si JSON, Expert si HTML seul)
+- [x] Avertissement « éjection » avant de passer un CV-formulaire en mode Expert
+- [x] Export/import qui conserve le JSON
+- [x] **Brouillon : sauvegarde du JSON du formulaire à chaque modif + reconstruction au rechargement** — avant, le JSON n'était persisté qu'à l'export PDF ; un F5 sans export rouvrait le CV en mode Expert et perdait le formulaire (corrigé dans `app.js`, brouillon localStorage).
+
 ---
 
 ## 🔵 Priorité haute — à faire
@@ -59,6 +67,12 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 ---
 
 ## 🟡 Priorité moyenne — bonnes idées
+
+- [ ] **Multi-modèles de mise en page (template)**
+  Aujourd'hui `ResumeForm.getTemplateId()` renvoie toujours `'sobre'` en dur (`resume-form.js`). Le champ `templateId` est déjà stocké partout (IndexedDB, export/import) mais inutile tant qu'il n'existe qu'un seul modèle. À activer le jour où on ajoute d'autres mises en page (Moderne / Classique / Minimal).
+
+- [ ] **Découper `static/js/app.js` (2378 lignes)**
+  Fichier devenu un mastodonte qui mélange éditeur Monaco, chat IA, ATS, IndexedDB, tailoring… Chaque modif est plus risquée. Extraire des modules (ex: `idb.js`, `tailor.js`, `ats.js`). Refacto à faire prudemment, avec tests à l'appui — pas en aveugle.
 
 - [ ] **Raccourcis clavier**
   `Ctrl+Enter` = convertir PDF, `Ctrl+S` = sauvegarder brouillon, `Ctrl+Shift+A` = lancer ATS.

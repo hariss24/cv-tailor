@@ -246,7 +246,7 @@ async function exportData() {
 
   const htmlEntries = await _getAllHtmlFromIDB();
   const htmlMap = {};
-  for (const h of htmlEntries) htmlMap[h.id] = { html: h.html, css: h.css };
+  for (const h of htmlEntries) htmlMap[h.id] = { html: h.html, css: h.css, json: h.json || null, templateId: h.templateId || null };
 
   // Fallback serveur pour les entrées pré-migration (HTML sur disque, pas dans IDB)
   await Promise.all(meta.filter(e => !htmlMap[e.id]).map(async e => {
@@ -299,14 +299,14 @@ async function importData(file) {
   for (const entry of payload.entries) {
     if (!entry.id) continue;
     if (!existingIds.has(entry.id)) {
-      const { html, css, ...meta } = entry;
+      const { html, css, json, templateId, ...meta } = entry;
       existing.push(meta);
       existingIds.add(entry.id);
       imported++;
     }
-    // Toujours écrire le HTML dans IDB (même si les métadonnées existaient)
-    if (entry.html) {
-      await _saveHtmlToIDB(entry.id, entry.html || '', entry.css || '');
+    // Toujours écrire le HTML (+ JSON structuré) dans IDB, même si les métadonnées existaient
+    if (entry.html || entry.json) {
+      await _saveHtmlToIDB(entry.id, entry.html || '', entry.css || '', entry.json || null, entry.templateId || null);
     }
   }
 
@@ -317,12 +317,12 @@ async function importData(file) {
   alert(`Import terminé : ${imported} nouvelle(s) entrée(s) ajoutée(s).`);
 }
 
-async function _saveHtmlToIDB(id, html, css) {
+async function _saveHtmlToIDB(id, html, css, json, templateId) {
   try {
     const db = await _openHistoryIDB();
     await new Promise((res, rej) => {
       const tx = db.transaction(IDB_HTML, 'readwrite');
-      tx.objectStore(IDB_HTML).put({ id, html, css });
+      tx.objectStore(IDB_HTML).put({ id, html, css, json: json || null, templateId: templateId || null });
       tx.oncomplete = res;
       tx.onerror    = e => rej(e.target.error);
     });

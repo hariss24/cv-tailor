@@ -490,3 +490,220 @@ def generate_pack(
         "letter_css":  str(result.get("letter_css", "")).strip(),
         "email":       str(result.get("email", "")).strip(),
     }
+
+
+# ---------------------------------------------------------------------------
+# CV structuré (« CV = données ») — extraction PDF et tailoring sur les champs
+# ---------------------------------------------------------------------------
+# Schéma JSON partagé avec le mode Formulaire du frontend (resume-form.js).
+
+_RESUME_SCHEMA_DESC = (
+    '{\n'
+    '  "name": "...", "title": "...", "location": "...", "email": "...", '
+    '"phone": "...", "linkedin": "...",\n'
+    '  "summary": "...",\n'
+    '  "experience": [{"title": "...", "company": "...", "location": "...", '
+    '"date": "...", "bullets": ["...", "..."]}],\n'
+    '  "education": [{"title": "...", "school": "...", "location": "...", "date": "..."}],\n'
+    '  "skills": ["...", "..."],\n'
+    '  "languages": [{"name": "...", "level": "..."}]\n'
+    '}'
+)
+
+
+def _s(value) -> str:
+    return str(value).strip() if value is not None else ""
+
+
+def _normalize_resume(d: dict) -> dict:
+    """Coerce une structure quelconque vers le schéma CV propre et sûr."""
+    if not isinstance(d, dict):
+        d = {}
+
+    def experience_item(e):
+        if not isinstance(e, dict):
+            e = {}
+        bullets = e.get("bullets")
+        if isinstance(bullets, str):
+            bullets = [bullets]
+        if not isinstance(bullets, list):
+            bullets = []
+        return {
+            "title":    _s(e.get("title")),
+            "company":  _s(e.get("company")),
+            "location": _s(e.get("location")),
+            "date":     _s(e.get("date")),
+            "bullets":  [_s(b) for b in bullets if _s(b)][:8],
+        }
+
+    def education_item(e):
+        if not isinstance(e, dict):
+            e = {}
+        return {
+            "title":    _s(e.get("title")),
+            "school":   _s(e.get("school")),
+            "location": _s(e.get("location")),
+            "date":     _s(e.get("date")),
+        }
+
+    def language_item(l):
+        if not isinstance(l, dict):
+            l = {}
+        return {"name": _s(l.get("name")), "level": _s(l.get("level"))}
+
+    exp = d.get("experience") if isinstance(d.get("experience"), list) else []
+    edu = d.get("education") if isinstance(d.get("education"), list) else []
+    langs = d.get("languages") if isinstance(d.get("languages"), list) else []
+    skills = d.get("skills")
+    if isinstance(skills, str):
+        skills = [s for s in re.split(r"[\n,;]", skills)]
+    if not isinstance(skills, list):
+        skills = []
+
+    return {
+        "name":       _s(d.get("name")),
+        "title":      _s(d.get("title")),
+        "location":   _s(d.get("location")),
+        "email":      _s(d.get("email")),
+        "phone":      _s(d.get("phone")),
+        "linkedin":   _s(d.get("linkedin")),
+        "summary":    _s(d.get("summary")),
+        "experience": [experience_item(e) for e in exp][:20],
+        "education":  [education_item(e) for e in edu][:20],
+        "skills":     [_s(s) for s in skills if _s(s)][:60],
+        "languages":  [language_item(l) for l in langs if _s(l.get("name") if isinstance(l, dict) else l)][:20],
+    }
+
+
+def _loads_ai_json(raw: str) -> dict:
+    """Parse une réponse IA en retirant d'éventuelles balises markdown ```json."""
+    import json as _json
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```\s*$", "", raw.strip()).strip()
+    try:
+        return _json.loads(raw)
+    except _json.JSONDecodeError as exc:
+        raise ValueError(f"Réponse IA invalide (JSON malformé) : {exc}") from None
+
+
+_SYSTEM_PDF_TO_RESUME = (
+    "Tu es un moteur d'extraction de CV. Tu reçois les pages d'un CV sous forme d'images. "
+    "Tu produis UNIQUEMENT un objet JSON structuré reprenant TOUTES les informations visibles.\n\n"
+    "SCHÉMA JSON OBLIGATOIRE :\n" + _RESUME_SCHEMA_DESC + "\n\n"
+    "RÈGLES :\n"
+    "- N'invente RIEN : n'extrais que ce qui est réellement écrit dans le CV.\n"
+    "- N'omets AUCUN détail : toutes les expériences, formations, compétences, langues, coordonnées.\n"
+    "- 'bullets' = les puces/réalisations de chaque expérience (une chaîne par puce).\n"
+    "- 'date' = la période telle qu'écrite (ex : 'Jan 2024 - Présent', '2020 - 2022').\n"
+    "- Si une information est absente, mets une chaîne vide \"\" (ou une liste vide).\n"
+    "- N'inclus PAS de photo.\n"
+    "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON."
+)
+
+
+def pdf_to_resume(images: list[bytes], api_key: str | None = None) -> dict:
+    """Extrait un CV (images PDF) vers le schéma JSON structuré.
+
+    Raises:
+        ValueError: clé manquante, clé Anthropic (images non supportées), ou JSON invalide.
+        RuntimeError: quota épuisé.
+    """
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        raise ValueError(
+            "Aucune clé API configurée. "
+            "Ajoutez GEMINI_API_KEY dans les variables d'environnement "
+            "ou une clé personnelle dans ⚙️ Paramètres."
+        )
+    n = len(images)
+    prompt = (
+        f"Voici le CV en {n} page{'s' if n > 1 else ''}. "
+        "Extrais toutes les informations dans le schéma JSON demandé."
+    )
+    raw = "".join(stream_completion(prompt, _SYSTEM_PDF_TO_RESUME, images=images, api_key=key))
+    return _normalize_resume(_loads_ai_json(raw))
+
+
+_RESUME_TAILOR_RULES = {
+    "peu": (
+        "NIVEAU SUBTIL :\n"
+        "- Ajuste 'title' pour refléter le type de poste visé, de façon générique.\n"
+        "- Réoriente 'summary' avec 2-3 mots-clés du poste, naturellement.\n"
+        "- NE modifie PAS 'skills', 'experience', 'education', 'languages'.\n"
+    ),
+    "adapte": (
+        "NIVEAU MODÉRÉ :\n"
+        "- Ajuste 'title' et réécris 'summary' pour le poste visé.\n"
+        "- Réordonne les 'skills' existantes (sans en ajouter ni supprimer).\n"
+        "- Enrichis/reformule les 'bullets' des expériences (max 4 par expérience, "
+        "sans inventer de contenu absent du CV).\n"
+        "- NE touche PAS à 'languages', 'education', ni aux 'company'/'date' du parcours.\n"
+    ),
+    "hyper": (
+        "NIVEAU MAXIMUM :\n"
+        "- Ajuste 'title' et réécris entièrement 'summary'.\n"
+        "- Réorganise et reformule les 'skills' existantes (sans en inventer de nouvelles).\n"
+        "- Réécris les 'bullets' des expériences (max 4 par expérience, sans inventer de faits).\n"
+        "- INTERDIT : supprimer des langues, inventer des compétences, modifier les dates/"
+        "entreprises du parcours ou les diplômes.\n"
+    ),
+}
+
+_SYSTEM_TAILOR_RESUME_BASE = (
+    "Tu es un expert en optimisation de CV. Tu reçois un CV au format JSON structuré et une "
+    "offre d'emploi. Tu renvoies le MÊME CV au format JSON, adapté à l'offre.\n\n"
+    "SCHÉMA JSON OBLIGATOIRE (identique en entrée et en sortie) :\n" + _RESUME_SCHEMA_DESC + "\n\n"
+    "RÈGLES ABSOLUES :\n"
+    "- Conserve EXACTEMENT la même structure JSON et toutes les clés.\n"
+    "- Ne FABRIQUE jamais d'expérience, d'entreprise, de diplôme ou de date absents du CV.\n"
+    "- ANTI-DÉTECTION : n'écris JAMAIS le nom de l'entreprise ciblée dans 'title' ou 'summary'. "
+    "Le CV doit rester naturel, pas taillé pour une seule offre.\n\n"
+)
+
+_SYSTEM_TAILOR_RESUME_TAIL = (
+    "\nFORMAT DE RÉPONSE OBLIGATOIRE : JSON PUR uniquement, aucune balise markdown, "
+    "aucun ```json, aucun texte avant ou après le JSON."
+)
+
+
+def tailor_resume(
+    resume: dict,
+    job_desc: str,
+    level: str = "adapte",
+    api_key: str | None = None,
+) -> dict:
+    """Adapte un CV structuré (JSON) à une offre d'emploi, en JSON structuré.
+
+    Raises:
+        ValueError: clé manquante ou JSON invalide.
+        RuntimeError: quota épuisé.
+    """
+    import json as _json
+
+    key = api_key or os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        raise ValueError(
+            "Aucune clé API configurée. "
+            "Ajoutez GEMINI_API_KEY dans les variables d'environnement "
+            "ou une clé personnelle dans ⚙️ Paramètres."
+        )
+
+    rules = _RESUME_TAILOR_RULES.get(level, _RESUME_TAILOR_RULES["adapte"])
+    system = _SYSTEM_TAILOR_RESUME_BASE + rules + _SYSTEM_TAILOR_RESUME_TAIL
+
+    # On retire la photo (base64) : inutile pour l'adaptation, coûteuse en tokens.
+    clean = {k: v for k, v in _normalize_resume(resume).items()}
+    content = (
+        "CV (JSON) :\n" + _json.dumps(clean, ensure_ascii=False)
+        + "\n\nOffre d'emploi :\n" + job_desc
+    )
+    messages = [{"role": "user", "content": content}]
+
+    if _is_anthropic_key(key):
+        raw = _complete_anthropic(messages, system, key)
+    else:
+        raw = _complete_gemini(messages, system, key)
+
+    return _normalize_resume(_loads_ai_json(raw))
