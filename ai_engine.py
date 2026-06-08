@@ -502,8 +502,8 @@ _RESUME_SCHEMA_DESC = (
     '  "name": "...", "title": "...", "location": "...", "email": "...", '
     '"phone": "...", "linkedin": "...",\n'
     '  "summary": "...",\n'
-    '  "experience": [{"title": "...", "company": "...", "location": "...", '
-    '"date": "...", "bullets": ["...", "..."]}],\n'
+    '  "experience": [{"title": "...", "company": "...", "contract": "...", '
+    '"location": "...", "date": "...", "bullets": ["...", "..."]}],\n'
     '  "education": [{"title": "...", "school": "...", "location": "...", "date": "..."}],\n'
     '  "skills": ["...", "..."],\n'
     '  "languages": [{"name": "...", "level": "..."}],\n'
@@ -532,6 +532,7 @@ def _normalize_resume(d: dict) -> dict:
         return {
             "title":    _s(e.get("title")),
             "company":  _s(e.get("company")),
+            "contract": _s(e.get("contract")),
             "location": _s(e.get("location")),
             "date":     _s(e.get("date")),
             "bullets":  [_s(b) for b in bullets if _s(b)][:8],
@@ -604,6 +605,8 @@ _SYSTEM_PDF_TO_RESUME = (
     "- N'invente RIEN : n'extrais que ce qui est réellement écrit dans le CV.\n"
     "- N'omets AUCUN détail : toutes les expériences, formations, compétences, langues, coordonnées.\n"
     "- 'bullets' = les puces/réalisations de chaque expérience (une chaîne par puce).\n"
+    "- 'contract' = le type de contrat de l'expérience (ex : 'Stage', 'CDI', 'CDD', "
+    "'Alternance', 'Freelance'). Laisse \"\" si non précisé.\n"
     "- 'date' = la période telle qu'écrite (ex : 'Jan 2024 - Présent', '2020 - 2022').\n"
     "- Si une information est absente, mets une chaîne vide \"\" (ou une liste vide).\n"
     "- N'inclus PAS de photo.\n"
