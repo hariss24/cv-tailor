@@ -1211,6 +1211,71 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
+// Drag & drop d'un fichier .html / .md dans l'éditeur
+// ============================================================
+// Conversion Markdown minimale (titres, gras, italique, liens, listes,
+// paragraphes). Le contenu est d'abord échappé pour éviter toute injection.
+function _mdToHtml(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = s => s
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
+  const out = [];
+  let inList = false;
+  for (const raw of esc(md).split(/\r?\n/)) {
+    const line = raw.trim();
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    const li = line.match(/^[-*]\s+(.*)$/);
+    if (li) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push('  <li>' + inline(li[1]) + '</li>');
+      continue;
+    }
+    if (inList) { out.push('</ul>'); inList = false; }
+    if (h) out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>');
+    else if (line) out.push('<p>' + inline(line) + '</p>');
+  }
+  if (inList) out.push('</ul>');
+  return out.join('\n');
+}
+
+function _loadDroppedFile(file) {
+  const name = (file.name || '').toLowerCase();
+  const isHtml = name.endsWith('.html') || name.endsWith('.htm');
+  const isMd = name.endsWith('.md') || name.endsWith('.markdown');
+  if (!isHtml && !isMd) { setStatus('Glissez un fichier .html ou .md.', 'err'); return; }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const text = String(ev.target.result || '');
+    saveSnapshot('Avant import (glisser-déposer)');
+    if (htmlModel) htmlModel.setValue(isHtml ? text : _mdToHtml(text));
+    markCvLoaded();
+    showToast(isHtml ? 'Fichier HTML importé.' : 'Markdown converti et importé.', 'ok');
+  };
+  reader.onerror = () => setStatus('Lecture du fichier impossible.', 'err');
+  reader.readAsText(file);
+}
+
+(function _wireEditorDnd() {
+  const zone = $('editor');
+  if (!zone) return;
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+  ['dragenter', 'dragover'].forEach(evt =>
+    zone.addEventListener(evt, (e) => {
+      if (!hasFiles(e)) return; // laisse le drag&drop de texte natif de Monaco intact
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    })
+  );
+  zone.addEventListener('drop', (e) => {
+    if (!hasFiles(e) || !e.dataTransfer.files.length) return;
+    e.preventDefault();
+    _loadDroppedFile(e.dataTransfer.files[0]);
+  });
+})();
+
+// ============================================================
 // Convertir en PDF
 // ============================================================
 $('go').onclick = async () => {

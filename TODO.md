@@ -89,7 +89,7 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 
 - [ ] Export `.docx` — certains recruteurs exigent encore Word — ⏸️ _en attente : nécessite `app.py` (modifié hors boucle) + lib backend (python-docx) + nouvel endpoint/UI. À débloquer quand app.py sera committé._
 - [x] Présets de thème CSS (Moderne / Classique / Minimal) en un clic — ajout des modèles `classique` (serif, accent brun) et `minimal` (épuré, sans bordures) dans `TEMPLATES`, sélectionnables dans le mode Formulaire (Sobre / Moderne / Classique / Minimal).
-- [ ] Drag & drop d'un fichier `.html` ou `.md` dans l'éditeur
+- [x] Drag & drop d'un fichier `.html` ou `.md` dans l'éditeur — dépôt sur la zone éditeur (`#editor`) ; `.html`/`.htm` chargé tel quel, `.md`/`.markdown` converti via un mini-parser (titres, gras, italique, liens, listes). Snapshot auto avant import. Guard `Files` pour ne pas casser le drag de texte natif de Monaco. ⚠️ _déclenchement du drop à confirmer visuellement dans le navigateur._
 - [ ] Sidebar "Récents" dans l'éditeur (5 derniers CVs)
 - [ ] Import depuis LinkedIn (très complexe, dépend de l'API)
 
