@@ -71,13 +71,13 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
 - [x] **Multi-modèles de mise en page (template)**
   Ajout d'un 2ᵉ modèle « Moderne » (`TEMPLATES.moderne` = sobre + overrides CSS accent bleu, mêmes classes donc zéro risque structurel) et d'un sélecteur dans le mode Formulaire. `getTemplateId()` lit désormais le choix (persisté dans localStorage), `ensureCss()`/`setTemplate()` appliquent le CSS du modèle sélectionné. Base prête pour ajouter Classique / Minimal (une entrée `TEMPLATES.*` + une `<option>`).
 
-- [ ] **Découper `static/js/app.js` (2378 lignes)**
+- [ ] **Découper `static/js/app.js` (2378 lignes)** — ⏸️ _différé (refacto risqué, à faire en mode validé avec relecture, pas en autonomie : déplacements de code entre fichiers avec globales partagées, invérifiable hors navigateur)._
   Fichier devenu un mastodonte qui mélange éditeur Monaco, chat IA, ATS, IndexedDB, tailoring… Chaque modif est plus risquée. Extraire des modules (ex: `idb.js`, `tailor.js`, `ats.js`). Refacto à faire prudemment, avec tests à l'appui — pas en aveugle.
 
 - [x] **Raccourcis clavier**
   `Ctrl+Enter` = convertir PDF (déjà présent), `Ctrl+S` = sauvegarder brouillon (snapshot manuel), `Ctrl+Shift+A` = lancer l'analyse ATS sur le CV + l'offre courants.
 
-- [ ] **Modèle IA upgradeable**
+- [ ] **Modèle IA upgradeable** — ⏸️ _en attente : touche `ai_engine.py` + `app.py` + `index.html`, actuellement modifiés non committés (travail en cours hors boucle). La boucle ne peut pas committer sélectivement sans embarquer ce travail. À débloquer une fois ces fichiers committés/stashés._
   Permettre de choisir le modèle Gemini (Flash Lite / Flash / Pro) selon le besoin. Pro pour l'adaptation hyper, Lite pour le chat rapide.
 
 - [ ] **Preview page-break**
