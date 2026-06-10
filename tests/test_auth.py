@@ -1,5 +1,4 @@
-from unittest.mock import patch, MagicMock
-import app as _app_module
+from unittest.mock import patch
 
 
 def test_local_mode_leaves_convert_open(client, monkeypatch):
@@ -76,8 +75,6 @@ def test_logout_get_not_allowed(client):
 def test_login_rate_limited_after_max_failures(client, monkeypatch):
     monkeypatch.setenv("APP_MODE", "remote")
     monkeypatch.setenv("REMOTE_AUTH_PASSWORD", "secret")
-
-    ip = "10.0.0.1"
 
     def fake_rate_ok():
         return False

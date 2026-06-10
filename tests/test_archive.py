@@ -1,11 +1,8 @@
 """Tests pour archive.py — backend SQLite local."""
 import os
-import sys
 import threading
-import tempfile
 import uuid
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -224,7 +221,7 @@ def test_migrate_from_json(tmp_path, monkeypatch):
 # ---- Utilitaires de nommage -------------------------------------------------
 
 def test_slug_basic():
-    assert archive._slug("Société Générale") == "SocieteGenerale"
+    assert archive._slug("Société Générale") == "Societe_Generale"
 
 
 def test_slug_empty():

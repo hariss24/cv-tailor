@@ -1,5 +1,4 @@
 """Tests pour l'endpoint POST /api/editor-chat."""
-import json
 from unittest.mock import patch
 
 _HTML = "<div><h1>Jean Dupont</h1><p>Développeur Python</p></div>"

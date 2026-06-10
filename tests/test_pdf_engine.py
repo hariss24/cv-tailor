@@ -1,5 +1,4 @@
 """Tests pour pdf_engine.py."""
-import os
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -107,7 +106,7 @@ def test_playwright_render_passes_format_and_margin():
         "playwright": MagicMock(),
         "playwright.sync_api": mock_pw_module,
     }):
-        result = pdf_engine._playwright_render("<html></html>", "A4", "10mm", True)
+        pdf_engine._playwright_render("<html></html>", "A4", "10mm", True)
 
     mock_page.pdf.assert_called_once()
     call_kwargs = mock_page.pdf.call_args.kwargs

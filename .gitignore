@@ -13,3 +13,5 @@ env/
 
 .claude/worktrees/
 tmp_pytest/
+tmp_*/
+test_history.html

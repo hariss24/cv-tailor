@@ -94,7 +94,6 @@ def test_pdf_to_html_streams_sse(client):
 
     with patch("app.quota.check_and_increment", return_value=True), \
          patch("app.ai_engine.stream_completion", side_effect=fake_stream):
-        import fitz
         with patch("fitz.open", side_effect=fake_fitz_open):
             resp = client.post(
                 "/api/pdf-to-html",
