@@ -48,4 +48,32 @@ test.describe('resume-form.js', () => {
     expect(generatedHtml).toContain("Asso");
     expect(generatedHtml).toContain("Aidé");
   });
+
+  test('generates Letter HTML when docType is Lettre', async ({ page }) => {
+    await page.goto(pageUrl);
+
+    // Initialize the form and set docType
+    await page.evaluate(() => {
+      window.ResumeForm.setDocType('Lettre');
+      window.ResumeForm.init();
+    });
+
+    const mockData = {
+      sender_name: "Alice Dupont",
+      recipient_name: "Tech Corp",
+      subject: "Candidature pour dev",
+      body: "Je suis intéressée."
+    };
+
+    await page.evaluate((data) => {
+      window.ResumeForm.loadData(data);
+    }, mockData);
+
+    const generatedHtml = await page.evaluate(() => window.htmlModel.getValue());
+
+    expect(generatedHtml).toContain("Alice Dupont");
+    expect(generatedHtml).toContain("Tech Corp");
+    expect(generatedHtml).toContain("Candidature pour dev");
+    expect(generatedHtml).toContain("Je suis intéressée.");
+  });
 });

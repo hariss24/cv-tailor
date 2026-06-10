@@ -940,6 +940,7 @@ require(['vs/editor/editor.main'], function () {
   document.querySelectorAll('.tab').forEach(btn => {
     btn.onclick = () => switchTab(btn.dataset.tab);
   });
+  if (window.ResumeForm && window.ResumeForm.setDocType) window.ResumeForm.setDocType(_activeDocType);
   if (window.ResumeForm && window.ResumeForm.init) window.ResumeForm.init();
   // Restaurer le formulaire depuis le brouillon (CV non encore exporté en PDF).
   // loadData() reconstruit les champs ET réécrit htmlModel + l'aperçu.
@@ -1020,6 +1021,10 @@ require(['vs/editor/editor.main'], function () {
     _activeDocType = newType;
     try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) { }
 
+    if (window.ResumeForm && window.ResumeForm.setDocType) {
+      window.ResumeForm.setDocType(_activeDocType);
+    }
+
     const raw = localStorage.getItem(_docTypeKey(newType));
     if (raw) {
       try {
@@ -1072,6 +1077,9 @@ require(['vs/editor/editor.main'], function () {
       _activeDocType = localEntry.doc_type || 'CV';
       if ($('doc_type')) $('doc_type').value = _activeDocType;
       try { localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType); } catch (_) { }
+      if (window.ResumeForm && window.ResumeForm.setDocType) {
+        window.ResumeForm.setDocType(_activeDocType);
+      }
       $('company').value = localEntry.company || '';
       $('role').value = localEntry.role || '';
       $('notes').value = localEntry.notes || '';
