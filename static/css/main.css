@@ -363,7 +363,7 @@ button.ghost:active {
 }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .modal-header h2 { margin: 0; font-size: 20px; color: var(--text); display: flex; align-items: center; gap: 8px; }
-.close-modal { color: var(--muted); font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.2s; line-height: 1; }
+.close-modal { color: var(--muted); font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.2s; line-height: 1; background: none; border: none; padding: 0; font-family: inherit; }
 .close-modal:hover { color: var(--text); }
 .ia-step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; margin-top: 20px; display: block; }
 .modal-content textarea {
@@ -412,7 +412,7 @@ button.ghost:active {
 
   .splitter { width: 100%; height: 14px; cursor: row-resize; background: rgba(163,177,198,0.25); border-radius: 7px; }
 
-  .pane-title { flex-wrap: nowrap; overflow-x: auto; gap: 4px; }
+  .pane-title { flex-wrap: wrap; gap: 4px; }
   .pane-title .actions-mini { display: flex; flex-shrink: 0; gap: 2px; }
   .pane-title .actions-mini button,
   .pane-title .actions-mini select { font-size: 10px; padding: 3px 7px; }
@@ -608,6 +608,12 @@ button.ghost:active {
 .tailor-status { font-size: 12px; color: var(--muted); min-height: 16px; }
 
 /* ---- Accessibilité : focus clavier visible sur les contrôles du panel ---- */
+/* Focus clavier visible sur tout le chrome UI (topbar, modales, liens, toggles) */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
 .tailor-btn:focus-visible,
 .level-btn:focus-visible,
 .btn-show-diff:focus-visible,
