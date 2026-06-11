@@ -1042,7 +1042,7 @@ require(['vs/editor/editor.main'], function () {
         htmlModel.setValue(saved.html || '');
         if (cssModel) cssModel.setValue(saved.css || '');
         if (saved.json && window.ResumeForm && window.ResumeForm.loadData) {
-          window.ResumeForm.loadData(saved.json, true); // Ne pas réécraser le HTML qu'on vient de set
+          window.ResumeForm.loadData(saved.json, activeTab !== 'form'); // Écrase le HTML corrompu si on est sur l'onglet formulaire
         } else if (!saved.json && window.ResumeForm && window.ResumeForm.clearData) {
           window.ResumeForm.clearData(); // Document Expert pur, vider le formulaire
         }
