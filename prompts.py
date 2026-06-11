@@ -134,11 +134,12 @@ _LETTRE_SKELETON = """\
   <style>
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Helvetica", "Arial", sans-serif; font-size: 9.5pt; line-height: 1.6; color: #333; padding: 48px 58px 40px; }
+    body { font-family: "Inter", "Helvetica", "Arial", sans-serif; font-size: 9.5pt; line-height: 1.6; color: #333; padding: 48px 58px 40px; }
     .header { display: flex; justify-content: space-between; margin-bottom: 36px; }
     .sender strong, .recipient strong { font-size: 10.5pt; color: #000; }
     .sender p, .recipient p { margin-top: 2px; color: #555; font-size: 9pt; }
-    .recipient { text-align: right; }
+    .recipient { text-align: left; }
+    .sender { text-align: right; }
     .subject { font-weight: 600; font-size: 9.5pt; color: #000; margin-bottom: 24px; border-bottom: 2px solid #c9c6c1; padding-bottom: 8px; }
     .salutation { margin-bottom: 16px; }
     .body p { margin-bottom: 16px; text-align: justify; }
@@ -149,16 +150,18 @@ _LETTRE_SKELETON = """\
 </head>
 <body>
   <div class="header">
+    <div class="recipient">
+      <strong>A l'attention du responsable de recrutement</strong>
+      <p>Service ou contact</p>
+      <p>Adresse de l'entreprise</p>
+    </div>
     <div class="sender">
       <strong>Prenom Nom</strong>
       <p>Titre du poste</p>
       <p>Ville, Pays</p>
       <p>+33 6 00 00 00 00</p>
       <p>email@example.com</p>
-    </div>
-    <div class="recipient">
-      <strong>A l'attention du responsable de recrutement</strong>
-      <p>Ville, le JJ mois AAAA</p>
+      <p style="margin-top: 16px;">Ville, le JJ mois AAAA</p>
     </div>
   </div>
   <div class="subject">Objet : Candidature au poste de [Poste]</div>

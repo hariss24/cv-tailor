@@ -352,22 +352,26 @@ function _docTypeKey(type) { return _TYPE_STORE_PREFIX + type.toLowerCase(); }
 const STORAGE_KEY_LAST_TYPE = 'html-to-pdf:last-doc-type';
 let _activeDocType = 'CV';
 
-const _LETTRE_SKELETON = `<div style="font-family: Georgia, 'Times New Roman', serif; max-width: 680px; margin: 40px auto; color: #222; line-height: 1.7; font-size: 14px;">
+const _LETTRE_SKELETON = `<div style="font-family: 'Inter', sans-serif; max-width: 680px; margin: 40px auto; color: #222; line-height: 1.7; font-size: 14px;">
 
-  <div style="text-align: right; margin-bottom: 48px;">
-    <p style="margin: 0;">Prénom Nom<br>
-    Adresse, Ville<br>
-    email@example.com &middot; +33 6 00 00 00 00</p>
-    <p style="margin: 16px 0 0;">Ville, le JJ/MM/AAAA</p>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px;">
+    <!-- Infos de l'entreprise à gauche -->
+    <div style="flex: 1; padding-right: 20px;">
+      <p style="margin: 0;"><strong>Nom de l'entreprise</strong><br>
+      Service Recrutement<br>
+      Adresse de l'entreprise</p>
+    </div>
+    
+    <!-- Infos personnelles à droite -->
+    <div style="text-align: right; flex: 1; padding-left: 20px;">
+      <p style="margin: 0;"><strong>Prénom Nom</strong><br>
+      Adresse, Ville<br>
+      email@example.com &middot; +33 6 00 00 00 00</p>
+      <p style="margin: 16px 0 0; color: #555;">Ville, le JJ/MM/AAAA</p>
+    </div>
   </div>
 
-  <div style="margin-bottom: 32px;">
-    <p style="margin: 0;"><strong>Nom de l'entreprise</strong><br>
-    Service Recrutement<br>
-    Adresse de l'entreprise</p>
-  </div>
-
-  <p><strong>Objet : Candidature au poste de [Intitulé du poste]</strong></p>
+  <p style="margin-bottom: 32px;"><strong>Objet : Candidature au poste de [Intitulé du poste]</strong></p>
 
   <p>Madame, Monsieur,</p>
 
@@ -382,7 +386,7 @@ const _LETTRE_SKELETON = `<div style="font-family: Georgia, 'Times New Roman', s
   <p>Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.</p>
 
   <br><br>
-  <p>Prénom Nom</p>
+  <p style="text-align: right; padding-right: 40px;"><strong>Prénom Nom</strong></p>
 
 </div>`;
 

@@ -274,22 +274,26 @@ ${interests.map(s => `      <span class="plain-list__item">${esc(s)}</span>`).jo
     const paragraphs = (d.body || '').split('\n').filter(p => p.trim() !== '').map(p => `<p>${esc(p)}</p>`).join('\n  ');
     const signoffParagraphs = (d.signoff || '').split('\n').filter(p => p.trim() !== '').map(p => `<p>${esc(p)}</p>`).join('\n  ');
 
-    return `<div style="font-family: Georgia, 'Times New Roman', serif; max-width: 680px; margin: 40px auto; color: #222; line-height: 1.7; font-size: 14px;" class="resume-template-renderer">
+    return `<div style="font-family: 'Inter', sans-serif; max-width: 680px; margin: 40px auto; color: #222; line-height: 1.7; font-size: 14px;" class="resume-template-renderer">
 
-  <div style="text-align: right; margin-bottom: 48px;">
-    <p style="margin: 0;">${esc(d.sender_name)}<br>
-    ${esc(d.sender_address)}<br>
-    ${esc(d.sender_contact)}</p>
-    <p style="margin: 16px 0 0;">${esc(d.date)}</p>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px;">
+    <!-- Infos de l'entreprise à gauche -->
+    <div style="flex: 1; padding-right: 20px;">
+      <p style="margin: 0;"><strong>${esc(d.recipient_name)}</strong><br>
+      ${esc(d.recipient_service)}<br>
+      ${esc(d.recipient_address)}</p>
+    </div>
+    
+    <!-- Infos personnelles à droite -->
+    <div style="text-align: right; flex: 1; padding-left: 20px;">
+      <p style="margin: 0;"><strong>${esc(d.sender_name)}</strong><br>
+      ${esc(d.sender_address)}<br>
+      ${esc(d.sender_contact)}</p>
+      <p style="margin: 16px 0 0; color: #555;">${esc(d.date)}</p>
+    </div>
   </div>
 
-  <div style="margin-bottom: 32px;">
-    <p style="margin: 0;"><strong>${esc(d.recipient_name)}</strong><br>
-    ${esc(d.recipient_service)}<br>
-    ${esc(d.recipient_address)}</p>
-  </div>
-
-  <p><strong>Objet : ${esc(d.subject)}</strong></p>
+  <p style="margin-bottom: 32px;"><strong>Objet : ${esc(d.subject)}</strong></p>
 
   <p>${esc(d.greeting)}</p>
 
@@ -298,7 +302,7 @@ ${interests.map(s => `      <span class="plain-list__item">${esc(s)}</span>`).jo
   ${signoffParagraphs}
 
   <br><br>
-  <p>${esc(d.signature)}</p>
+  <p style="text-align: right; padding-right: 40px;"><strong>${esc(d.signature)}</strong></p>
 
 </div>`;
   }
