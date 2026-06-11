@@ -491,7 +491,8 @@ button.ghost:active {
 .tailor-open-btn:hover .tailor-open-arrow { transform: translateX(3px); color: var(--orange); }
 
 /* Modale Tailor : plus large pour accueillir la grille 2 colonnes */
-.tailor-modal-content { width: 920px; max-height: 88vh; overflow-y: auto; padding: 24px 28px; }
+/* overflow-x hidden : les tooltips absolus des level-btn gonflent le scrollWidth de quelques px */
+.tailor-modal-content { width: 920px; max-height: 88vh; overflow-y: auto; overflow-x: hidden; padding: 24px 28px; }
 .tailor-modal-content .tailor-body-inner { padding: 0; }
 .tailor-body-inner {
   padding: 18px 20px 20px;
