@@ -2372,7 +2372,8 @@ $('btn-create-pack').addEventListener('click', async () => {
   const btn = $('btn-create-pack');
   const original = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Génération du pack…';
+  btn.classList.add('status-busy');
+  btn.textContent = 'Génération du pack… (jusqu’à 2 min)';
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000);
@@ -2405,10 +2406,11 @@ $('btn-create-pack').addEventListener('click', async () => {
     _openPackModal();
     showToast('Pack candidature généré.', 'ok');
   } catch (err) {
-    showToast(err.name === 'AbortError' ? "Délai dépassé, réessaie." : err.message, 'err');
+    showToast(err.name === 'AbortError' ? "Le serveur n'a pas répondu en 2 minutes. Réessaie." : err.message, 'err');
   } finally {
     clearTimeout(timeoutId);
     btn.disabled = false;
+    btn.classList.remove('status-busy');
     btn.innerHTML = original;
   }
 });
