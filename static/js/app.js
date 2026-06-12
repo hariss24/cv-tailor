@@ -453,13 +453,115 @@ const _LETTRE_SKELETON = `<div style="font-family: 'Inter', sans-serif; max-widt
 // ============================================================
 // Variables globales Monaco
 // ============================================================
-let editor;
+let editor = null;
 let htmlModel;
 let cssModel;
 let activeTab = 'html';
 let _isPreviewPrintMode = false;
 let _atsMissingKeywords = [];
 let _atsBoostEnabled = false;
+let _isSwitchingDoc = false;
+let _monacoLoading = false;
+let _monacoLoadPromise = null;
+
+// Modèle stub (avant chargement Monaco) : même interface getValue/setValue/onDidChangeContent.
+function _makeModelStub(initialValue) {
+  let _v = initialValue || '';
+  const _listeners = [];
+  return {
+    _stub: true,
+    getValue() { return _v; },
+    setValue(v) { _v = String(v); _listeners.forEach(fn => fn()); },
+    onDidChangeContent(fn) { _listeners.push(fn); return { dispose() {} }; },
+  };
+}
+
+// Sauvegarde l'état courant dans localStorage.
+function _saveCurrentState() {
+  if (_isSwitchingDoc || !htmlModel) return;
+  try {
+    let formJson = null;
+    if (window.ResumeForm && window.ResumeForm.matchesEditor && window.ResumeForm.matchesEditor()) {
+      formJson = window.ResumeForm.getData();
+    }
+    localStorage.setItem(_docTypeKey(_activeDocType), JSON.stringify({
+      html: htmlModel.getValue(),
+      css: cssModel ? cssModel.getValue() : '',
+      json: formJson,
+    }));
+    localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType);
+    flashAutosave();
+  } catch (_) { }
+}
+
+function _loadMonacoLoader() {
+  if (window.require && window.require.config) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-monaco-loader="true"]');
+    if (existing) {
+      existing.addEventListener('load', resolve, { once: true });
+      existing.addEventListener('error', reject, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js';
+    script.async = true;
+    script.dataset.monacoLoader = 'true';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Chargement de Monaco impossible.'));
+    document.head.appendChild(script);
+  });
+}
+
+// Charge Monaco à la demande (premier onglet html/css).
+function _ensureMonaco() {
+  if (editor) return Promise.resolve(editor);
+  if (_monacoLoadPromise) return _monacoLoadPromise;
+  _monacoLoading = true;
+
+  _monacoLoadPromise = _loadMonacoLoader()
+    .then(() => new Promise((resolve, reject) => {
+      require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+      require(['vs/editor/editor.main'], resolve, reject);
+    }))
+    .then(() => {
+      const h = htmlModel.getValue();
+      const c = cssModel.getValue();
+      htmlModel = monaco.editor.createModel(h, 'html');
+      cssModel = monaco.editor.createModel(c, 'css');
+      editor = monaco.editor.create($('editor'), {
+        model: htmlModel,
+        theme: 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        wordWrap: 'on',
+        fontSize: 13,
+        tabSize: 2,
+        scrollBeyondLastLine: false,
+        scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
+        overviewRulerLanes: 0,
+      });
+      editor.setModel(activeTab === 'css' ? cssModel : htmlModel);
+      setTimeout(function () {
+        if (htmlModel.getValue().includes('<!-- #region Photo_Base64 -->')) {
+          editor.trigger('fold', 'editor.foldAllMarkerRegions');
+        }
+        _foldStyleBlocks();
+      }, 400);
+      htmlModel.onDidChangeContent(() => { _saveCurrentState(); schedulePreview(); });
+      cssModel.onDidChangeContent(() => { _saveCurrentState(); schedulePreview(); });
+      _monacoLoading = false;
+      return editor;
+    })
+    .catch((err) => {
+      _monacoLoading = false;
+      _monacoLoadPromise = null;
+      showToast(err.message || 'Chargement de Monaco impossible.', 'err');
+      throw err;
+    });
+
+  return _monacoLoadPromise;
+}
 
 // ============================================================
 // Fusion HTML + CSS avec échappement anti-injection de balise
@@ -520,6 +622,7 @@ function switchTab(tab) {
     if (window.ResumeForm && window.ResumeForm.onShow) window.ResumeForm.onShow();
   } else {
     if (editorDiv) editorDiv.style.display = '';
+    _ensureMonaco().catch(() => {});
     if (editor) editor.setModel(tab === 'css' ? cssModel : htmlModel);
   }
   try { localStorage.setItem(STORAGE_KEY_TAB, tab); } catch (_) { }
@@ -929,10 +1032,9 @@ $('btn-save-snapshot-now').onclick = async () => {
 };
 
 // ============================================================
-// Initialisation Monaco
+// Initialisation légère (Monaco est chargé à la demande)
 // ============================================================
-require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
-require(['vs/editor/editor.main'], function () {
+(function initEditorState() {
   _activeDocType = localStorage.getItem(STORAGE_KEY_LAST_TYPE);
   if (!_activeDocType || !['CV', 'Lettre', 'Maître', 'Autre'].includes(_activeDocType)) {
     _activeDocType = $('doc_type') ? $('doc_type').value : 'CV';
@@ -975,50 +1077,9 @@ require(['vs/editor/editor.main'], function () {
 
   const wantTab = 'form';
 
-  htmlModel = monaco.editor.createModel(initialHtml || '', 'html');
-  cssModel = monaco.editor.createModel(initialCss || '', 'css');
+  htmlModel = _makeModelStub(initialHtml || '');
+  cssModel = _makeModelStub(initialCss || '');
 
-  editor = monaco.editor.create($('editor'), {
-    model: htmlModel,
-    theme: 'vs-dark',
-    automaticLayout: true,
-    minimap: { enabled: false },
-    wordWrap: 'on',
-    fontSize: 13,
-    tabSize: 2,
-    scrollBeyondLastLine: false,
-    scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
-    overviewRulerLanes: 0,
-  });
-
-  // Auto-replier les <style> et la région Photo_Base64 au chargement
-  setTimeout(function () {
-    if (htmlModel.getValue().includes('<!-- #region Photo_Base64 -->')) {
-      editor.trigger('fold', 'editor.foldAllMarkerRegions');
-    }
-    _foldStyleBlocks();
-  }, 400);
-
-  let _isSwitchingDoc = false;
-  function _saveCurrentState() {
-    if (_isSwitchingDoc || !htmlModel) return;
-    try {
-      // Si le CV affiché provient du formulaire, on persiste aussi son JSON
-      // structuré pour pouvoir reconstruire le formulaire au rechargement,
-      // même sans export PDF préalable.
-      let formJson = null;
-      if (window.ResumeForm && window.ResumeForm.matchesEditor && window.ResumeForm.matchesEditor()) {
-        formJson = window.ResumeForm.getData();
-      }
-      localStorage.setItem(_docTypeKey(_activeDocType), JSON.stringify({
-        html: htmlModel.getValue(),
-        css: cssModel ? cssModel.getValue() : '',
-        json: formJson,
-      }));
-      localStorage.setItem(STORAGE_KEY_LAST_TYPE, _activeDocType);
-      flashAutosave();
-    } catch (_) { }
-  }
 
   htmlModel.onDidChangeContent(() => {
     _saveCurrentState();
@@ -1044,6 +1105,7 @@ require(['vs/editor/editor.main'], function () {
   $('preview').srcdoc = mergedHtml();
 
   $('format-btn').onclick = () => {
+    if (!editor) { _ensureMonaco().then(() => $('format-btn').click()).catch(() => {}); return; }
     const action = editor.getAction('editor.action.formatDocument');
     if (action) action.run();
   };
@@ -1228,10 +1290,10 @@ require(['vs/editor/editor.main'], function () {
         });
     });
   }
-});
+})();
 
 function insertSnippet(text) {
-  if (!editor) return;
+  if (!editor) { _ensureMonaco().then(() => insertSnippet(text)).catch(() => {}); return; }
   const sel = editor.getSelection();
   editor.executeEdits('snippet', [{ range: sel, text, forceMoveMarkers: true }]);
   editor.focus();
