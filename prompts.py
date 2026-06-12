@@ -347,3 +347,45 @@ _COMMON_HTML_RULES = (
     "10. FORMAT DE SORTIE : Retourne UNIQUEMENT le code HTML complet, du <!DOCTYPE html> "
     "jusqu'à </html>. Zéro bloc markdown (```html), zéro commentaire global, zéro texte avant ou après."
 )
+
+
+# ---------------------------------------------------------------------------
+# Règles d'adaptation du CV JSON (pipeline /api/tailor-resume), par niveau.
+# Pendant équivalent de _TAILOR_SYSTEMS (pipeline HTML) ci-dessus.
+# ---------------------------------------------------------------------------
+
+_RESUME_TAILOR_RULES = {
+    "peu": (
+        "NIVEAU SUBTIL :\n"
+        "- Ajuste 'title' pour refléter le type de poste visé, de façon générique.\n"
+        "- Réoriente 'summary' avec 2-3 mots-clés du poste, naturellement.\n"
+        "- NE modifie PAS 'skills', 'experience', 'education', 'languages'.\n"
+    ),
+    "adapte": (
+        "NIVEAU MODÉRÉ :\n"
+        "- Ajuste 'title' et réécris 'summary' pour le poste visé.\n"
+        "- Réordonne les 'skills' existantes (sans en ajouter ni supprimer).\n"
+        "- Enrichis/reformule les 'bullets' des expériences (max 4 par expérience, "
+        "sans inventer de contenu absent du CV).\n"
+        "- NE touche PAS à 'languages', 'education', ni aux 'company'/'date' du parcours.\n"
+    ),
+    "hyper": (
+        "NIVEAU MAXIMUM :\n"
+        "- Ajuste 'title' et réécris entièrement 'summary'.\n"
+        "- Réorganise et reformule les 'skills' existantes (sans en inventer de nouvelles).\n"
+        "- Réécris les 'bullets' des expériences (max 4 par expérience, sans inventer de faits).\n"
+        "- INTERDIT : supprimer des langues, inventer des compétences, modifier les dates/"
+        "entreprises du parcours ou les diplômes.\n"
+    ),
+    "sur-mesure": (
+        "NIVEAU SUR-MESURE (invention autorisée) :\n"
+        "- Ajuste 'title' et réécris entièrement 'summary' pour coller parfaitement au poste.\n"
+        "- AJOUTE aux 'skills' les compétences demandées par l'offre même si elles sont absentes "
+        "du CV, et réorganise-les pour mettre les plus pertinentes en premier.\n"
+        "- Réécris et ENRICHIS les 'bullets' des expériences (max 5 par expérience) : tu peux "
+        "ajouter des réalisations, responsabilités et résultats chiffrés crédibles qui collent à "
+        "l'offre, même s'ils ne figurent pas dans le CV original.\n"
+        "- Reste crédible et cohérent avec le parcours (secteur, séniorité, dates).\n"
+        "- NE modifie PAS les 'company', les 'date' du parcours, ni les diplômes/établissements.\n"
+    ),
+}

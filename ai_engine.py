@@ -8,6 +8,8 @@ import os
 import re
 from typing import Generator
 
+from prompts import _RESUME_TAILOR_RULES
+
 # gemini-2.0-flash : meilleur rapport qualité/quota sur le free tier.
 # gemini-2.0-flash-lite : plus rapide mais quota journalier plus faible.
 GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
@@ -628,42 +630,6 @@ def pdf_to_resume(images: list[bytes], api_key: str | None = None) -> dict:
     raw = "".join(stream_completion(prompt, _SYSTEM_PDF_TO_RESUME, images=images, api_key=key))
     return _normalize_resume(_loads_ai_json(raw))
 
-
-_RESUME_TAILOR_RULES = {
-    "peu": (
-        "NIVEAU SUBTIL :\n"
-        "- Ajuste 'title' pour refléter le type de poste visé, de façon générique.\n"
-        "- Réoriente 'summary' avec 2-3 mots-clés du poste, naturellement.\n"
-        "- NE modifie PAS 'skills', 'experience', 'education', 'languages'.\n"
-    ),
-    "adapte": (
-        "NIVEAU MODÉRÉ :\n"
-        "- Ajuste 'title' et réécris 'summary' pour le poste visé.\n"
-        "- Réordonne les 'skills' existantes (sans en ajouter ni supprimer).\n"
-        "- Enrichis/reformule les 'bullets' des expériences (max 4 par expérience, "
-        "sans inventer de contenu absent du CV).\n"
-        "- NE touche PAS à 'languages', 'education', ni aux 'company'/'date' du parcours.\n"
-    ),
-    "hyper": (
-        "NIVEAU MAXIMUM :\n"
-        "- Ajuste 'title' et réécris entièrement 'summary'.\n"
-        "- Réorganise et reformule les 'skills' existantes (sans en inventer de nouvelles).\n"
-        "- Réécris les 'bullets' des expériences (max 4 par expérience, sans inventer de faits).\n"
-        "- INTERDIT : supprimer des langues, inventer des compétences, modifier les dates/"
-        "entreprises du parcours ou les diplômes.\n"
-    ),
-    "sur-mesure": (
-        "NIVEAU SUR-MESURE (invention autorisée) :\n"
-        "- Ajuste 'title' et réécris entièrement 'summary' pour coller parfaitement au poste.\n"
-        "- AJOUTE aux 'skills' les compétences demandées par l'offre même si elles sont absentes "
-        "du CV, et réorganise-les pour mettre les plus pertinentes en premier.\n"
-        "- Réécris et ENRICHIS les 'bullets' des expériences (max 5 par expérience) : tu peux "
-        "ajouter des réalisations, responsabilités et résultats chiffrés crédibles qui collent à "
-        "l'offre, même s'ils ne figurent pas dans le CV original.\n"
-        "- Reste crédible et cohérent avec le parcours (secteur, séniorité, dates).\n"
-        "- NE modifie PAS les 'company', les 'date' du parcours, ni les diplômes/établissements.\n"
-    ),
-}
 
 _SYSTEM_TAILOR_RESUME_BASE = (
     "Tu es un expert en optimisation de CV. Tu reçois un CV au format JSON structuré et une "
