@@ -133,3 +133,29 @@ def test_tailor_streams_sse(client):
     body = resp.data.decode()
     assert "CV adapté" in body
     assert "[DONE]" in body
+
+
+def test_tailor_resume_refunds_quota_on_ai_failure(client):
+    with patch("app.ai_engine.tailor_resume", side_effect=RuntimeError("Quota Gemini épuisé")), \
+         patch("app.quota.check_and_increment", return_value=True), \
+         patch("app.quota.decrement") as mock_decrement:
+        resp = client.post(
+            "/api/tailor-resume",
+            json={"resume": {"profile": {}}, "job_desc": "Développeur Python"},
+        )
+
+    assert resp.status_code == 429
+    mock_decrement.assert_called_once()
+
+
+def test_tailor_resume_no_refund_with_user_key(client):
+    with patch("app.ai_engine.tailor_resume", side_effect=RuntimeError("boom")), \
+         patch("app.quota.decrement") as mock_decrement:
+        resp = client.post(
+            "/api/tailor-resume",
+            json={"resume": {"profile": {}}, "job_desc": "Développeur Python"},
+            headers={"X-Api-Key": "user-key-123"},
+        )
+
+    assert resp.status_code == 429
+    mock_decrement.assert_not_called()
