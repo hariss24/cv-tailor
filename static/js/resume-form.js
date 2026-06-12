@@ -167,12 +167,20 @@ ${items}
     // Compétences
     const skills = (d.skills || []).filter(s => s && s.trim());
     if (skills.length) {
+      const items = skills.map(s => {
+        let parts = s.split(' — ');
+        if (parts.length === 1) parts = s.split(' - ');
+        if (parts.length > 1) {
+          return `      <li class="plain-list__item"><strong>${esc(parts[0].trim())}</strong> &mdash; ${esc(parts.slice(1).join(' — ').trim())}</li>`;
+        }
+        return `      <li class="plain-list__item">${esc(s)}</li>`;
+      }).join('\n');
       out.push(`
-  <section class="resume-template-renderer-section plain-list">
+  <section class="resume-template-renderer-section plain-list section-skills">
     <h2 class="resume-template-renderer-section__title">Competences</h2>
-    <div class="plain-list__items">
-${skills.map(s => `      <span class="plain-list__item">${esc(s)}</span>`).join('\n')}
-    </div>
+    <ul class="plain-list__items">
+${items}
+    </ul>
   </section>`);
     }
 
@@ -201,11 +209,11 @@ ${items}
     const certs = (d.certifications || []).filter(s => s && s.trim());
     if (certs.length) {
       out.push(`
-  <section class="resume-template-renderer-section plain-list">
+  <section class="resume-template-renderer-section plain-list section-certifications">
     <h2 class="resume-template-renderer-section__title">Certifications</h2>
-    <div class="plain-list__items">
-${certs.map(s => `      <span class="plain-list__item">${esc(s)}</span>`).join('\n')}
-    </div>
+    <ul class="plain-list__items">
+${certs.map(s => `      <li class="plain-list__item">${esc(s)}</li>`).join('\n')}
+    </ul>
   </section>`);
     }
 
@@ -242,13 +250,13 @@ ${items}
     const langs = (d.languages || []).filter(l => l && (l.name || '').trim());
     if (langs.length) {
       out.push(`
-  <section class="resume-template-renderer-section languages">
+  <section class="resume-template-renderer-section languages section-languages">
     <h2 class="resume-template-renderer-section__title">Langues</h2>
-    <div class="languages__items">
-${langs.map(l => `      <div class="languages__item">
+    <ul class="languages__items">
+${langs.map(l => `      <li class="languages__item">
         <span class="languages__name">${esc(l.name)}</span>${(l.level || '').trim() ? `<span class="languages__description">${esc(l.level)}</span>` : ''}
-      </div>`).join('\n')}
-    </div>
+      </li>`).join('\n')}
+    </ul>
   </section>`);
     }
 
@@ -256,11 +264,11 @@ ${langs.map(l => `      <div class="languages__item">
     const interests = (d.interests || []).filter(s => s && s.trim());
     if (interests.length) {
       out.push(`
-  <section class="resume-template-renderer-section plain-list">
+  <section class="resume-template-renderer-section plain-list section-interests">
     <h2 class="resume-template-renderer-section__title">Centres d'interet</h2>
-    <div class="plain-list__items">
-${interests.map(s => `      <span class="plain-list__item">${esc(s)}</span>`).join('\n')}
-    </div>
+    <ul class="plain-list__items">
+${interests.map(s => `      <li class="plain-list__item">${esc(s)}</li>`).join('\n')}
+    </ul>
   </section>`);
     }
 
@@ -468,6 +476,7 @@ ${interests.map(s => `      <span class="plain-list__item">${esc(s)}</span>`).jo
             <option value="moderne"${_tplId === 'moderne' ? ' selected' : ''}>Moderne</option>
             <option value="classique"${_tplId === 'classique' ? ' selected' : ''}>Classique</option>
             <option value="minimal"${_tplId === 'minimal' ? ' selected' : ''}>Minimal</option>
+            <option value="graphique"${_tplId === 'graphique' ? ' selected' : ''}>Graphique</option>
           </select>
         </label>
       </div>

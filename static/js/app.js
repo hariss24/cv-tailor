@@ -202,6 +202,10 @@ a { color: inherit; text-decoration: underline; }
 .resume-template-1.resume-template-renderer .plain-list .resume-template-renderer-section__title { flex-shrink: 0; width: 25%; margin-bottom: 0; }
 .resume-template-1.resume-template-renderer .plain-list .plain-list__items { display: flex; flex-wrap: wrap; gap: 3px 0; flex: 1; }
 .resume-template-1.resume-template-renderer .plain-list .plain-list__items .plain-list__item { color: #000; font-weight: 500; padding-right: 12px; width: 33.33%; }
+.resume-template-1.resume-template-renderer .section-skills { display: block; margin-bottom: 20px; }
+.resume-template-1.resume-template-renderer .section-skills .resume-template-renderer-section__title { width: 100%; margin-bottom: 10px; }
+.resume-template-1.resume-template-renderer .section-skills .plain-list__items { display: block; padding-left: 15px; margin-top: 10px; }
+.resume-template-1.resume-template-renderer .section-skills .plain-list__items .plain-list__item { display: list-item; list-style-type: disc; width: 100%; margin-bottom: 8px; color: #111; line-height: 1.4; padding-right: 0; font-weight: normal; }
 .resume-template-1.resume-template-renderer .languages { display: flex; margin-bottom: 6px; }
 .resume-template-1.resume-template-renderer .languages .resume-template-renderer-section__title { flex-shrink: 0; width: 25%; margin-bottom: 0; }
 .resume-template-1.resume-template-renderer .languages .languages__items { display: flex; flex-grow: 1; flex-wrap: wrap; gap: 6px 0; }
@@ -347,6 +351,62 @@ TEMPLATES.minimal = {
 .resume-template-1.resume-template-renderer .personal-data .personal-data__desired-job-title { color: #666; }`,
 };
 
+// Modèle « Graphique » : inspiré du CV de Hariss (Timeline, en-tête flex)
+TEMPLATES.graphique = {
+  html: TEMPLATES.sobre.html,
+  css: TEMPLATES.sobre.css + `
+
+/* === Modele Graphique (overrides) === */
+:root { --resume-template-customization-color: #0078d4; }
+.resume-template-1.resume-template-renderer { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+.resume-template-1.resume-template-renderer .personal-data { display: flex !important; align-items: center; justify-content: space-between; min-height: auto; padding-left: 0 !important; margin-bottom: 10px; }
+.resume-template-1.resume-template-renderer .personal-data .personal-data__photo { position: static !important; width: 100px !important; height: 100px !important; border-radius: 4px; overflow: hidden; margin-right: 20px; }
+.resume-template-1.resume-template-renderer .personal-data .personal-data__title-row { flex: 1; display: flex; flex-direction: column; justify-content: center; margin-bottom: 0; }
+.resume-template-1.resume-template-renderer .personal-data .personal-data__name { font-size: 24pt; font-weight: 700; text-transform: uppercase; color: #111; line-height: 1.1; }
+.resume-template-1.resume-template-renderer .personal-data .personal-data__desired-job-title { color: #111; font-size: 16pt; font-weight: 600; margin-top: 4px; display: block; }
+.resume-template-1.resume-template-renderer .personal-data .personal-data__desired-job-title::before { content: ""; display: none; }
+.resume-template-1.resume-template-renderer .personal-data .personal-data__contact-row { flex: 0 0 250px; text-align: right; font-size: 9.5pt; color: #444; line-height: 1.5; margin-left: 20px; }
+.resume-template-1.resume-template-renderer .resume-template-renderer-section .resume-template-renderer-section__title { color: #0078d4; font-size: 14pt; border-bottom: none; font-weight: 700; margin-bottom: 10px; margin-top: 10px; text-transform: uppercase; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item { position: relative; padding-left: 20px; border-left: 2px solid #555; margin-left: 10px; margin-bottom: 0; padding-bottom: 12px; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item:last-child { border-left-color: transparent; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item::before { content: ""; position: absolute; left: -6px; top: 0px; width: 10px; height: 10px; border-radius: 50%; background-color: #555; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item .entry-list__date { float: right; color: #888; font-size: 10pt; font-weight: normal; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item .entry-list__title { font-weight: 700; font-size: 11pt; color: #111; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item .entry-list__subtitle { font-weight: 700; color: #111; }
+.resume-template-1.resume-template-renderer .summary-objective { display: block; }
+.resume-template-1.resume-template-renderer .summary-objective .summary-objective__title { display: none; }
+.resume-template-1.resume-template-renderer .summary-objective .summary-objective__content { font-size: 10pt; text-align: justify; margin-bottom: 10px; }
+.resume-template-1.resume-template-renderer .entry-list .entry-list__item .entry-list__description ul { padding-left: 15px; }
+
+/* === Layout overrides for Plain Lists (Skills, Certs, etc) === */
+.resume-template-1.resume-template-renderer .plain-list,
+.resume-template-1.resume-template-renderer .languages { display: block !important; margin-bottom: 10px !important; }
+
+.resume-template-1.resume-template-renderer .section-skills { border-top: 2px solid var(--resume-template-customization-color) !important; border-bottom: 2px solid var(--resume-template-customization-color) !important; padding-top: 5px !important; padding-bottom: 8px !important; }
+
+.resume-template-1.resume-template-renderer .plain-list .resume-template-renderer-section__title,
+.resume-template-1.resume-template-renderer .languages .resume-template-renderer-section__title { display: block !important; width: 100% !important; margin-bottom: 8px !important; }
+
+.resume-template-1.resume-template-renderer .section-skills .plain-list__items { display: block !important; padding-left: 15px !important; margin-top: 6px !important; }
+.resume-template-1.resume-template-renderer .section-skills .plain-list__items .plain-list__item { display: list-item !important; list-style-type: disc !important; width: 100% !important; margin-bottom: 4px !important; color: #111 !important; line-height: 1.4 !important; padding-right: 0 !important; font-weight: normal !important; }
+
+/* Side-by-side Langues & Centres d'interets */
+.resume-template-1.resume-template-renderer .section-languages,
+.resume-template-1.resume-template-renderer .section-interests { display: inline-block !important; width: 48% !important; vertical-align: top !important; margin-bottom: 0 !important; border-top: none !important; padding-top: 0 !important; }
+.resume-template-1.resume-template-renderer .section-languages { margin-right: 2% !important; }
+
+.resume-template-1.resume-template-renderer .section-languages .languages__items,
+.resume-template-1.resume-template-renderer .section-interests .plain-list__items { display: block !important; padding-left: 15px !important; margin-top: 6px !important; }
+
+.resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item,
+.resume-template-1.resume-template-renderer .section-interests .plain-list__items .plain-list__item { display: list-item !important; list-style-type: disc !important; width: 100% !important; margin-bottom: 4px !important; padding-right: 0 !important; font-weight: normal !important; color: #111 !important; }
+
+.resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__name { font-weight: normal !important; color: #111 !important; display: inline !important; }
+.resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__description { color: #555 !important; display: inline !important; }
+.resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__description::before { content: " : " !important; }
+.resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__description::after { content: "" !important; }`,
+};
+
 const _TYPE_STORE_PREFIX = 'html-to-pdf:type:';
 function _docTypeKey(type) { return _TYPE_STORE_PREFIX + type.toLowerCase(); }
 const STORAGE_KEY_LAST_TYPE = 'html-to-pdf:last-doc-type';
@@ -398,6 +458,8 @@ let htmlModel;
 let cssModel;
 let activeTab = 'html';
 let _isPreviewPrintMode = false;
+let _atsMissingKeywords = [];
+let _atsBoostEnabled = false;
 
 // ============================================================
 // Fusion HTML + CSS avec échappement anti-injection de balise
@@ -410,16 +472,32 @@ function mergedHtml() {
     css = css.replace(/@media\s+print\b/gi, '@media screen');
   }
 
-  if (!css.trim()) return html;
-  // Empêcher la fermeture prématurée du bloc <style> par du CSS malformé.
-  const safeCss = css.replace(/<\/style\s*>/gi, '<\\/style>');
-  if (/<\/head>/i.test(html)) {
-    return html.replace(/<\/head>/i, `<style>\n${safeCss}\n</style>\n</head>`);
+  let result;
+  if (!css.trim()) {
+    result = html;
+  } else {
+    // Empêcher la fermeture prématurée du bloc <style> par du CSS malformé.
+    const safeCss = css.replace(/<\/style\s*>/gi, '<\\/style>');
+    if (/<\/head>/i.test(html)) {
+      result = html.replace(/<\/head>/i, `<style>\n${safeCss}\n</style>\n</head>`);
+    } else if (/<html[\s>]/i.test(html)) {
+      result = html.replace(/<html([^>]*)>/i, `<html$1>\n<head><meta charset="utf-8"><style>\n${safeCss}\n</style></head>`);
+    } else {
+      result = `<!DOCTYPE html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<style>\n${safeCss}\n</style>\n</head>\n<body>\n${html}\n</body>\n</html>`;
+    }
   }
-  if (/<html[\s>]/i.test(html)) {
-    return html.replace(/<html([^>]*)>/i, `<html$1>\n<head><meta charset="utf-8"><style>\n${safeCss}\n</style></head>`);
+
+  if (_atsBoostEnabled && _atsMissingKeywords.length > 0) {
+    const boostText = _atsMissingKeywords
+      .join(' ')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const boostSpan = `<span style="font-size:1px;color:#ffffff;line-height:0;">${boostText}</span>`;
+    result = /<\/body>/i.test(result)
+      ? result.replace(/<\/body>/i, boostSpan + '</body>')
+      : result + boostSpan;
   }
-  return `<!DOCTYPE html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<style>\n${safeCss}\n</style>\n</head>\n<body>\n${html}\n</body>\n</html>`;
+
+  return result;
 }
 
 function switchTab(tab) {
@@ -2566,6 +2644,7 @@ function _renderAts(cvHtml, jobDesc) {
 
   const matched = jobKw.filter(isMatched);
   const missing = jobKw.filter(kw => !isMatched(kw)).slice(0, 20);
+  _atsMissingKeywords = missing.map(k => k.replace(/-/g, ' '));
   const score = jobKw.length ? Math.round((matched.length / jobKw.length) * 100) : 0;
   const cls = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
   const barColor = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
@@ -2593,6 +2672,7 @@ function _renderAts(cvHtml, jobDesc) {
     '<div class="ats-keywords-title">Sections détectées</div>',
     '<div class="ats-sections">' + sectBadges + '</div>',
     '<button type="button" class="ats-ai-btn" id="btn-ats-ai">🤖 Analyser avec l\'IA</button>',
+    missing.length ? '<button type="button" class="ats-ai-btn ats-boost-btn' + (_atsBoostEnabled ? ' active' : '') + '" id="btn-ats-boost">🧲 Booster ATS invisible' + (_atsBoostEnabled ? ' ✓' : '') + '</button>' : '',
   ].join('');
   panel.style.display = 'block';
 
@@ -2604,6 +2684,8 @@ function _renderAts(cvHtml, jobDesc) {
 
   const aiBtn = panel.querySelector('#btn-ats-ai');
   if (aiBtn) aiBtn.addEventListener('click', _runAtsAI);
+  const boostBtn = panel.querySelector('#btn-ats-boost');
+  if (boostBtn) boostBtn.addEventListener('click', _toggleAtsBoost);
 }
 
 // ---- Score ATS piloté par l'IA (côté serveur, optionnel) ----
@@ -2644,6 +2726,7 @@ function _renderAtsAI(result) {
   const matched = Array.isArray(result.matched_skills) ? result.matched_skills : [];
   const missingHard = Array.isArray(result.missing_hard_skills) ? result.missing_hard_skills : [];
   const missingNice = Array.isArray(result.missing_nice_to_have) ? result.missing_nice_to_have : [];
+  _atsMissingKeywords = [...missingHard, ...missingNice];
 
   const cls = score >= 70 ? 'ats-ok' : score >= 45 ? 'ats-mid' : 'ats-low';
   const barColor = score >= 70 ? '#5dd39e' : score >= 45 ? '#f5a623' : '#ff6b6b';
@@ -2664,6 +2747,7 @@ function _renderAtsAI(result) {
     missingNice.length ? '<div class="ats-keywords-title">Atouts bonus manquants</div><div class="ats-pills">' + pills(missingNice, 'bonus') + '</div>' : '',
     matched.length ? '<div class="ats-keywords-title">Compétences présentes</div><div class="ats-pills">' + pills(matched, 'match') + '</div>' : '',
     '<button type="button" class="ats-ai-btn" id="btn-ats-ai">🔄 Relancer l\'analyse IA</button>',
+    _atsMissingKeywords.length ? '<button type="button" class="ats-ai-btn ats-boost-btn' + (_atsBoostEnabled ? ' active' : '') + '" id="btn-ats-boost">🧲 Booster ATS invisible' + (_atsBoostEnabled ? ' ✓' : '') + '</button>' : '',
   ].join('');
   panel.style.display = 'block';
 
@@ -2674,6 +2758,23 @@ function _renderAtsAI(result) {
 
   const aiBtn = panel.querySelector('#btn-ats-ai');
   if (aiBtn) aiBtn.addEventListener('click', _runAtsAI);
+  const boostBtn = panel.querySelector('#btn-ats-boost');
+  if (boostBtn) boostBtn.addEventListener('click', _toggleAtsBoost);
+}
+
+function _toggleAtsBoost() {
+  _atsBoostEnabled = !_atsBoostEnabled;
+  const btn = document.getElementById('btn-ats-boost');
+  if (btn) {
+    btn.classList.toggle('active', _atsBoostEnabled);
+    btn.textContent = '🧲 Booster ATS invisible' + (_atsBoostEnabled ? ' ✓' : '');
+  }
+  showToast(
+    _atsBoostEnabled
+      ? '🧲 Booster actif — mots-clés injectés invisiblement au prochain export PDF.'
+      : '🧲 Booster désactivé.',
+    'ok'
+  );
 }
 
 // ============================================================

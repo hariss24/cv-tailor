@@ -845,6 +845,8 @@ select:focus-visible,
 .ats-ai-btn { width: 100%; margin-top: 12px; padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text); background: var(--bg); box-shadow: var(--neu-raised-sm); cursor: pointer; transition: color 0.2s; }
 .ats-ai-btn:hover:not(:disabled) { color: var(--warning); }
 .ats-ai-btn:disabled { opacity: 0.6; cursor: default; }
+.ats-boost-btn.active { color: var(--success); }
+.ats-boost-btn.active:hover { color: var(--success); }
 
 /* ---- Modal Nouveau CV — cartes de templates ---- */
 .template-cards { display: flex; gap: 14px; }
