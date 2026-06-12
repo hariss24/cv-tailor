@@ -101,7 +101,7 @@ Suivi des fonctionnalités : ce qui est fait, ce qui est prévu, ce qui est en r
   *Problème :* Le texte déborde légèrement sur une deuxième page, obligeant l'utilisateur à ajuster manuellement les marges et la police pendant de longues minutes.
   *Solution :* Un algorithme qui calcule la hauteur réelle du contenu et ajuste dynamiquement des variables CSS globales (ex: `--base-font-size`) pour que le CV tienne parfaitement et automatiquement sur une seule page A4.
 
-- [ ] **🧲 Le "White-Fonting" Intelligent (Hack ATS)**
+- [x] **🧲 Le "White-Fonting" Intelligent (Hack ATS)**
   *Problème :* L'ATS signale des mots-clés manquants, mais l'utilisateur ne veut pas les forcer artificiellement dans le texte visible au risque d'alerter le recruteur.
   *Solution :* Une option "Booster ATS invisible" qui injecte automatiquement les mots-clés manquants en police 1px, blanche sur fond blanc, à la fin du document lors de l'export PDF. L'ATS les lit, l'humain ne voit rien.
 

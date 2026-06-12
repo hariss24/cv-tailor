@@ -23,13 +23,21 @@ Ce fichier définit les règles de base pour intervenir sur le dépôt `html-to-
 2. **Ne casse pas la synchro JSON** : Le projet a migré vers une source de vérité JSON. Toute nouvelle fonctionnalité IA doit prioriser les endpoints JSON (ex: `/api/tailor-resume`) plutôt que les anciens endpoints HTML (`/api/tailor`).
 3. **Préserver l'intégrité des données JSON** : Lors des adaptations de CV via l'IA, assure-toi de **ne jamais perdre des champs** existants (ex: `interests`, `languages`, `certifications`). Le flux de données doit préserver l'intégralité du modèle de données (Schema JSON).
 4. **Fichiers lourds (Images Base64)** : Il est CRITIQUE de toujours **stripper la clé `photoBase64`** des objets JSON avant de les envoyer aux moteurs d'IA (Gemini/Anthropic) pour éviter d'exploser les limites de tokens, puis de les restaurer à la réception.
-5. **Esthétique de l'UI** : Le design s'oriente vers un style soigné, avec des touches de skeuomorphisme (effets de relief, mode expert interactif, transitions douces). Ne livre pas d'UI "basique".
+5. **Esthétique et UI (Tailwind v4)** : Le projet intègre progressivement **Tailwind CSS v4** avec un thème *Neumorphique* et supporte le mode Light/Dark via des variables CSS (`--bg`, `--text`, etc.). Les couleurs ne doivent **jamais être hardcodées**.
+6. **Accessibilité & UX** : Assure un focus visible, prévois des boutons de fermeture pour les modales, utilise des scrollbars affinées (`var(--faint)`), et garantis que les toolbars sont responsives (wrap).
+7. **Dialogues UI personnalisés** : N'utilise **JAMAIS** les fonctions natives `alert()`, `confirm()` ou `prompt()`. Utilise impérativement le module `ui-dialogs.js` qui fournit `uiConfirm()`, `uiPrompt()` et `uiAlert()` basées sur des promesses.
+8. **SDKs IA & Modèles** : Le projet utilise le NOUVEAU SDK officiel `google-genai` (et non l'ancien `google-generativeai`). Le modèle Gemini par défaut est `gemini-3.1-flash-lite`. Les appels Anthropic utilisent quant à eux le SDK `anthropic`.
 
 ## 🚀 Commandes Essentielles
 
 **Lancement du Serveur Web (Local) :**
 ```bash
 python app.py
+```
+
+**Build Tailwind CSS (Local) :**
+```bash
+npm run build:css
 ```
 
 **Lancement du Serveur FastMCP (Intégration Claude Desktop) :**
@@ -44,12 +52,13 @@ pytest
 
 **Vérification syntaxique rapide :**
 ```bash
-python -m py_compile app.py archive.py ai_engine.py pdf_engine.py
+python -m py_compile app.py archive.py ai_engine.py pdf_engine.py scraper.py prompts.py quota.py mcp_server.py
 ```
 
 **Installation des dépendances :**
 ```bash
 pip install -r requirements.txt
+npm install
 python -m playwright install chromium
 ```
 
