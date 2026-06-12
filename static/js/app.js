@@ -2276,6 +2276,14 @@ $('btn-extract-url').addEventListener('click', async () => {
   const url = ($('job-url-input').value || '').trim();
   if (!url) { showToast('Colle une URL d\'offre d\'emploi.', 'err'); return; }
 
+  const ok = await uiConfirm(
+    'L\'extraction lit la page directement. Si elle est bloquée (LinkedIn, etc.), ' +
+    'l\'URL sera envoyée à <strong>Jina AI</strong> (r.jina.ai) pour extraction. ' +
+    'Continuer ?',
+    { title: 'Extraction d\'offre', confirmLabel: 'Extraire' }
+  );
+  if (!ok) return;
+
   const btn = $('btn-extract-url');
   const status = $('url-extract-status');
   btn.disabled = true;

@@ -693,9 +693,22 @@ pane.innerHTML = html.join('');
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
-        resumeData.photo = ev.target.result;
-        buildForm();
-        applyToEditor();
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 800;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+            else { width = Math.round(width * MAX / height); height = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resumeData.photo = canvas.toDataURL('image/jpeg', 0.8);
+          buildForm();
+          applyToEditor();
+        };
+        img.src = ev.target.result;
       };
       reader.readAsDataURL(file);
       e.target.value = '';
