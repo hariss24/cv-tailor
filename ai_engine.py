@@ -480,8 +480,42 @@ def _s(value) -> str:
     return str(value).strip() if value is not None else ""
 
 
+_RESUME_TOP_KEYS = frozenset({
+    "name", "title", "location", "email", "phone", "linkedin", "summary",
+    "experience", "education", "skills", "languages", "interests",
+    "projects", "certifications", "volunteer",
+})
+
+
+def _unwrap_resume(d):
+    """Récupère le CV d'une réponse IA mal emballée (liste, ou enveloppe {"cv": {...}}).
+
+    Évite le vidage silencieux : une réponse comme [{...}] ou {"resume": {...}}
+    serait sinon traitée comme un CV vide par _normalize_resume.
+    """
+    if isinstance(d, list):
+        d = next((x for x in d if isinstance(x, dict)), {})
+    if not isinstance(d, dict):
+        return {}
+    if _RESUME_TOP_KEYS & d.keys():
+        return d  # déjà au bon format
+    # Enveloppe à une (ou plusieurs) clé(s) : cherche une valeur qui ressemble à un CV.
+    for v in d.values():
+        if isinstance(v, dict) and (_RESUME_TOP_KEYS & v.keys()):
+            return v
+        if isinstance(v, list):
+            inner = next(
+                (x for x in v if isinstance(x, dict) and (_RESUME_TOP_KEYS & x.keys())),
+                None,
+            )
+            if inner is not None:
+                return inner
+    return d
+
+
 def _normalize_resume(d: dict) -> dict:
     """Coerce une structure quelconque vers le schéma CV propre et sûr."""
+    d = _unwrap_resume(d)
     if not isinstance(d, dict):
         d = {}
 
@@ -645,7 +679,12 @@ _SYSTEM_TAILOR_RESUME_BASE = (
     "et ne recopie pas les phrases ou expressions exactes de l'offre. Le 'summary' doit rester "
     "GÉNÉRIQUE et sobre : il décrit le profil du candidat orienté vers ce TYPE de métier, pas une "
     "candidature à une offre précise. Évite l'effet 'CV taillé sur mesure'.\n"
-    "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n\n"
+    "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n"
+    "- LONGUEUR GLOBALE STRICTE (1 PAGE MAX) : Le texte JSON généré doit IMPÉRATIVEMENT être concis "
+    "pour tenir sur une seule page (idéalement moins de 2500 caractères au total). Le CV d'entrée "
+    "peut être un CV Maître très long : ton rôle est de TRIER et D'ÉLAGUER. Supprime les détails inutiles, "
+    "raccourcis les descriptions et concentre-toi sur ce qui est pertinent pour l'offre.\n"
+    "- COMPÉTENCES : Chaque élément du tableau 'skills' doit respecter le format 'Mot clé — Description'.\n\n"
 )
 
 _SYSTEM_TAILOR_RESUME_BASE_INVENT = (
@@ -663,7 +702,15 @@ _SYSTEM_TAILOR_RESUME_BASE_INVENT = (
     "et ne recopie pas les phrases ou expressions exactes de l'offre. Le 'summary' doit rester "
     "GÉNÉRIQUE et sobre : il décrit le profil du candidat orienté vers ce TYPE de métier, pas une "
     "candidature à une offre précise. Évite l'effet 'CV taillé sur mesure'.\n"
-    "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n\n"
+    "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n"
+    "- LONGUEUR GLOBALE STRICTE (1 PAGE MAX) : Le texte JSON généré doit IMPÉRATIVEMENT être concis "
+    "pour tenir sur une seule page (idéalement moins de 2500 caractères au total). Le CV d'entrée "
+    "peut être un CV Maître très long : ton rôle est de TRIER et D'ÉLAGUER. Supprime les détails inutiles, "
+    "raccourcis les descriptions et concentre-toi sur ce qui est pertinent pour l'offre.\n"
+    "- COMPÉTENCES (RÈGLE STRICTE) : Chaque élément du tableau 'skills' doit respecter le format "
+    "texte brut 'Mot clé — Description détaillée' (le mot-clé avant le tiret cadratin est mis "
+    "en gras automatiquement à l'affichage : n'ajoute JAMAIS de balises <strong>). Ton volume de "
+    "compétences doit rester raisonnable (environ 800 caractères au total pour les compétences).\n\n"
 )
 
 _SYSTEM_TAILOR_RESUME_TAIL = (
@@ -709,4 +756,17 @@ def tailor_resume(
     for field in ("projects", "certifications", "volunteer"):
         if not result[field] and clean.get(field):
             result[field] = clean[field]
+    # Langues et centres d'intérêt : aucun niveau d'adaptation n'autorise à les
+    # modifier. On les restaure toujours depuis l'entrée pour garantir, de façon
+    # déterministe, que l'IA ne les altère jamais (le prompt ne suffit pas).
+    for field in ("languages", "interests"):
+        if clean.get(field):
+            result[field] = clean[field]
+    # Garde anti-vidage : si le CV d'entrée avait un cœur (nom ou expériences) et que
+    # l'IA renvoie un CV sans aucun des deux, la réponse est inexploitable. On lève
+    # plutôt que de renvoyer un CV vide qui écraserait le formulaire de l'utilisateur.
+    if (clean.get("name") or clean.get("experience")) and not (result["name"] or result["experience"]):
+        raise ValueError(
+            "Réponse IA invalide : le CV adapté est vide (structure JSON inattendue)."
+        )
     return result

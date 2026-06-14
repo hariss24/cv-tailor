@@ -159,6 +159,32 @@ def test_resume_schema_desc_mentions_new_sections():
     assert "volunteer" in ai_engine._RESUME_SCHEMA_DESC
 
 
+# ---- Déballage des réponses IA mal emballées (anti-vidage silencieux) ----
+
+def test_normalize_resume_unwraps_envelope():
+    """Une réponse enveloppée {"resume": {...}} est déballée, pas vidée."""
+    import ai_engine
+    out = ai_engine._normalize_resume({"resume": {"name": "Jean", "skills": ["Python"]}})
+    assert out["name"] == "Jean"
+    assert out["skills"] == ["Python"]
+
+
+def test_normalize_resume_unwraps_list():
+    """Une réponse renvoyée comme liste [{...}] est déballée sur le premier objet."""
+    import ai_engine
+    out = ai_engine._normalize_resume([{"name": "Jean", "title": "Dev"}])
+    assert out["name"] == "Jean"
+    assert out["title"] == "Dev"
+
+
+def test_normalize_resume_flat_object_unchanged():
+    """Un objet déjà au bon format n'est pas altéré par le déballage."""
+    import ai_engine
+    out = ai_engine._normalize_resume({"name": "Jean", "experience": [{"title": "Dev"}]})
+    assert out["name"] == "Jean"
+    assert out["experience"][0]["title"] == "Dev"
+
+
 # ---- Round-trip tailor_resume : champs non mentionnés par l'IA survivent ----
 
 def test_tailor_resume_preserves_extra_sections_when_ai_drops_them():
@@ -199,6 +225,44 @@ def test_tailor_resume_preserves_extra_sections_when_ai_drops_them():
     assert result["title"] == "Dev Senior"
 
 
+def test_tailor_resume_always_restores_languages_and_interests():
+    """Langues et centres d'intérêt sont restaurés depuis l'entrée même si l'IA les modifie."""
+    import json
+    import ai_engine
+    importlib.reload(ai_engine)
+
+    input_resume = {
+        "name": "Jean Test",
+        "title": "Dev",
+        "experience": [{"title": "Dev", "company": "ACME", "location": "Paris",
+                        "date": "2022", "bullets": ["A"]}],
+        "languages": [{"name": "Anglais", "level": "Courant"},
+                      {"name": "Espagnol", "level": "Notions"}],
+        "interests": ["Randonnée", "Photographie"],
+    }
+
+    # L'IA charcute les langues et réécrit les centres d'intérêt
+    ai_response = json.dumps({
+        "name": "Jean Test",
+        "title": "Dev Senior",
+        "summary": "Profil adapté.",
+        "experience": [{"title": "Dev", "company": "ACME", "location": "Paris",
+                        "date": "2022", "bullets": ["A"]}],
+        "education": [], "skills": [],
+        "languages": [{"name": "Anglais", "level": "Bilingue"}],
+        "interests": ["Leadership", "Innovation"],
+    })
+
+    with patch("ai_engine._complete_gemini", return_value=ai_response), \
+         patch("ai_engine._require_key", return_value="fake-gemini-key"):
+        result = ai_engine.tailor_resume(input_resume, "Offre dev senior", level="sur-mesure")
+
+    # Les sections de l'entrée sont restaurées à l'identique, pas la version IA
+    assert result["languages"] == [{"name": "Anglais", "level": "Courant"},
+                                   {"name": "Espagnol", "level": "Notions"}]
+    assert result["interests"] == ["Randonnée", "Photographie"]
+
+
 def test_tailor_resume_preserves_extra_sections_when_ai_returns_them():
     """Quand l'IA renvoie correctement tous les champs, ils survivent."""
     import json
@@ -229,3 +293,39 @@ def test_tailor_resume_preserves_extra_sections_when_ai_returns_them():
 
     assert result["projects"][0]["title"] == "Projet X adapté"
     assert result["certifications"] == ["AWS", "GCP"]
+
+
+def test_tailor_resume_recovers_wrapped_ai_response():
+    """Si l'IA enveloppe sa réponse, on récupère le CV au lieu de le vider."""
+    import json
+    import ai_engine
+    importlib.reload(ai_engine)
+
+    input_resume = {"name": "Jean", "experience": [{"title": "Dev", "bullets": ["x"]}]}
+    ai_response = json.dumps({"resume": {
+        "name": "Jean", "title": "Dev Senior",
+        "experience": [{"title": "Dev Senior", "bullets": ["y"]}],
+    }})
+
+    with patch("ai_engine._complete_gemini", return_value=ai_response), \
+         patch("ai_engine._require_key", return_value="fake-gemini-key"):
+        result = ai_engine.tailor_resume(input_resume, "Offre dev", level="adapte")
+
+    assert result["name"] == "Jean"
+    assert result["title"] == "Dev Senior"
+    assert len(result["experience"]) == 1
+
+
+def test_tailor_resume_raises_when_ai_empties_cv():
+    """Si l'IA renvoie un CV vide alors que l'entrée avait du contenu, on lève."""
+    import json
+    import ai_engine
+    importlib.reload(ai_engine)
+
+    input_resume = {"name": "Jean", "experience": [{"title": "Dev", "bullets": ["x"]}]}
+    ai_response = json.dumps({})  # réponse dégénérée non récupérable
+
+    with patch("ai_engine._complete_gemini", return_value=ai_response), \
+         patch("ai_engine._require_key", return_value="fake-gemini-key"):
+        with pytest.raises(ValueError):
+            ai_engine.tailor_resume(input_resume, "Offre dev", level="adapte")
