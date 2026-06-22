@@ -32,11 +32,17 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 1 (fin) — `templates.ts`** : porter l'objet `TEMPLATES` (app.js, l.70-409) — 5 templates
-(sobre + overrides CSS moderne/classique/minimal/graphique). Exporter un map id→{name, css} (ou la
-structure équivalente). Vérif : `npm run test` + `npx tsc --noEmit` verts. ⚠️ Lancer les commandes
-DEPUIS `web/` (le CWD bash peut rester à la racine après un `cd` pour git ; toujours `cd web` avant
-npm). Après templates.ts, Phase 1 terminée → passer à la Phase 2 (éditeur & formulaire).
+➡️ **Phase 2 — Éditeur & formulaire** (UI principale). Étapes (faire un morceau par tour) :
+1. Store `zustand` (`web/src/state/`) : `{ doc: {html, css, json, docType, templateId}, setHtml, setCss,
+   setJson, setDocType, setTemplate }` — installer `zustand`.
+2. Aperçu live : iframe sandbox + debounce + `mergedHtml()` (html+css) — port de app.js. Compteur de
+   pages A4.
+3. Formulaire structuré : un composant par section (perso, expérience, formation, compétences, langues,
+   projets, certifs, bénévolat, intérêts), bind formulaire → `renderResume` (lib/resume) → aperçu.
+4. Onglets Formulaire / HTML / CSS + Monaco (`@monaco-editor/react`), switch docType CV/Lettre,
+   sélecteur de template, dialogs/toasts React (port `ui-dialogs.js`, JAMAIS alert/confirm/prompt natifs).
+Vérif : `npm run dev` (depuis `web/`) → saisie met à jour l'aperçu ; plus tard Playwright.
+⚠️ Toujours `cd web` avant les commandes npm (le CWD bash peut rester à la racine après un `cd` git).
 
 ## État des phases
 
@@ -44,11 +50,11 @@ npm). Après templates.ts, Phase 1 terminée → passer à la Phase 2 (éditeur 
       thème néomorphique porté dans `globals.css` (variables + ombres + `[data-theme=dark]`),
       polices Inter + JetBrains Mono via `next/font`, layout de base (topbar + toolbar + split
       éditeur/aperçu placeholders), `turbopack.root` fixé. `npm run build` vert sans warning.
-- [~] **Phase 1 — Domaine CV** : `lib/resume/` (schéma Zod, normalize+anti-wipe, renderResume/renderLetter,
-      templates). ✅ `schema.ts` (zod 4.4.3). ✅ `normalize.ts` (unwrap, normalizeResume avec caps +
-      découpage chaînes, normalizeLetter, isEmptyResume, preservePhoto, mergeTailored anti-wipe) +
-      Vitest en place. ✅ `render.ts` (renderResume/renderLetter portés fidèlement, `escapeHtml`,
-      sections vides filtrées) + `render.test.ts` (XSS, sections, lettre). 25 tests verts. ⏳ reste : templates.
+- [x] **Phase 1 — Domaine CV** : `lib/resume/` complet. ✅ `schema.ts` (zod 4.4.3). ✅ `normalize.ts`
+      (unwrap, normalizeResume, normalizeLetter, isEmptyResume, preservePhoto, mergeTailored anti-wipe).
+      ✅ `render.ts` (renderResume/renderLetter + escapeHtml). ✅ `templates.ts` (5 modèles sobre/moderne/
+      classique/minimal/graphique portés de TEMPLATES, typés `Record<TemplateId, Template>`).
+      **28 tests Vitest verts**, `tsc --noEmit` vert.
 - [ ] **Phase 2 — Éditeur & formulaire** : store zustand, formulaire par sections, Monaco
       (`@monaco-editor/react`), aperçu live, onglets form/HTML/CSS, switch docType, dialogs/toasts.
       Vérif : Playwright (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console).
@@ -76,3 +82,4 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 1 démarrée : `lib/resume/schema.ts` (zod installé, schéma CV/Lettre + défauts + types) — `tsc --noEmit` vert
 - 2026-06-23 — Phase 1 : `lib/resume/normalize.ts` (unwrap + normalize + anti-wipe `mergeTailored`) + Vitest installé, `normalize.test.ts` (15 tests verts), script `npm run test`
 - 2026-06-23 — Phase 1 : `lib/resume/render.ts` (renderResume/renderLetter + escapeHtml) + `render.test.ts` — 25 tests verts au total, tsc OK
+- 2026-06-23 — **Phase 1 terminée** : `lib/resume/templates.ts` (5 modèles portés de TEMPLATES app.js, typés) + `templates.test.ts` — 28 tests verts, tsc OK
