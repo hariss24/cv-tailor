@@ -32,13 +32,12 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 1 (suite) — `normalize.ts`** : port de `_unwrap_resume`/`_normalize_resume` (ai_engine.py,
-l.483+) et `unwrapResume`/`normalizeIncoming` (resume-form.js). Fonctions : `unwrap()` (récupère le CV
-d'une réponse IA mal emballée — liste, enveloppe `{cv:{...}}`), `normalize()` (parse via `resumeSchema`),
-et garde-fou anti-wipe `mergePreserving(base, incoming)` qui **préserve** languages/interests/
-certifications/projects/volunteer quand l'IA les omet. Utiliser `RESUME_TOP_KEYS` de schema.ts.
-Ensuite (tours suivants) : `render.ts` (renderResume/renderLetter), `templates.ts`, puis mettre Vitest
-en place. Vérif : `npx tsc --noEmit` vert, puis tests unitaires.
+➡️ **Phase 1 (suite) — `render.ts`** : port de `renderResume(d)` (resume-form.js, l.85-240) →
+HTML du template « sobre », et `renderLetter(d)`. Échappement HTML (`esc`) inclus, sections vides
+filtrées. Lire la suite de `renderResume` dans resume-form.js (l.85-240) + le rendu Lettre. Ajouter
+des tests Vitest (`render.test.ts`) : JSON connu → HTML attendu, section vide omise, XSS échappé
+(`<script>` → `&lt;script&gt;`). Ensuite (tour suivant) : `templates.ts` (objet TEMPLATES, app.js
+l.70-409). Vérif : `npm run test` vert.
 
 ## État des phases
 
@@ -47,8 +46,9 @@ en place. Vérif : `npx tsc --noEmit` vert, puis tests unitaires.
       polices Inter + JetBrains Mono via `next/font`, layout de base (topbar + toolbar + split
       éditeur/aperçu placeholders), `turbopack.root` fixé. `npm run build` vert sans warning.
 - [~] **Phase 1 — Domaine CV** : `lib/resume/` (schéma Zod, normalize+anti-wipe, renderResume/renderLetter,
-      templates). ✅ `schema.ts` (zod 4.4.3, port fidèle `_RESUME_SCHEMA_DESC` + `DEFAULT_RESUME`/
-      `DEFAULT_LETTER`, types inférés, `RESUME_TOP_KEYS`). ⏳ reste : normalize, render, templates, Vitest.
+      templates). ✅ `schema.ts` (zod 4.4.3). ✅ `normalize.ts` (unwrap, normalizeResume avec caps +
+      découpage chaînes, normalizeLetter, isEmptyResume, preservePhoto, mergeTailored anti-wipe) +
+      Vitest en place (15 tests verts). ⏳ reste : render, templates.
 - [ ] **Phase 2 — Éditeur & formulaire** : store zustand, formulaire par sections, Monaco
       (`@monaco-editor/react`), aperçu live, onglets form/HTML/CSS, switch docType, dialogs/toasts.
       Vérif : Playwright (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console).
@@ -74,3 +74,4 @@ _(aucun pour l'instant)_
 - 2026-06-22 — Setup loop + Phase 0 scaffold (`create-next-app web/`, build vert) — commit `web: phase 0 — scaffold Next.js`
 - 2026-06-23 — Phase 0 terminée : thème néo porté (`globals.css`), polices `next/font` (Inter + JetBrains Mono), layout de base (topbar/toolbar/split), `turbopack.root` fixé — build vert sans warning
 - 2026-06-23 — Phase 1 démarrée : `lib/resume/schema.ts` (zod installé, schéma CV/Lettre + défauts + types) — `tsc --noEmit` vert
+- 2026-06-23 — Phase 1 : `lib/resume/normalize.ts` (unwrap + normalize + anti-wipe `mergeTailored`) + Vitest installé, `normalize.test.ts` (15 tests verts), script `npm run test`
