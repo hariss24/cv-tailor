@@ -32,17 +32,14 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 2 — Éditeur & formulaire** (UI principale). Étapes (faire un morceau par tour) :
-1. Store `zustand` (`web/src/state/`) : `{ doc: {html, css, json, docType, templateId}, setHtml, setCss,
-   setJson, setDocType, setTemplate }` — installer `zustand`.
-2. Aperçu live : iframe sandbox + debounce + `mergedHtml()` (html+css) — port de app.js. Compteur de
-   pages A4.
-3. Formulaire structuré : un composant par section (perso, expérience, formation, compétences, langues,
-   projets, certifs, bénévolat, intérêts), bind formulaire → `renderResume` (lib/resume) → aperçu.
-4. Onglets Formulaire / HTML / CSS + Monaco (`@monaco-editor/react`), switch docType CV/Lettre,
-   sélecteur de template, dialogs/toasts React (port `ui-dialogs.js`, JAMAIS alert/confirm/prompt natifs).
-Vérif : `npm run dev` (depuis `web/`) → saisie met à jour l'aperçu ; plus tard Playwright.
-⚠️ Toujours `cd web` avant les commandes npm (le CWD bash peut rester à la racine après un `cd` git).
+➡️ **Phase 2 (suite) — Aperçu live** : composant `PreviewPane` (client) qui lit le store
+(`useDocStore`), construit le document complet `mergedHtml = <html><style>{css}</style>{html}` et
+l'affiche dans une **iframe sandbox** (`sandbox="allow-same-origin"`, `srcDoc`), avec un debounce.
+Brancher l'aperçu dans `page.tsx` (remplacer le placeholder de droite). Bonus si rapide : compteur de
+pages A4. Port de `mergedHtml()`/`schedulePreview()`/`updatePageCount()` (app.js). Vérif :
+`npm run dev` (depuis `web/`) → l'aperçu affiche le CV par défaut ; `npm run build` vert.
+Ensuite : formulaire par sections (étape 3), puis onglets/Monaco/docType/template/dialogs (étape 4).
+⚠️ Toujours `cd web` avant npm. `page.tsx` devient client (`"use client"`) ou garde un wrapper client.
 
 ## État des phases
 
@@ -55,9 +52,11 @@ Vérif : `npm run dev` (depuis `web/`) → saisie met à jour l'aperçu ; plus t
       ✅ `render.ts` (renderResume/renderLetter + escapeHtml). ✅ `templates.ts` (5 modèles sobre/moderne/
       classique/minimal/graphique portés de TEMPLATES, typés `Record<TemplateId, Template>`).
       **28 tests Vitest verts**, `tsc --noEmit` vert.
-- [ ] **Phase 2 — Éditeur & formulaire** : store zustand, formulaire par sections, Monaco
+- [~] **Phase 2 — Éditeur & formulaire** : store zustand, formulaire par sections, Monaco
       (`@monaco-editor/react`), aperçu live, onglets form/HTML/CSS, switch docType, dialogs/toasts.
-      Vérif : Playwright (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console).
+      ✅ étape 1 : store `state/docStore.ts` (doc html/css/json/docType/templateId + setters, re-render
+      via lib/resume) + config Vitest alias `@/` + 5 tests (33 verts au total). ⏳ aperçu, formulaire, Monaco.
+      Vérif finale : Playwright (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console).
 - [ ] **Phase 3 — Conversion PDF** : `lib/pdf/` (playwright-core + @sparticuz/chromium),
       `api/convert`, téléchargement, whitelist formats/marges, anti-SSRF. Vérif : PDF téléchargé correct.
       ⚠️ Risque n°1 : Chromium serverless Vercel — valider tôt.
@@ -83,3 +82,4 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 1 : `lib/resume/normalize.ts` (unwrap + normalize + anti-wipe `mergeTailored`) + Vitest installé, `normalize.test.ts` (15 tests verts), script `npm run test`
 - 2026-06-23 — Phase 1 : `lib/resume/render.ts` (renderResume/renderLetter + escapeHtml) + `render.test.ts` — 25 tests verts au total, tsc OK
 - 2026-06-23 — **Phase 1 terminée** : `lib/resume/templates.ts` (5 modèles portés de TEMPLATES app.js, typés) + `templates.test.ts` — 28 tests verts, tsc OK
+- 2026-06-23 — Phase 2 étape 1 : store `state/docStore.ts` (zustand 5) + `vitest.config.ts` (alias `@/`) + `docStore.test.ts` — 33 tests verts, tsc OK
