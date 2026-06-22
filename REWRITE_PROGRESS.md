@@ -32,12 +32,11 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 1 (suite) — `render.ts`** : port de `renderResume(d)` (resume-form.js, l.85-240) →
-HTML du template « sobre », et `renderLetter(d)`. Échappement HTML (`esc`) inclus, sections vides
-filtrées. Lire la suite de `renderResume` dans resume-form.js (l.85-240) + le rendu Lettre. Ajouter
-des tests Vitest (`render.test.ts`) : JSON connu → HTML attendu, section vide omise, XSS échappé
-(`<script>` → `&lt;script&gt;`). Ensuite (tour suivant) : `templates.ts` (objet TEMPLATES, app.js
-l.70-409). Vérif : `npm run test` vert.
+➡️ **Phase 1 (fin) — `templates.ts`** : porter l'objet `TEMPLATES` (app.js, l.70-409) — 5 templates
+(sobre + overrides CSS moderne/classique/minimal/graphique). Exporter un map id→{name, css} (ou la
+structure équivalente). Vérif : `npm run test` + `npx tsc --noEmit` verts. ⚠️ Lancer les commandes
+DEPUIS `web/` (le CWD bash peut rester à la racine après un `cd` pour git ; toujours `cd web` avant
+npm). Après templates.ts, Phase 1 terminée → passer à la Phase 2 (éditeur & formulaire).
 
 ## État des phases
 
@@ -48,7 +47,8 @@ l.70-409). Vérif : `npm run test` vert.
 - [~] **Phase 1 — Domaine CV** : `lib/resume/` (schéma Zod, normalize+anti-wipe, renderResume/renderLetter,
       templates). ✅ `schema.ts` (zod 4.4.3). ✅ `normalize.ts` (unwrap, normalizeResume avec caps +
       découpage chaînes, normalizeLetter, isEmptyResume, preservePhoto, mergeTailored anti-wipe) +
-      Vitest en place (15 tests verts). ⏳ reste : render, templates.
+      Vitest en place. ✅ `render.ts` (renderResume/renderLetter portés fidèlement, `escapeHtml`,
+      sections vides filtrées) + `render.test.ts` (XSS, sections, lettre). 25 tests verts. ⏳ reste : templates.
 - [ ] **Phase 2 — Éditeur & formulaire** : store zustand, formulaire par sections, Monaco
       (`@monaco-editor/react`), aperçu live, onglets form/HTML/CSS, switch docType, dialogs/toasts.
       Vérif : Playwright (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console).
@@ -75,3 +75,4 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 0 terminée : thème néo porté (`globals.css`), polices `next/font` (Inter + JetBrains Mono), layout de base (topbar/toolbar/split), `turbopack.root` fixé — build vert sans warning
 - 2026-06-23 — Phase 1 démarrée : `lib/resume/schema.ts` (zod installé, schéma CV/Lettre + défauts + types) — `tsc --noEmit` vert
 - 2026-06-23 — Phase 1 : `lib/resume/normalize.ts` (unwrap + normalize + anti-wipe `mergeTailored`) + Vitest installé, `normalize.test.ts` (15 tests verts), script `npm run test`
+- 2026-06-23 — Phase 1 : `lib/resume/render.ts` (renderResume/renderLetter + escapeHtml) + `render.test.ts` — 25 tests verts au total, tsc OK
