@@ -32,15 +32,15 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 2 (suite) — Formulaire Lettre** (étape 4.3). Créer `components/form/LetterForm.tsx` (client) :
-champs de `DEFAULT_LETTER` (sender_name/address/contact, date, recipient_name/service/address, subject,
-greeting, body [textarea], signoff [textarea], signature) liés au store via `setJson`. Dans `EditorPane`,
-quand `docType === "Lettre"`, afficher `LetterForm` à la place de `FormEditor` dans l'onglet Formulaire
-(les onglets HTML/CSS restent valides pour la lettre aussi). Réutiliser le pattern `Field`/`update`.
-Vérif : `npm run build` + `npm run lint` verts ; switch CV/Lettre édite la lettre et l'aperçu suit.
-Ensuite étape 4.4 (dernière de Phase 2) : dialogs/toasts React (port `ui-dialogs.js` :
-`uiAlert/uiConfirm/uiPrompt` + toasts, à base de promesses — JAMAIS alert/confirm/prompt natifs), puis
-vérif Playwright de Phase 2 (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console). ⚠️ `cd web` avant npm.
+➡️ **Phase 2 (fin) — Dialogs/toasts React** (étape 4.4, dernière de Phase 2). Porter `ui-dialogs.js` en
+React : `components/ui/` avec un provider + des fonctions à base de promesses `uiAlert(msg)`,
+`uiConfirm(msg)`, `uiPrompt(msg, default)` (modales accessibles, bouton fermer, Échap, focus) et un
+système de toasts (`toast(msg, type)`). JAMAIS alert/confirm/prompt natifs. Exposer via un hook/contexte
+ou un petit store zustand (`useUiStore`) pour pouvoir appeler depuis n'importe quel composant. Monter le
+provider dans `layout.tsx` (ou un wrapper client dans `page.tsx`). Pas de consommateur obligatoire encore
+(les flux IA de Phase 5 les utiliseront) — juste l'infra + un test. Vérif : `npm run build` + `npm run
+lint` verts. Ensuite **clôturer Phase 2** : mettre en place Playwright (config + 1 test fumée : page
+charge sans erreur console, saisie nom → aperçu màj, switch CV↔Lettre). ⚠️ `cd web` avant npm.
 
 ## État des phases
 
@@ -64,7 +64,9 @@ vérif Playwright de Phase 2 (saisie→aperçu, CV↔Lettre, form↔expert, 0 er
       Formulaire/HTML/CSS — `components/editor/EditorPane.tsx` (Monaco `@monaco-editor/react` pour
       HTML/CSS liés au store, FormEditor en onglet Form), FormEditor allégé du pane-title. ✅ étape 4.2 :
       `components/editor/Toolbar.tsx` (sélecteurs docType CV/Lettre + template, bouton PDF désactivé)
-      branché dans page.tsx + styles toolbar. build/lint OK. ⏳ formulaire Lettre, dialogs/toasts.
+      branché dans page.tsx + styles toolbar. ✅ étape 4.3 : `components/form/LetterForm.tsx` (champs
+      DEFAULT_LETTER liés au store) ; EditorPane route Lettre→LetterForm dans l'onglet Form. build/lint OK.
+      ⏳ dialogs/toasts React, puis vérif Playwright (clôture Phase 2).
       Vérif finale : Playwright (saisie→aperçu, CV↔Lettre, form↔expert, 0 erreur console).
 - [ ] **Phase 3 — Conversion PDF** : `lib/pdf/` (playwright-core + @sparticuz/chromium),
       `api/convert`, téléchargement, whitelist formats/marges, anti-SSRF. Vérif : PDF téléchargé correct.
@@ -97,3 +99,4 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 2 étape 3b : FormEditor complété (expérience+puces, formation, langues, projets, certifs, bénévolat+puces, intérêts ; sous-composants par section) — tsc/lint/build verts
 - 2026-06-23 — Phase 2 étape 4.1 : onglets Form/HTML/CSS — `components/editor/EditorPane.tsx` + Monaco (@monaco-editor/react) pour HTML/CSS liés au store — tsc/lint/build verts
 - 2026-06-23 — Phase 2 étape 4.2 : `components/editor/Toolbar.tsx` (sélecteurs docType + template branchés au store) + styles toolbar — tsc/lint/build verts
+- 2026-06-23 — Phase 2 étape 4.3 : `components/form/LetterForm.tsx` (formulaire Lettre lié au store), EditorPane route CV/Lettre — tsc/lint/build verts

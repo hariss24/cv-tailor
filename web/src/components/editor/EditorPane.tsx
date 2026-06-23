@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import FormEditor from "@/components/form/FormEditor";
+import LetterForm from "@/components/form/LetterForm";
 import { useDocStore } from "@/state/docStore";
 
 type Tab = "form" | "html" | "css";
@@ -18,6 +19,7 @@ type Tab = "form" | "html" | "css";
  */
 export default function EditorPane() {
   const [tab, setTab] = useState<Tab>("form");
+  const docType = useDocStore((s) => s.docType);
   const html = useDocStore((s) => s.html);
   const css = useDocStore((s) => s.css);
   const setHtml = useDocStore((s) => s.setHtml);
@@ -52,7 +54,7 @@ export default function EditorPane() {
       </div>
 
       {tab === "form" ? (
-        <FormEditor />
+        docType === "Lettre" ? <LetterForm /> : <FormEditor />
       ) : (
         <div className="pane-body editor-monaco">
           <Editor
