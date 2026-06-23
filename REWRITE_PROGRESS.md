@@ -32,17 +32,16 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 4 — Couche IA serveur**. Créer `web/src/lib/ai/` : `clients.ts` (init Gemini `@google/genai`
-+ Anthropic `anthropic` ; détection clé `sk-ant-` ; clé serveur env OU clé utilisateur via header) et
-`prompts.ts` (port intégral de `prompts.py` : squelettes CV/Lettre, `_TAILOR_SYSTEMS` 4 niveaux,
-`_RESUME_TAILOR_RULES`, règles ATS/pack/import, anti-détection entreprise, photo jamais envoyée).
-Puis les route handlers `app/api/*` : `tailor-resume` (prioritaire, JSON, anti-wipe via `mergeTailored`),
-`tailor` (HTML legacy, **à conserver**), `editor-chat`, `ats-score`, `generate-pack`,
-`text-to-html` (streaming), `pdf-to-resume`, `extract-job`, `status`. Streaming via `ReadableStream`.
-⚠️ Stripper `photo`/base64 avant tout appel IA (port `lib/ai/base64.ts` côté Phase 5, mais le strip
-serveur doit déjà être en place). Commencer par `clients.ts` + `status` (route simple) pour valider la
-config, puis `prompts.ts`, puis `tailor-resume`. Vérif : Vitest avec IA mockée (format de sortie,
-anti-wipe, normalize appliqué). ⚠️ `cd web` avant npm.
+➡️ **Phase 4 (suite) — `prompts.ts` puis `tailor-resume`**. (1) Porter `prompts.py` → `web/src/lib/ai/
+prompts.ts` : `_RESUME_SCHEMA_DESC`, squelettes CV/Lettre, `_TAILOR_SYSTEMS` (4 niveaux peu/adapte/
+hyper/sur-mesure), `_RESUME_TAILOR_RULES`, systèmes ATS/pack/import (`_SYSTEM_*_IMPORT`), anti-détection
+entreprise. Constantes pures, testables (présence des règles clés). (2) Route `app/api/tailor-resume/
+route.ts` (POST JSON, prioritaire) : strip `photo` avant l'appel IA (la photo n'est JAMAIS envoyée),
+`complete()` avec le bon système selon le niveau, parse JSON, `normalizeResume` + `mergeTailored`
+(anti-wipe) + `preservePhoto` au retour. ⚠️ anti-détection : ne jamais inclure le nom de l'entreprise
+ciblée dans le CV. Vérif : Vitest avec `complete` mocké (anti-wipe préservé, photo restaurée, normalize
+appliqué). Ensuite : `tailor` (HTML legacy), `editor-chat`, `ats-score`, `generate-pack`,
+`text-to-html`/`pdf-to-resume`/`extract-job` (streaming via `ReadableStream`). ⚠️ `cd web` avant npm.
 
 ## Décisions de scoping (Phase 3)
 - **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
@@ -100,9 +99,14 @@ anti-wipe, normalize appliqué). ⚠️ `cd web` avant npm.
       **48 tests verts, lint/build OK. Risque n°1 validé EN LOCAL** : PDF réel généré via l'API (200,
       application/pdf, %PDF-) y compris avec une image vers `169.254.169.254` (bloquée, rendu OK). ⏳ reste :
       valider le Chromium serverless sur Vercel (Phase 8) ; hook historique Dexie (Phase 6).
-- [ ] **Phase 4 — Couche IA serveur** : `lib/ai/` (clients Gemini/Anthropic, prompts portés de
+- [~] **Phase 4 — Couche IA serveur** : `lib/ai/` (clients Gemini/Anthropic, prompts portés de
       prompts.py), routes `tailor-resume`/`tailor`/`editor-chat`/`ats-score`/`generate-pack`/
       `text-to-html`/`pdf-to-resume`/`extract-job`/`status`, streaming. Vérif : Vitest IA mockée.
+      ✅ étape 1 : `lib/ai/clients.ts` (`@google/genai` + `@anthropic-ai/sdk` ; `requireKey` clé
+      utilisateur/serveur, `isAnthropicKey`, `streamCompletion` async generator + `complete` non-streaming,
+      garde Anthropic+images, gestion quota Gemini) + `clients.test.ts` (8 tests). ✅ étape 2 : route
+      `app/api/status` (server_key_configured/preview + model ; quota reporté). 56 tests verts, lint/build
+      OK, `/api/status` vérifié en runtime (200). ⏳ reste : `prompts.ts` + routes IA.
 - [ ] **Phase 5 — Flux IA frontend** : `lib/ai/base64.ts` (strip/restore fidèle), modals adaptation/
       chat/ATS/pack, imports texte/PDF, extraction URL, diff. Vérif : Playwright backend mocké.
 - [ ] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
@@ -132,3 +136,5 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 2 étape 4.4 : dialogs/toasts React — `state/uiStore.ts` (uiAlert/uiConfirm/uiPrompt promesses + toasts) + `components/ui/UiHost.tsx` monté dans layout + tests — 42 tests verts, lint/build OK
 - 2026-06-23 — **Phase 2 terminée** : Playwright dans `web/` (`playwright.config.ts`, `tests/e2e/editor.spec.ts` : chargement sans erreur console, saisie→aperçu, CV→Lettre, onglet HTML→Monaco) + script `test:e2e` + gitignore artefacts — **4 tests e2e verts**
 - 2026-06-23 — **Phase 3 (cœur) terminée** : `lib/pdf/render.ts` (htmlToPdf playwright-core + @sparticuz/chromium, whitelist, anti-SSRF v4/v6) + `render.test.ts` (16 tests) + `api/convert/route.ts` + bouton PDF branché + `serverExternalPackages` + Vitest `include` src uniquement (exclut e2e). 49 tests verts, lint/build OK. **Risque n°1 validé en local** : PDF réel via l'API (200, %PDF-, ~42 Ko) ; cas d'erreur 400 OK. Serverless Vercel à valider en Phase 8.
+- 2026-06-23 — Phase 3 (sécu) : durcissement anti-SSRF suite à revue auto (DNS rebinding/TOCTOU) — blocage total des sous-ressources réseau, inline only (`data:`/`blob:`/`about:`), `isAllowedResourceUrl`. 48 tests verts, validé (image vers 169.254.169.254 bloquée, PDF OK).
+- 2026-06-23 — Phase 4 étape 1+2 : `lib/ai/clients.ts` (Gemini `@google/genai` 2.9 + Anthropic `@anthropic-ai/sdk` 0.105 ; streamCompletion/complete, requireKey, garde Anthropic+images, quota Gemini) + `clients.test.ts` + route `api/status`. 56 tests verts, lint/build OK, `/api/status` runtime 200.
