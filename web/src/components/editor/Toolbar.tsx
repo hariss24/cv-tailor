@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useDocStore } from "@/state/docStore";
 import { TEMPLATE_IDS, type TemplateId } from "@/lib/resume/templates";
-import type { DocType } from "@/lib/resume/schema";
+import type { DocType, Resume } from "@/lib/resume/schema";
+import { toast, uiAlert } from "@/state/uiStore";
 
 const TEMPLATE_LABELS: Record<TemplateId, string> = {
   sobre: "Sobre",
@@ -21,6 +23,37 @@ export default function Toolbar() {
   const templateId = useDocStore((s) => s.templateId);
   const setDocType = useDocStore((s) => s.setDocType);
   const setTemplate = useDocStore((s) => s.setTemplate);
+  const [busy, setBusy] = useState(false);
+
+  const onConvert = async () => {
+    const { html, css, json } = useDocStore.getState();
+    const name = (json as Resume).name?.trim() || docType;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html, css, filename: `${name} - ${docType}` }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "Échec de la conversion." }));
+        await uiAlert(error ?? "Échec de la conversion.", "Conversion PDF");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name} - ${docType}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("PDF téléchargé.", "success");
+    } catch {
+      await uiAlert("Impossible de joindre le serveur de conversion.", "Conversion PDF");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="toolbar">
@@ -51,8 +84,13 @@ export default function Toolbar() {
         </select>
       </label>
 
-      <button className="go toolbar-cta" type="button" disabled title="Disponible en phase 3">
-        Convertir en PDF
+      <button
+        className="go toolbar-cta"
+        type="button"
+        onClick={onConvert}
+        disabled={busy}
+      >
+        {busy ? "Conversion…" : "Convertir en PDF"}
       </button>
     </div>
   );

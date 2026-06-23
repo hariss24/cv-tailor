@@ -32,14 +32,25 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 3 — Conversion PDF (risque n°1)**. Créer `web/src/lib/pdf/` : moteur de rendu PDF
-serverless (`playwright-core` + `@sparticuz/chromium` pour Vercel ; fallback Chromium local en dev).
-Porter la logique de `pdf_engine.py` (format A4, marges, `print_background`). Route API
-`web/src/app/api/convert/route.ts` (POST : reçoit le HTML fusionné, renvoie le PDF en download).
-Whitelist des formats/marges + anti-SSRF (pas d'URL externe arbitraire dans le HTML). Brancher le
-bouton « Convertir en PDF » de la Toolbar (actuellement `disabled`). ⚠️ **Valider tôt le Chromium
-serverless** : c'est le plus gros risque du chantier. Vérif : un PDF correct est téléchargé depuis
-l'aperçu courant (tester en local d'abord ; la prod Vercel se valide en Phase 8). ⚠️ `cd web` avant npm.
+➡️ **Phase 4 — Couche IA serveur**. Créer `web/src/lib/ai/` : `clients.ts` (init Gemini `@google/genai`
++ Anthropic `anthropic` ; détection clé `sk-ant-` ; clé serveur env OU clé utilisateur via header) et
+`prompts.ts` (port intégral de `prompts.py` : squelettes CV/Lettre, `_TAILOR_SYSTEMS` 4 niveaux,
+`_RESUME_TAILOR_RULES`, règles ATS/pack/import, anti-détection entreprise, photo jamais envoyée).
+Puis les route handlers `app/api/*` : `tailor-resume` (prioritaire, JSON, anti-wipe via `mergeTailored`),
+`tailor` (HTML legacy, **à conserver**), `editor-chat`, `ats-score`, `generate-pack`,
+`text-to-html` (streaming), `pdf-to-resume`, `extract-job`, `status`. Streaming via `ReadableStream`.
+⚠️ Stripper `photo`/base64 avant tout appel IA (port `lib/ai/base64.ts` côté Phase 5, mais le strip
+serveur doit déjà être en place). Commencer par `clients.ts` + `status` (route simple) pour valider la
+config, puis `prompts.ts`, puis `tailor-resume`. Vérif : Vitest avec IA mockée (format de sortie,
+anti-wipe, normalize appliqué). ⚠️ `cd web` avant npm.
+
+## Décisions de scoping (Phase 3)
+- **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
+  de l'entrée dans l'historique est **reporté en Phase 6** (la couche `lib/storage/` Dexie n'existe pas
+  encore) — on branchera le hook à ce moment-là. Non bloquant.
+- **Dev local** : `chromium.launch()` par défaut utilise le Chromium installé par Playwright (déjà présent
+  via les tests e2e). En serverless (`VERCEL`/`AWS_LAMBDA_FUNCTION_NAME`), bascule sur `@sparticuz/chromium`.
+  ⚠️ Le chemin serverless n'est PAS encore validé sur un vrai déploiement Vercel → à confirmer en Phase 8.
 
 ## État des phases
 
@@ -71,9 +82,14 @@ l'aperçu courant (tester en local d'abord ; la prod Vercel se valide en Phase 8
       ✅ clôture : Playwright dans `web/` (`playwright.config.ts` webServer `next dev`,
       `tests/e2e/editor.spec.ts` 4 tests fumée, script `test:e2e`) — **4 tests verts**.
       **Phase 2 = TERMINÉE.**
-- [ ] **Phase 3 — Conversion PDF** : `lib/pdf/` (playwright-core + @sparticuz/chromium),
-      `api/convert`, téléchargement, whitelist formats/marges, anti-SSRF. Vérif : PDF téléchargé correct.
-      ⚠️ Risque n°1 : Chromium serverless Vercel — valider tôt.
+- [x] **Phase 3 — Conversion PDF** (cœur) : ✅ `lib/pdf/render.ts` (`htmlToPdf` via `playwright-core`,
+      split dev/serverless `@sparticuz/chromium`, whitelist formats/marges, anti-SSRF `isBlockedIp` v4/v6 +
+      route-guard) + `render.test.ts` (16 tests). ✅ `app/api/convert/route.ts` (POST, runtime nodejs,
+      maxDuration 60, merge serveur, limite 2 Mo, filename sûr, 400/413/500). ✅ bouton « Convertir en PDF »
+      branché (fetch → Blob → download + toast/uiAlert). ✅ `serverExternalPackages` (Chromium non bundlé).
+      **49 tests verts, lint/build OK. Risque n°1 validé EN LOCAL** : PDF réel généré via l'API (200,
+      application/pdf, %PDF-). ⏳ reste : valider le Chromium serverless sur Vercel (Phase 8) ; hook
+      historique Dexie (Phase 6).
 - [ ] **Phase 4 — Couche IA serveur** : `lib/ai/` (clients Gemini/Anthropic, prompts portés de
       prompts.py), routes `tailor-resume`/`tailor`/`editor-chat`/`ats-score`/`generate-pack`/
       `text-to-html`/`pdf-to-resume`/`extract-job`/`status`, streaming. Vérif : Vitest IA mockée.
@@ -105,3 +121,4 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 2 étape 4.3 : `components/form/LetterForm.tsx` (formulaire Lettre lié au store), EditorPane route CV/Lettre — tsc/lint/build verts
 - 2026-06-23 — Phase 2 étape 4.4 : dialogs/toasts React — `state/uiStore.ts` (uiAlert/uiConfirm/uiPrompt promesses + toasts) + `components/ui/UiHost.tsx` monté dans layout + tests — 42 tests verts, lint/build OK
 - 2026-06-23 — **Phase 2 terminée** : Playwright dans `web/` (`playwright.config.ts`, `tests/e2e/editor.spec.ts` : chargement sans erreur console, saisie→aperçu, CV→Lettre, onglet HTML→Monaco) + script `test:e2e` + gitignore artefacts — **4 tests e2e verts**
+- 2026-06-23 — **Phase 3 (cœur) terminée** : `lib/pdf/render.ts` (htmlToPdf playwright-core + @sparticuz/chromium, whitelist, anti-SSRF v4/v6) + `render.test.ts` (16 tests) + `api/convert/route.ts` + bouton PDF branché + `serverExternalPackages` + Vitest `include` src uniquement (exclut e2e). 49 tests verts, lint/build OK. **Risque n°1 validé en local** : PDF réel via l'API (200, %PDF-, ~42 Ko) ; cas d'erreur 400 OK. Serverless Vercel à valider en Phase 8.
