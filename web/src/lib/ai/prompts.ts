@@ -588,3 +588,22 @@ export const SYSTEM_PACK =
   "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.\n" +
   "- 'letter_html' est un fragment sans balise <style> : tout le style va dans 'letter_css'.\n" +
   "- N'intègre aucune image base64 : si une photo apparaît dans le CV, ignore-la pour la lettre.";
+
+// ---- extraction PDF → CV JSON (port de _SYSTEM_PDF_TO_RESUME, ai_engine.py) --
+
+export const SYSTEM_PDF_TO_RESUME =
+  "Tu es un moteur d'extraction de CV. Tu reçois les pages d'un CV sous forme d'images. " +
+  "Tu produis UNIQUEMENT un objet JSON structuré reprenant TOUTES les informations visibles.\n\n" +
+  "SCHÉMA JSON OBLIGATOIRE :\n" +
+  RESUME_SCHEMA_DESC +
+  "\n\n" +
+  "RÈGLES :\n" +
+  "- N'invente RIEN : n'extrais que ce qui est réellement écrit dans le CV.\n" +
+  "- N'omets AUCUN détail : toutes les expériences, formations, compétences, langues, coordonnées.\n" +
+  "- 'bullets' = les puces/réalisations de chaque expérience (une chaîne par puce).\n" +
+  "- 'contract' = le type de contrat de l'expérience (ex : 'Stage', 'CDI', 'CDD', " +
+  "'Alternance', 'Freelance'). Laisse \"\" si non précisé.\n" +
+  "- 'date' = la période telle qu'écrite (ex : 'Jan 2024 - Présent', '2020 - 2022').\n" +
+  '- Si une information est absente, mets une chaîne vide "" (ou une liste vide).\n' +
+  "- N'inclus PAS de photo.\n" +
+  "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";

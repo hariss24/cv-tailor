@@ -32,15 +32,12 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 4 (fin) — `pdf-to-resume`**. Dernière route IA : `api/pdf-to-resume` (port de `pdf_to_resume`
-ai_engine.py l.634+ + `_SYSTEM_PDF_TO_RESUME`). Reçoit les pages d'un PDF en images PNG (probablement
-data: base64 dans le body ou multipart), appelle `streamCompletion(prompt, system, {images})` — **clé
-Gemini obligatoire** (la garde Anthropic+images lève sinon) — assemble les chunks, `parseAiJson` +
-`normalizeResume`, renvoie `{resume}` (non-streaming). ⚠️ Décoder les images base64 → `Uint8Array` côté
-route. Vérif : Vitest avec `streamCompletion` mocké (JSON assemblé → normalizeResume).
-**Note : `extract-job` (scraping d'offre) décalé en Phase 7** (dépend de `scraper.py` + anti-SSRF, cohérent
-avec la couche sécurité). Après `pdf-to-resume`, **Phase 4 = terminée** (routes serveur IA complètes,
-hors scraping). ⚠️ `cd web` avant npm.
+➡️ **Phase 5 — Flux IA frontend**. La couche IA serveur est complète (Phase 4 terminée). Démarrer le
+câblage front : `lib/ai/base64.ts` (strip/restore fidèle de `photoBase64` côté client, port de la logique
+JS d'origine), puis modals adaptation/chat/ATS/pack, imports texte/PDF (le rendu PDF→PNG via pdf.js
+alimente `/api/pdf-to-resume`), extraction URL, diff. Vérif : Playwright avec backend mocké.
+**Rappel : `extract-job` (scraping d'offre) est en Phase 7** (dépend de `scraper.py` + anti-SSRF).
+⚠️ `cd web` avant npm.
 
 ## Décisions de scoping (Phase 3)
 - **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
@@ -98,7 +95,7 @@ hors scraping). ⚠️ `cd web` avant npm.
       **48 tests verts, lint/build OK. Risque n°1 validé EN LOCAL** : PDF réel généré via l'API (200,
       application/pdf, %PDF-) y compris avec une image vers `169.254.169.254` (bloquée, rendu OK). ⏳ reste :
       valider le Chromium serverless sur Vercel (Phase 8) ; hook historique Dexie (Phase 6).
-- [~] **Phase 4 — Couche IA serveur** : `lib/ai/` (clients Gemini/Anthropic, prompts portés de
+- [x] **Phase 4 — Couche IA serveur** : `lib/ai/` (clients Gemini/Anthropic, prompts portés de
       prompts.py), routes `tailor-resume`/`tailor`/`editor-chat`/`ats-score`/`generate-pack`/
       `text-to-html`/`pdf-to-resume`/`extract-job`/`status`, streaming. Vérif : Vitest IA mockée.
       ✅ étape 1 : `lib/ai/clients.ts` (`@google/genai` + `@anthropic-ai/sdk` ; `requireKey` clé
@@ -123,7 +120,11 @@ hors scraping). ⚠️ `cd web` avant npm.
       `api/text-to-html` (import texte→HTML, système CV/Lettre selon doc_type) et `api/tailor` (HTML legacy
       **conservé**, `tailorHtmlSystem` avec mode `is_master`=élagage) ; échec tôt 400 si pas de clé. Tests
       stream + 2 routes (streamCompletion mocké, format SSE vérifié). 92 tests verts, lint/build OK.
-      ⏳ reste : `pdf-to-resume` (images). `extract-job` → Phase 7 (scraper).
+      ✅ étape 7 (fin) : `api/pdf-to-resume` (port `pdf_to_resume` : décodage base64→Uint8Array,
+      `SYSTEM_PDF_TO_RESUME` ajouté à prompts.ts, `streamCompletion({images})` clé Gemini obligatoire,
+      assemblage chunks → `parseAiJson` → `normalizeResume`, max 10 pages, 400/413/502) + tests (mock
+      async-generator fidèle). **96 tests verts, tsc/lint/build OK, route enregistrée.**
+      **Phase 4 = TERMINÉE** (routes serveur IA complètes, hors `extract-job`/scraper → Phase 7).
 - [ ] **Phase 5 — Flux IA frontend** : `lib/ai/base64.ts` (strip/restore fidèle), modals adaptation/
       chat/ATS/pack, imports texte/PDF, extraction URL, diff. Vérif : Playwright backend mocké.
 - [ ] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
@@ -158,3 +159,4 @@ _(aucun pour l'instant)_
 - 2026-06-23 — Phase 4 étape 3+4 : `lib/ai/prompts.ts` (port intégral prompts.py + systèmes tailor-resume JSON + `tailorResumeSystem`) + `lib/ai/json.ts` (`parseAiJson`) + route `api/tailor-resume` (strip photo, anti-wipe via mergeTailored, preservePhoto) + tests (prompts/json/route, complete mocké). 69 tests verts, lint/build OK, route enregistrée.
 - 2026-06-23 — Phase 4 étape 5 : routes JSON `api/editor-chat` + `api/ats-score` + `api/generate-pack` (ports complete_chat/score_ats/generate_pack) ; systèmes EDITOR_CHAT/ATS/PACK dans prompts.ts ; helper `lib/ai/http.ts` (aiErrorResponse + coerceSkillList) réutilisé par tailor-resume. Tests routes + http. 80 tests verts, lint/build OK.
 - 2026-06-23 — Phase 4 étape 6 : streaming — `lib/ai/stream.ts` (`sseFromGenerator`, SSE port de `_stream_ai`) + routes `api/text-to-html` et `api/tailor` (HTML legacy + `tailorHtmlSystem`/is_master) ; échec tôt 400 sans clé. Tests stream + routes (streamCompletion mocké). 92 tests verts, lint/build OK.
+- 2026-06-23 — **Phase 4 terminée** : `api/pdf-to-resume` (port `pdf_to_resume` + `SYSTEM_PDF_TO_RESUME` fidèle à ai_engine.py : décodage base64→Uint8Array, `streamCompletion({images})` Gemini-only, parseAiJson→normalizeResume, max 10 pages, 400/413/502). Test du cas erreur corrigé (mock `async function*` fidèle au vrai générateur qui lève au 1er `next()`, pas à l'appel — évitait un rejet parasite vitest). 96 tests verts, tsc/lint/build OK, route enregistrée.
