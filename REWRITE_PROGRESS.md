@@ -32,16 +32,12 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 5 (fin) — Modale diff**. Tous les imports/flux IA sont faits (étapes 1-8 : base64, client+SSE,
-TailorModal, chat, ATS+booster, pack, import texte, import PDF). Dernière étape de la phase :
-1. **Modale diff** (avant/après) : comparaison visuelle des modifications IA avant application. Voir le
-   plan `kind-prancing-wand.md` (Phase 5, « diff modal ») et le flux d'origine dans `app.js` (chercher
-   `diff` / `_renderDiff` / modale de comparaison). Si la fonctionnalité n'existe pas clairement dans
-   l'app d'origine ou est trop couplée au storage → la **reporter** et clôturer la Phase 5, passer à la
-   **Phase 6** (persistance Dexie : snapshots, brouillons, CV Maître, page `/history`).
+➡️ **Phase 6 — Persistance navigateur**. Initialiser `lib/storage/db.ts` (Dexie) pour gérer les snapshots (max 20, pruning), brouillons et historique.
+1. **Setup Dexie** : Installer `dexie` dans `web/`.
+2. **Créer la DB** : Porter la logique de l'app d'origine (`app.js` l.789-948) dans `lib/storage/db.ts`. Définir le schéma : id, date, type (snapshot, brouillon), nom, json, docType, etc.
 **Rappel : `extract-job` → Phase 7.**
 ⚠️ `cd web` avant npm (le répertoire courant est souvent la **racine** après le `cd ..` du commit : vérifier
-le nom de paquet `web@0.1.0` dans la sortie npm). Tests : Vitest (logique) + Playwright `page.route` (flux).
+le nom de paquet `web@0.1.0` dans la sortie npm). Tests : Vitest (logique) + Playwright (flux de restauration).
 
 ## Décisions de scoping (Phase 3)
 - **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
@@ -129,7 +125,7 @@ le nom de paquet `web@0.1.0` dans la sortie npm). Tests : Vitest (logique) + Pla
       assemblage chunks → `parseAiJson` → `normalizeResume`, max 10 pages, 400/413/502) + tests (mock
       async-generator fidèle). **96 tests verts, tsc/lint/build OK, route enregistrée.**
       **Phase 4 = TERMINÉE** (routes serveur IA complètes, hors `extract-job`/scraper → Phase 7).
-- [~] **Phase 5 — Flux IA frontend** : `lib/ai/base64.ts` (strip/restore fidèle), modals adaptation/
+- [x] **Phase 5 — Flux IA frontend** : `lib/ai/base64.ts` (strip/restore fidèle), modals adaptation/
       chat/ATS/pack, imports texte/PDF, extraction URL, diff. Vérif : Playwright backend mocké.
       ✅ étape 1 : `lib/ai/base64.ts` — port fidèle de `app.js` : `stripBase64ForTailor`/
       `restoreBase64InTailor` (placeholder indexé `[IMAGE_BASE64_N]`, map = match complet, split/join)
@@ -196,9 +192,9 @@ le nom de paquet `web@0.1.0` dans la sortie npm). Tests : Vitest (logique) + Pla
       `pdfToImages` → POST `/api/pdf-to-resume` {images} → `normalizeResume` + garde `isEmptyResume` →
       `setJson`). Bouton « Importer un PDF » (CV only) + CSS. `public/**` exclu d'ESLint (asset vendoré).
       e2e `import-pdf.spec.ts` (fixture PDF réel `tests/e2e/fixtures/sample.pdf` généré, pdf.js rend dans
-      le navigateur : images PNG base64 transmises, CV mocké peuple l'aperçu). **Phase 5 = quasi-terminée**
-      (reste diff modal/éval). 128 tests + 11 e2e, tsc/lint/build OK.
-- [ ] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
+      le navigateur : images PNG base64 transmises, CV mocké peuple l'aperçu). La modale diff (avant/après) 
+      a été reportée à la Phase 6 car elle est trop couplée aux snapshots. **Phase 5 = TERMINÉE**.
+- [~] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
       historique), page `/history`. Vérif : snapshot→restauration fidèle.
 - [ ] **Phase 7 — Sécurité** : scraper porté (anti-SSRF + Jina fallback), auth remote (middleware),
       en-têtes durcissement, timeouts. Vérif : URL interne rejetée, login rate-limit.
@@ -239,3 +235,4 @@ _(aucun pour l'instant)_
 - 2026-06-24 — Phase 5 étape 7 : import texte→HTML streaming — lecteur SSE `streamSse` dans `lib/ai/client.ts` (port fidèle `_readSseStream`/`streamToMonaco` : `data:`/`[DONE]`/`[ERROR]`, buffer inter-chunks, accumulation+callback) + `ImportTextModal.tsx` (textarea → `streamSse('/api/text-to-html')` → setHtml en direct, puis CSS sobre/vide selon doc_type) branché Toolbar (bouton « Importer un texte ») + CSS `.import-modal`. Tests : 3 unit `streamSse` + e2e `import-text.spec.ts` (flux SSE mocké). 128 tests + 10 e2e, tsc/lint/build OK.
 - 2026-06-24 — Phase 5 étape 6 : pack candidature — `PackModal.tsx` (CV-only, photo strippée `stripBase64ForChat`, POST `/api/generate-pack` cv_html/cv_css/job_desc/company/role, aperçu lettre iframe `mergeHtml` + email, copier presse-papier + insertion éditeur type Lettre via setDocType+setHtml/setCss) branché Toolbar + CSS `.pack-modal`. Snapshot → Phase 6. e2e `pack.spec.ts` (lettre+email, cv_html transmis, insertion→Lettre). 125 tests + 9 e2e, tsc/lint/build OK. (Note : `editor.spec.ts` « basculer » flaky en parallèle, passe en isolé.)
 - 2026-06-24 — Phase 5 étape 3 : chat éditeur `components/modals/ChatPanel.tsx` (panneau latéral, port de `_sendChat`/`_appendProposals` : historique, strip/restore base64 flux chat, `/api/editor-chat` avec `mergeHtml(strippedHtml, css)`, propositions Prévisualiser/Appliquer/Rejeter) ; `previewOverride` ajouté au store + honoré par PreviewPane ; `extractCss` (inverse de mergeHtml) pour l'application en mode expert ; bouton « Assistant IA » Toolbar + CSS. Tests `extractCss` (3) + e2e `chat.spec.ts` (réponse+proposition, application→aperçu, html sans data:image/). 113 tests verts + 6 e2e, tsc/lint/build OK. Snapshot avant-chat → Phase 6.
+- 2026-06-24 — Phase 5 terminée : La modale diff (avant/après) de la Phase 5 (port de `_openDiffModal`) s'appuyant trop sur le flux `_tailorBeforeHtml` et les snapshots non implémentés (qui incombent à la couche Storage), elle a été délibérément reportée à la Phase 6 (persistance) conformément aux instructions initiales de la "Prochaine action". Tous les tests (unitaires et e2e) sont verts.
