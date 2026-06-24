@@ -1,28 +1,12 @@
 import PreviewPane from "@/components/editor/PreviewPane";
 import EditorPane from "@/components/editor/EditorPane";
 import Toolbar from "@/components/editor/Toolbar";
-import Link from "next/link";
+import TopBar from "@/components/layout/TopBar";
 
 export default function Home() {
   return (
     <div className="wrap">
-      <header className="topbar">
-        <div className="logo-badge">
-          <div className="logo-icon">
-            <div className="logo-icon-inner">CV</div>
-          </div>
-          <div className="logo-text">
-            <span className="logo-title">CV Forge</span>
-            <span className="logo-sub">Éditeur de CV · aperçu live · PDF</span>
-          </div>
-        </div>
-        <div className="topbar-actions">
-          <Link href="/history" className="neu-btn-sm" style={{ textDecoration: 'none' }}>
-            Historique
-          </Link>
-          <span className="topbar-pill">Réécriture Next.js — Phase 6</span>
-        </div>
-      </header>
+      <TopBar />
 
       <Toolbar />
 

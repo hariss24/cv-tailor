@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useDocStore } from "@/state/docStore";
 import { TEMPLATE_IDS, type TemplateId } from "@/lib/resume/templates";
-import type { DocType, Resume } from "@/lib/resume/schema";
-import { toast, uiAlert } from "@/state/uiStore";
+import type { DocType } from "@/lib/resume/schema";
 import TailorModal from "@/components/modals/TailorModal";
 import ChatPanel from "@/components/modals/ChatPanel";
 import AtsPanel from "@/components/modals/AtsPanel";
@@ -14,7 +13,6 @@ import ImportPdfModal from "@/components/modals/ImportPdfModal";
 import SnapshotsModal from "@/components/modals/SnapshotsModal";
 import DiffModal from "@/components/modals/DiffModal";
 import { takeSnapshot } from "@/lib/storage/snapshots";
-import { saveHistoryEntry } from "@/lib/storage/db";
 import { useAutoDraft } from "@/lib/storage/useAutoDraft";
 
 const TEMPLATE_LABELS: Record<TemplateId, string> = {
@@ -35,7 +33,6 @@ export default function Toolbar() {
   const tailorBefore = useDocStore((s) => s.tailorBefore);
   const setDocType = useDocStore((s) => s.setDocType);
   const setTemplate = useDocStore((s) => s.setTemplate);
-  const [busy, setBusy] = useState(false);
   const [tailorOpen, setTailorOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [atsOpen, setAtsOpen] = useState(false);
@@ -54,57 +51,6 @@ export default function Toolbar() {
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const onConvert = async () => {
-    const { html, css, json, atsBoost } = useDocStore.getState();
-    const name = (json as Resume).name?.trim() || docType;
-    const boostKeywords = atsBoost.enabled ? atsBoost.keywords : [];
-    setBusy(true);
-    try {
-      const res = await fetch("/api/convert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html, css, filename: `${name} - ${docType}`, boostKeywords }),
-      });
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({ error: "Échec de la conversion." }));
-        await uiAlert(error ?? "Échec de la conversion.", "Conversion PDF");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${name} - ${docType}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast("PDF téléchargé.", "success");
-
-      // Sauvegarde dans l'historique (Phase 6)
-      await saveHistoryEntry({
-        id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
-        doc_type: docType,
-        company: "",
-        role: "",
-        job_desc: "",
-        filename: `${name} - ${docType}.pdf`,
-        notes: "",
-        pdf_views: 1,
-        editor_reloads: 0,
-        last_viewed_at: new Date().toISOString(),
-        html,
-        css,
-        json: structuredClone(json),
-        templateId,
-      });
-
-    } catch {
-      await uiAlert("Impossible de joindre le serveur de conversion.", "Conversion PDF");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <div className="toolbar">
@@ -208,15 +154,6 @@ export default function Toolbar() {
         onClick={() => { takeSnapshot("Avant chat IA"); setChatOpen(true); }}
       >
         Assistant IA
-      </button>
-
-      <button
-        className="go toolbar-cta"
-        type="button"
-        onClick={onConvert}
-        disabled={busy}
-      >
-        {busy ? "Conversion…" : "Convertir en PDF"}
       </button>
 
       <TailorModal open={tailorOpen} onClose={() => setTailorOpen(false)} />

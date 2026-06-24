@@ -104,6 +104,60 @@ a:hover { text-decoration: underline; }
 .logo-title { font-size: 18px; font-weight: 800; letter-spacing: -0.4px; color: var(--text); }
 .logo-sub { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.3px; }
 
+/* ---- Boutons du topbar (portés de static/css/main.css) ---- */
+a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
+.btn-nav {
+  background: var(--bg); border: none; color: var(--text);
+  border-radius: 10px; padding: 7px 13px; cursor: pointer;
+  font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-ui);
+  box-shadow: var(--neu-raised-sm);
+  transition: box-shadow 100ms, transform 100ms;
+}
+.btn-nav:hover { box-shadow: var(--neu-raised); transform: translateY(-1px); }
+.btn-nav:active { transform: translateY(1px); box-shadow: var(--neu-inset); }
+
+#btn-settings {
+  background: var(--bg); border: none;
+  color: var(--muted); cursor: pointer; padding: 6px 8px; border-radius: 10px;
+  display: inline-flex; align-items: center;
+  box-shadow: var(--neu-raised-sm);
+  transition: color 150ms, box-shadow 150ms;
+}
+#btn-settings:hover { color: var(--text); box-shadow: var(--neu-raised); }
+#btn-settings:active { box-shadow: var(--neu-inset); }
+
+/* Toggle thème pill neumorphique */
+#btn-theme {
+  position: relative; display: inline-flex; align-items: center;
+  width: 68px; height: 32px; border-radius: 999px;
+  background: var(--bg); box-shadow: var(--neu-inset);
+  border: none; cursor: pointer; padding: 0; flex-shrink: 0; outline: none;
+}
+.toggle-icon {
+  position: relative; z-index: 2; width: 34px; height: 32px;
+  display: grid; place-items: center; transition: color 250ms; pointer-events: none;
+}
+.toggle-sun  { color: var(--orange); }
+.toggle-moon { color: var(--muted); }
+[data-theme="dark"] .toggle-sun  { color: var(--muted); }
+[data-theme="dark"] .toggle-moon { color: var(--orange); }
+.toggle-knob {
+  position: absolute; width: 28px; height: 28px; border-radius: 999px;
+  background: var(--bg); box-shadow: var(--neu-raised-sm);
+  left: 2px; top: 2px; z-index: 1; pointer-events: none;
+  transform: translateX(0);
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="dark"] .toggle-knob { transform: translateX(36px); }
+
+/* Variante topbar du CTA : gros bouton avec icône */
+.go.go-top { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; font-size: 14px; }
+
+@media (max-width: 1180px) {
+  .topbar .btn-nav, .topbar #btn-theme, .topbar #btn-settings { padding: 6px 10px; font-size: 12px; }
+}
+
 /* ---- Toolbar ---- */
 .toolbar {
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
