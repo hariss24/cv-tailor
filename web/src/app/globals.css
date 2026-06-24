@@ -183,6 +183,17 @@ a:hover { text-decoration: underline; }
 .tailor-levels { display: flex; gap: 6px; flex-wrap: wrap; }
 .tailor-level { flex: 1; min-width: 88px; text-align: center; }
 
+/* ---- Modale Pack candidature ---- */
+.pack-modal { max-width: 620px; max-height: 90vh; overflow-y: auto; }
+.pack-meta { display: flex; gap: 8px; margin-top: 8px; }
+.pack-meta .form-input { flex: 1; }
+.pack-result { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.pack-letter-title { font-size: 13px; font-weight: 700; color: var(--orange); margin-top: 6px; }
+.pack-letter-frame {
+  width: 100%; height: 320px; border: none; border-radius: 12px;
+  background: #fff; box-shadow: var(--neu-inset);
+}
+
 /* ---- Panneau Score ATS ---- */
 .ats-modal { max-width: 560px; max-height: 88vh; overflow-y: auto; }
 .ats-result { display: flex; flex-direction: column; gap: 8px; }

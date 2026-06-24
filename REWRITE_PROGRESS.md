@@ -32,15 +32,18 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 5 (suite) — Pack candidature**. `base64.ts`, `client.ts`, `TailorModal`, chat éditeur,
-panneau ATS (local + IA) **et booster invisible** sont faits (étapes 1-5). Étapes suivantes au choix :
-1. **Pack candidature** (`/api/generate-pack`) : modale qui envoie `{resume/html, job_desc}` → affiche
-   lettre + email générés (boutons copier / insérer dans l'éditeur Lettre ?). Photo strippée si CV JSON.
-   Voir le flux d'origine dans `app.js` (chercher `generate-pack` / `pack`).
-2. **Imports texte/PDF** : nécessite un lecteur **SSE** (à ajouter dans `client.ts`) pour `/api/text-to-html`
-   (import texte→HTML streaming), et le rendu PDF→PNG (pdf.js, package à installer) pour `/api/pdf-to-resume`.
-Suggestion d'ordre : pack → imports. **Rappel : `extract-job` → Phase 7.**
-⚠️ `cd web` avant npm. Tests : Vitest (logique) + Playwright `page.route` (flux).
+➡️ **Phase 5 (suite) — Imports texte/PDF**. `base64.ts`, `client.ts`, `TailorModal`, chat éditeur,
+panneau ATS (local + IA) + booster invisible, **pack candidature** sont faits (étapes 1-6).
+Étape suivante :
+1. **Import texte→HTML** (`/api/text-to-html`, **streaming SSE**) : nécessite un lecteur SSE à ajouter
+   dans `client.ts` (port de `_streamToModel`/lecture `data:`/`[DONE]`/`[ERROR]` d'app.js). Modale :
+   zone de texte → flux affiché en direct dans l'éditeur HTML. Système CV/Lettre selon `doc_type`.
+2. **Import PDF→CV JSON** (`/api/pdf-to-resume`) : rendu PDF→PNG côté client via **pdf.js**
+   (package à installer : `pdfjs-dist`), envoi des images base64 → CV JSON normalisé. Photo jamais à l'IA.
+Suggestion d'ordre : SSE texte d'abord (débloque le lecteur), puis PDF. **Rappel : `extract-job` → Phase 7.**
+⚠️ `cd web` avant npm (le répertoire courant peut déjà être `web/` : vérifier). Tests : Vitest (logique)
++ Playwright `page.route` (flux). Note : `editor.spec.ts` « basculer CV → Lettre » est **flaky** en run
+parallèle (timeout 5 s sur compilation à froid) — passe en isolé, ne pas confondre avec une régression.
 
 ## Décisions de scoping (Phase 3)
 - **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
@@ -172,6 +175,13 @@ Suggestion d'ordre : pack → imports. **Rappel : `extract-job` → Phase 7.**
       `_toggleAtsBoost` : visible s'il y a des mots-clés absents, alimenté par l'analyse locale OU IA).
       Tests : 4 unit `applyAtsBoost` + e2e (le span 1px apparaît dans l'aperçu à l'activation).
       125 tests verts + 8 e2e, tsc/lint/build OK.
+      ✅ étape 6 : **Pack candidature** — `components/modals/PackModal.tsx` (port de
+      `_openPackModal`/`btn-create-pack` app.js l.2520-2609) : CV-only, photo strippée avant l'appel
+      (`stripBase64ForChat`), POST `/api/generate-pack` (`{cv_html, cv_css, job_desc, company, role}`),
+      aperçu lettre (iframe `mergeHtml`) + email, bouton copier (clipboard) + « Insérer dans l'éditeur »
+      (bascule type Lettre puis `setHtml`/`setCss`). Branché Toolbar (bouton CV only) + CSS `.pack-modal`.
+      Snapshot « Avant pack » → Phase 6. Test e2e `pack.spec.ts` (backend mocké : lettre+email affichés,
+      `cv_html` transmis, insertion → type Lettre + aperçu MAJ). 125 tests + 9 e2e, tsc/lint/build OK.
 - [ ] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
       historique), page `/history`. Vérif : snapshot→restauration fidèle.
 - [ ] **Phase 7 — Sécurité** : scraper porté (anti-SSRF + Jina fallback), auth remote (middleware),
@@ -209,4 +219,5 @@ _(aucun pour l'instant)_
 - 2026-06-24 — Phase 5 étape 2 : `lib/ai/client.ts` (getApiHeaders/postJson, port de app.js userApiKey+X-Api-Key, SSR-safe) + `client.test.ts` (6 tests) ; modale `TailorModal` (4 niveaux, strip/restore photo client, normalisation + garde anti-vidage, setJson→aperçu) branchée dans Toolbar (bouton CV only) + CSS ; e2e `tailor.spec.ts` (backend mocké : aperçu MAJ, photo jamais transmise). CV Maître → Phase 6. 110 tests verts + 5 e2e, tsc/lint/build OK.
 - 2026-06-24 — Phase 5 étape 5 : booster ATS invisible — `applyAtsBoost` (port fidèle injection span 1px app.js l.606-614) + état store `atsBoost`. Appliqué aperçu (PreviewPane) ET export (api/convert via `boostKeywords[]`, Toolbar transmet). Toggle dans AtsPanel (port `_toggleAtsBoost`, mots-clés de l'analyse locale/IA). Tests : 4 unit + e2e (span 1px dans l'aperçu). 125 tests verts + 8 e2e, tsc/lint/build OK.
 - 2026-06-24 — Phase 5 étape 4 : panneau ATS — `lib/ats/score.ts` (port fidèle extractKeywords/detectSections/analyzeAts : stop-words FR+EN, composés, score ratio, pluriels >4, boostKeywords) + `score.test.ts` (8) ; `AtsPanel.tsx` (analyse locale instantanée + bouton IA `/api/ats-score`) branché Toolbar (CV only) + CSS ; e2e `ats.spec.ts` (score local + IA mockée 82). Booster invisible → étape suivante. 121 tests verts + 7 e2e, tsc/lint/build OK.
+- 2026-06-24 — Phase 5 étape 6 : pack candidature — `PackModal.tsx` (CV-only, photo strippée `stripBase64ForChat`, POST `/api/generate-pack` cv_html/cv_css/job_desc/company/role, aperçu lettre iframe `mergeHtml` + email, copier presse-papier + insertion éditeur type Lettre via setDocType+setHtml/setCss) branché Toolbar + CSS `.pack-modal`. Snapshot → Phase 6. e2e `pack.spec.ts` (lettre+email, cv_html transmis, insertion→Lettre). 125 tests + 9 e2e, tsc/lint/build OK. (Note : `editor.spec.ts` « basculer » flaky en parallèle, passe en isolé.)
 - 2026-06-24 — Phase 5 étape 3 : chat éditeur `components/modals/ChatPanel.tsx` (panneau latéral, port de `_sendChat`/`_appendProposals` : historique, strip/restore base64 flux chat, `/api/editor-chat` avec `mergeHtml(strippedHtml, css)`, propositions Prévisualiser/Appliquer/Rejeter) ; `previewOverride` ajouté au store + honoré par PreviewPane ; `extractCss` (inverse de mergeHtml) pour l'application en mode expert ; bouton « Assistant IA » Toolbar + CSS. Tests `extractCss` (3) + e2e `chat.spec.ts` (réponse+proposition, application→aperçu, html sans data:image/). 113 tests verts + 6 e2e, tsc/lint/build OK. Snapshot avant-chat → Phase 6.

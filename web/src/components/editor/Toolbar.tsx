@@ -8,6 +8,7 @@ import { toast, uiAlert } from "@/state/uiStore";
 import TailorModal from "@/components/modals/TailorModal";
 import ChatPanel from "@/components/modals/ChatPanel";
 import AtsPanel from "@/components/modals/AtsPanel";
+import PackModal from "@/components/modals/PackModal";
 
 const TEMPLATE_LABELS: Record<TemplateId, string> = {
   sobre: "Sobre",
@@ -30,6 +31,7 @@ export default function Toolbar() {
   const [tailorOpen, setTailorOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [atsOpen, setAtsOpen] = useState(false);
+  const [packOpen, setPackOpen] = useState(false);
 
   const onConvert = async () => {
     const { html, css, json, atsBoost } = useDocStore.getState();
@@ -111,6 +113,16 @@ export default function Toolbar() {
         </button>
       ) : null}
 
+      {docType === "CV" ? (
+        <button
+          className="form-btn-mini toolbar-pack"
+          type="button"
+          onClick={() => setPackOpen(true)}
+        >
+          Pack candidature
+        </button>
+      ) : null}
+
       <button
         className="form-btn-mini toolbar-chat"
         type="button"
@@ -130,6 +142,7 @@ export default function Toolbar() {
 
       <TailorModal open={tailorOpen} onClose={() => setTailorOpen(false)} />
       <AtsPanel open={atsOpen} onClose={() => setAtsOpen(false)} />
+      <PackModal open={packOpen} onClose={() => setPackOpen(false)} />
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
