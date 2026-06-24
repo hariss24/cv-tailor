@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDocStore } from "@/state/docStore";
 import { TEMPLATE_IDS, type TemplateId } from "@/lib/resume/templates";
 import type { DocType, Resume } from "@/lib/resume/schema";
@@ -48,16 +48,12 @@ export default function Toolbar() {
   // Initialisation et auto-save des brouillons
   useAutoDraft();
 
-  // Auto-snapshot toutes les 5 minutes
-  import("react").then(({ useEffect }) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-      const interval = setInterval(() => {
-        takeSnapshot("Auto-save");
-      }, 5 * 60 * 1000);
-      return () => clearInterval(interval);
-    }, []);
-  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      takeSnapshot("Auto-save");
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const onConvert = async () => {
     const { html, css, json, atsBoost } = useDocStore.getState();
