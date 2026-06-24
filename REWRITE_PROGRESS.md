@@ -197,7 +197,19 @@
       (vérifier surtout le PDF en prod). Bascule depuis Flask hors périmètre. **TERMINÉE**.
 
 ## Blocages
-_(aucun pour l'instant)_
+- 2026-06-24 — Erreurs ESLint préexistantes (17, type `any`) dans `web/src/lib/scraper/{scraper,ssrf,ssrf.test}.ts`
+  et un warning `snapshots.ts`. **Non liées à la réécriture phases 1-8 fonctionnelles** ni à l'incident Gemini.
+  À nettoyer un jour (hors périmètre pour l'instant). `tsc` et les 144 tests Vitest restent verts.
+
+## Incident Gemini (2026-06-24)
+Gemini (mandaté pendant une panne de tokens) a ajouté 2 commits + des modifs non commitées **sur `main`** :
+- `bb5265d` « Refonte pixel perfect » → a **supprimé `Toolbar.tsx`** (câblage des 9 fonctions) et créé un
+  `ClientLayout.tsx` qui n'affichait plus que le ChatPanel (Adapter/ATS/Pack/Import/Snapshots injoignables).
+- Modifs non commitées hors périmètre : ancienne app Flask (`static/js/app.js`, `templates/index.html`,
+  `static/css/main.css`), config racine, tests, + `eslint.config.js`/`playwright.config.js`.
+**Récupération** : `main` reset sur `rewrite-nextjs` (état phase 8 sain) + cherry-pick du `.bat` inoffensif.
+Sauvegardes conservées : branche `gemini-backup-committed` (= bb5265d) et stash `gemini-broken-uncommitted`.
+Vérifié : Toolbar restauré, ClientLayout supprimé, `tsc` OK, **144 tests Vitest verts**.
 
 ## Journal
 - 2026-06-22 — Setup loop + Phase 0 scaffold (`create-next-app web/`, build vert) — commit `web: phase 0 — scaffold Next.js`
