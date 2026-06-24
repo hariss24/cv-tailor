@@ -32,11 +32,10 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 6 — Persistance navigateur (fin)**. Gérer les brouillons (auto-save en temps réel) et réintégrer la modale Diff.
-1. **Brouillons (Drafts)** : Créer un hook `useAutoDraft` pour sauvegarder l'état courant (`docStore`) à chaque modification (debounce) et le recharger au démarrage de l'app, afin de ne pas perdre son travail au rafraîchissement.
-2. **Modale Diff** : Implémenter `DiffModal.tsx` (reportée de la Phase 5) en s'appuyant sur les snapshots ou un état temporaire `beforeTailorSnapshot` avant de valider l'adaptation.
-**Rappel : `extract-job` → Phase 7.**
-⚠️ `cd web` avant npm. Tests : Vitest (logique) + Playwright.
+➡️ **Phase 7 — Sécurité (début)**. Implémenter la route d'extraction d'URL `api/extract-job` (port de `scraper.py`).
+1. **Scraper & Fallback** : Créer `lib/scraper/` pour extraire le texte d'une URL (nettoyage HTML) avec fallback sur `r.jina.ai`.
+2. **Anti-SSRF** : Implémenter une garde stricte pour rejeter les IPs locales, privées et localhost avant fetch.
+⚠️ `cd web` avant npm. Tests : Vitest (anti-SSRF + mock fallback Jina).
 
 ## Décisions de scoping (Phase 3)
 - **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
@@ -193,8 +192,8 @@
       e2e `import-pdf.spec.ts` (fixture PDF réel `tests/e2e/fixtures/sample.pdf` généré, pdf.js rend dans
       le navigateur : images PNG base64 transmises, CV mocké peuple l'aperçu). La modale diff (avant/après) 
       a été reportée à la Phase 6 car elle est trop couplée aux snapshots. **Phase 5 = TERMINÉE**.
-- [~] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
-      historique), page `/history`. Vérif : snapshot→restauration fidèle.
+- [x] **Phase 6 — Persistance navigateur** : `lib/storage/` (Dexie : snapshots max 20, brouillons,
+      historique), page `/history`. Vérif : snapshot→restauration fidèle. **TERMINÉE**.
 - [ ] **Phase 7 — Sécurité** : scraper porté (anti-SSRF + Jina fallback), auth remote (middleware),
       en-têtes durcissement, timeouts. Vérif : URL interne rejetée, login rate-limit.
 - [ ] **Phase 8 — Tests, CI, déploiement** : Vitest + Playwright, job CI `web`, déploiement Vercel
@@ -237,3 +236,4 @@ _(aucun pour l'instant)_
 - 2026-06-24 — Phase 5 terminée : La modale diff (avant/après) de la Phase 5 (port de `_openDiffModal`) s'appuyant trop sur le flux `_tailorBeforeHtml` et les snapshots non implémentés (qui incombent à la couche Storage), elle a été délibérément reportée à la Phase 6 (persistance) conformément aux instructions initiales de la "Prochaine action". Tous les tests (unitaires et e2e) sont verts.
 - 2026-06-24 — Phase 6 étape 1 : initialisation Dexie (`npm install dexie`) + création de `lib/storage/db.ts` (port de la logique de `app.js` et `history.js` : tables `snapshots`, `drafts`, `history`). Le build et les tests existants passent.
 - 2026-06-24 — Phase 6 étape 2 : Câblage Dexie — auto-save `takeSnapshot` toutes les 5min et avant adaptation/pack/chat branché dans `Toolbar.tsx`. Ajout de `SnapshotsModal.tsx` (bouton "Brouillons") pour lister/restaurer/supprimer. Page `/history` et `HistoryList.tsx` créées (vue, PDF regénération, restauration). `Toolbar.onConvert` injecte maintenant dans `history` après l'export PDF. 128 tests verts, build OK.
+- 2026-06-24 — Phase 6 terminée : création de `useAutoDraft` pour la sauvegarde en temps réel (debounced 1s) du CV/Lettre en cours. Ajout de `tailorBefore` dans le store et création de `DiffModal.tsx` (modale de différence avant/après adaptation, reportée de la Phase 5) simulant l'injection de zoom de l'ancienne app via iframe srcDoc. Tous les tests (128 unitaires) passent. Phase 6 validée.

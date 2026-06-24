@@ -30,6 +30,8 @@ export type Doc = {
   previewOverride: string | null;
   /** Booster ATS invisible : mots-clés absents injectés en texte 1px à l'aperçu et à l'export. */
   atsBoost: { enabled: boolean; keywords: string[] };
+  /** État HTML/CSS avant adaptation (Tailor) pour le DiffModal. */
+  tailorBefore: { html: string; css: string } | null;
 };
 
 /** Rend le HTML d'un document selon son type. */
@@ -53,6 +55,7 @@ export type DocStore = Doc & {
   setTemplate: (templateId: TemplateId) => void;
   setPreviewOverride: (html: string | null) => void;
   setAtsBoost: (atsBoost: { enabled: boolean; keywords: string[] }) => void;
+  setTailorBefore: (state: { html: string; css: string } | null) => void;
 };
 
 const INITIAL_TEMPLATE: TemplateId = "sobre";
@@ -65,12 +68,14 @@ export const useDocStore = create<DocStore>((set, get) => ({
   css: TEMPLATES[INITIAL_TEMPLATE].css,
   previewOverride: null,
   atsBoost: { enabled: false, keywords: [] },
+  tailorBefore: null,
 
   setJson: (json) => set({ json, html: renderDoc(get().docType, json) }),
   setHtml: (html) => set({ html }),
   setCss: (css) => set({ css }),
   setPreviewOverride: (previewOverride) => set({ previewOverride }),
   setAtsBoost: (atsBoost) => set({ atsBoost }),
+  setTailorBefore: (tailorBefore) => set({ tailorBefore }),
 
   setDocType: (docType) => {
     const json = defaultJson(docType);

@@ -65,6 +65,10 @@ export default function TailorModal({
       if (isEmptyResume(adapted)) {
         throw new Error("Le CV adapté reçu est vide — CV conservé.");
       }
+      
+      const { html, css, setTailorBefore } = useDocStore.getState();
+      setTailorBefore({ html, css });
+      
       setJson({ ...adapted, photo: originalPhoto });
       toast("CV adapté avec succès.", "success");
       onClose();

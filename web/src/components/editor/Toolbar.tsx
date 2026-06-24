@@ -12,8 +12,10 @@ import PackModal from "@/components/modals/PackModal";
 import ImportTextModal from "@/components/modals/ImportTextModal";
 import ImportPdfModal from "@/components/modals/ImportPdfModal";
 import SnapshotsModal from "@/components/modals/SnapshotsModal";
+import DiffModal from "@/components/modals/DiffModal";
 import { takeSnapshot } from "@/lib/storage/snapshots";
 import { saveHistoryEntry } from "@/lib/storage/db";
+import { useAutoDraft } from "@/lib/storage/useAutoDraft";
 
 const TEMPLATE_LABELS: Record<TemplateId, string> = {
   sobre: "Sobre",
@@ -30,6 +32,7 @@ const TEMPLATE_LABELS: Record<TemplateId, string> = {
 export default function Toolbar() {
   const docType = useDocStore((s) => s.docType);
   const templateId = useDocStore((s) => s.templateId);
+  const tailorBefore = useDocStore((s) => s.tailorBefore);
   const setDocType = useDocStore((s) => s.setDocType);
   const setTemplate = useDocStore((s) => s.setTemplate);
   const [busy, setBusy] = useState(false);
@@ -40,6 +43,10 @@ export default function Toolbar() {
   const [importOpen, setImportOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [snapshotsOpen, setSnapshotsOpen] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
+
+  // Initialisation et auto-save des brouillons
+  useAutoDraft();
 
   // Auto-snapshot toutes les 5 minutes
   import("react").then(({ useEffect }) => {
@@ -142,6 +149,17 @@ export default function Toolbar() {
         </button>
       ) : null}
 
+      {docType === "CV" && tailorBefore ? (
+        <button
+          className="form-btn-mini toolbar-diff"
+          type="button"
+          onClick={() => setDiffOpen(true)}
+          style={{ backgroundColor: "var(--accent)", color: "white", borderColor: "var(--accent)" }}
+        >
+          Différence
+        </button>
+      ) : null}
+
       {docType === "CV" ? (
         <button
           className="form-btn-mini toolbar-ats"
@@ -212,6 +230,7 @@ export default function Toolbar() {
       <ImportPdfModal open={pdfOpen} onClose={() => setPdfOpen(false)} />
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
       <SnapshotsModal open={snapshotsOpen} onClose={() => setSnapshotsOpen(false)} />
+      <DiffModal open={diffOpen} onClose={() => setDiffOpen(false)} />
     </div>
   );
 }
