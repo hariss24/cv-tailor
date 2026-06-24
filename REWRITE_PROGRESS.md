@@ -32,10 +32,10 @@
 ---
 
 ## Prochaine action
-➡️ **Phase 7 — Sécurité (début)**. Implémenter la route d'extraction d'URL `api/extract-job` (port de `scraper.py`).
-1. **Scraper & Fallback** : Créer `lib/scraper/` pour extraire le texte d'une URL (nettoyage HTML) avec fallback sur `r.jina.ai`.
-2. **Anti-SSRF** : Implémenter une garde stricte pour rejeter les IPs locales, privées et localhost avant fetch.
-⚠️ `cd web` avant npm. Tests : Vitest (anti-SSRF + mock fallback Jina).
+➡️ **Phase 7 — Sécurité (suite)**. Implémenter l'authentification et le durcissement.
+1. **Middleware & Auth** : Créer le middleware Next.js pour protéger les routes et APIs par mot de passe (équivalent au login Flask), incluant une protection contre le brute-force (rate-limit rudimentaire).
+2. **En-têtes de sécurité** : Configurer les en-têtes HTTP de sécurité dans `next.config.ts` (CSP, frame-ancestors, HSTS, X-Content-Type-Options).
+⚠️ `cd web` avant npm. Tests : Vitest (rate-limit) + Playwright (protection route).
 
 ## Décisions de scoping (Phase 3)
 - **Historique Dexie** : le bouton PDF télécharge directement (`Blob` + `<a download>`). L'enregistrement
@@ -237,3 +237,4 @@ _(aucun pour l'instant)_
 - 2026-06-24 — Phase 6 étape 1 : initialisation Dexie (`npm install dexie`) + création de `lib/storage/db.ts` (port de la logique de `app.js` et `history.js` : tables `snapshots`, `drafts`, `history`). Le build et les tests existants passent.
 - 2026-06-24 — Phase 6 étape 2 : Câblage Dexie — auto-save `takeSnapshot` toutes les 5min et avant adaptation/pack/chat branché dans `Toolbar.tsx`. Ajout de `SnapshotsModal.tsx` (bouton "Brouillons") pour lister/restaurer/supprimer. Page `/history` et `HistoryList.tsx` créées (vue, PDF regénération, restauration). `Toolbar.onConvert` injecte maintenant dans `history` après l'export PDF. 128 tests verts, build OK.
 - 2026-06-24 — Phase 6 terminée : création de `useAutoDraft` pour la sauvegarde en temps réel (debounced 1s) du CV/Lettre en cours. Ajout de `tailorBefore` dans le store et création de `DiffModal.tsx` (modale de différence avant/après adaptation, reportée de la Phase 5) simulant l'injection de zoom de l'ancienne app via iframe srcDoc. Tous les tests (128 unitaires) passent. Phase 6 validée.
+- 2026-06-24 — Phase 7 étape 1 : création du module scraper `lib/scraper/` en remplacement de Playwright/Python par `cheerio` + fetch direct. Implémentation stricte d'anti-SSRF dans `ssrf.ts` bloquant localhost/IPs privées via résolution DNS. Fallback vers Jina AI (`r.jina.ai`) si bloqué (Cloudflare/403). Ajout de la route `/api/extract-job` et du composant mutualisé `JobExtractor.tsx` intégré directement dans `TailorModal` et `PackModal`. 140 tests unitaires verts.

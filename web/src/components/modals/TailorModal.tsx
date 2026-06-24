@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
 import { normalizeResume, isEmptyResume } from "@/lib/resume/normalize";
+import JobExtractor from "./JobExtractor";
 import type { Resume } from "@/lib/resume/schema";
 import type { TailorLevel } from "@/lib/ai/prompts";
 import { toast } from "@/state/uiStore";
@@ -90,10 +91,12 @@ export default function TailorModal({
       >
         <h2 className="ui-dialog__title">Adapter à une offre</h2>
 
+        <JobExtractor onExtracted={(text) => setJobDesc(text)} disabled={busy} />
+
         <textarea
           className="form-textarea"
           rows={6}
-          placeholder="Colle ici le texte de l'offre d'emploi…"
+          placeholder="Colle ici le texte de l'offre d'emploi, ou utilise l'extracteur ci-dessus…"
           value={jobDesc}
           onChange={(e) => setJobDesc(e.target.value)}
           disabled={busy}

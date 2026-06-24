@@ -6,6 +6,7 @@ import { postJson } from "@/lib/ai/client";
 import { stripBase64ForChat } from "@/lib/ai/base64";
 import { mergeHtml } from "@/lib/resume/mergeHtml";
 import { toast } from "@/state/uiStore";
+import JobExtractor from "./JobExtractor";
 
 /**
  * Modale « Pack candidature » : génère une lettre + un email cohérents avec le CV courant,
@@ -94,10 +95,12 @@ export default function PackModal({ open, onClose }: { open: boolean; onClose: (
       >
         <h2 className="ui-dialog__title">Pack candidature</h2>
 
+        <JobExtractor onExtracted={(text) => setJobDesc(text)} disabled={busy} />
+
         <textarea
           className="form-textarea"
           rows={5}
-          placeholder="Colle ici le texte de l'offre d'emploi…"
+          placeholder="Colle ici le texte de l'offre d'emploi, ou utilise l'extracteur ci-dessus…"
           value={jobDesc}
           onChange={(e) => setJobDesc(e.target.value)}
           disabled={busy}
