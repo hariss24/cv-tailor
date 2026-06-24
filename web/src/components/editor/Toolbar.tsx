@@ -7,6 +7,7 @@ import type { DocType, Resume } from "@/lib/resume/schema";
 import { toast, uiAlert } from "@/state/uiStore";
 import TailorModal from "@/components/modals/TailorModal";
 import ChatPanel from "@/components/modals/ChatPanel";
+import AtsPanel from "@/components/modals/AtsPanel";
 
 const TEMPLATE_LABELS: Record<TemplateId, string> = {
   sobre: "Sobre",
@@ -28,6 +29,7 @@ export default function Toolbar() {
   const [busy, setBusy] = useState(false);
   const [tailorOpen, setTailorOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [atsOpen, setAtsOpen] = useState(false);
 
   const onConvert = async () => {
     const { html, css, json } = useDocStore.getState();
@@ -98,6 +100,16 @@ export default function Toolbar() {
         </button>
       ) : null}
 
+      {docType === "CV" ? (
+        <button
+          className="form-btn-mini toolbar-ats"
+          type="button"
+          onClick={() => setAtsOpen(true)}
+        >
+          Score ATS
+        </button>
+      ) : null}
+
       <button
         className="form-btn-mini toolbar-chat"
         type="button"
@@ -116,6 +128,7 @@ export default function Toolbar() {
       </button>
 
       <TailorModal open={tailorOpen} onClose={() => setTailorOpen(false)} />
+      <AtsPanel open={atsOpen} onClose={() => setAtsOpen(false)} />
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
