@@ -6,6 +6,8 @@ import { useDocStore } from "@/state/docStore";
 import { DEFAULT_RESUME, type Resume } from "@/lib/resume/schema";
 import { toast, uiAlert, uiConfirm, uiPrompt } from "@/state/uiStore";
 import { saveHistoryEntry } from "@/lib/storage/db";
+import { takeSnapshot } from "@/lib/storage/snapshots";
+import ChatPanel from "@/components/modals/ChatPanel";
 
 const STORAGE_KEY_APIKEY = "userApiKey";
 
@@ -20,6 +22,7 @@ export default function TopBar() {
   const json = useDocStore((s) => s.json);
   const setJson = useDocStore((s) => s.setJson);
   const [busy, setBusy] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Initialisation du thème depuis localStorage.
   useEffect(() => {
@@ -60,7 +63,7 @@ export default function TopBar() {
   };
 
   const onConvert = async () => {
-    const { html, css, atsBoost } = useDocStore.getState();
+    const { html, css, atsBoost, company, role } = useDocStore.getState();
     const name = (json as Resume).name?.trim() || docType;
     const boostKeywords = atsBoost.enabled ? atsBoost.keywords : [];
     setBusy(true);
@@ -88,8 +91,8 @@ export default function TopBar() {
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
         doc_type: docType,
-        company: "",
-        role: "",
+        company,
+        role,
         job_desc: "",
         filename: `${name} - ${docType}.pdf`,
         notes: "",
@@ -109,6 +112,7 @@ export default function TopBar() {
   };
 
   return (
+    <>
     <header className="topbar">
       <div className="logo-badge">
         <div className="logo-icon"><div className="logo-icon-inner">F</div></div>
@@ -124,6 +128,11 @@ export default function TopBar() {
         <button type="button" className="btn-nav" onClick={onNewCv}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nouveau CV
+        </button>
+
+        <button type="button" className="btn-nav" onClick={() => { takeSnapshot("Avant chat IA"); setChatOpen(true); }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
+          Assistant IA
         </button>
 
         <Link href="/history" className="btn-nav">
@@ -151,5 +160,7 @@ export default function TopBar() {
         </button>
       </div>
     </header>
+    <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
+    </>
   );
 }

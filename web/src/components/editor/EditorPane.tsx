@@ -1,29 +1,115 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import FormEditor from "@/components/form/FormEditor";
 import LetterForm from "@/components/form/LetterForm";
 import { useDocStore } from "@/state/docStore";
+import { TEMPLATE_IDS, type TemplateId } from "@/lib/resume/templates";
+import { normalizeResume, normalizeLetter } from "@/lib/resume/normalize";
+import { resumeToJsonResume } from "@/lib/resume/jsonResume";
+import { toast, uiPrompt } from "@/state/uiStore";
+import SnapshotsModal from "@/components/modals/SnapshotsModal";
+import ImportTextModal from "@/components/modals/ImportTextModal";
+import ImportPdfModal from "@/components/modals/ImportPdfModal";
+import type { Resume } from "@/lib/resume/schema";
 
-type Tab = "form" | "html" | "css";
+const TEMPLATE_LABELS: Record<TemplateId, string> = {
+  sobre: "Sobre",
+  moderne: "Moderne",
+  classique: "Classique",
+  minimal: "Minimal",
+  graphique: "Graphique",
+};
+
+type Tab = "form" | "html" | "css" | "import";
 
 /**
- * Panneau d'édition : onglets Formulaire / HTML / CSS.
- * - Formulaire : `FormEditor` (édition structurée → store.setJson).
- * - HTML / CSS : éditeurs Monaco liés au store (mode expert, édition directe).
- *
- * Note : éditer le HTML/CSS écrase directement le rendu (setHtml/setCss) ; repasser au
- * formulaire et y modifier un champ régénère le HTML depuis le JSON (comportement attendu,
- * identique à l'app vanilla).
+ * Panneau d'édition : onglet Formulaire + mode expert (HTML / CSS / Importer).
+ * Outils intégrés à la barre de titre : Coller/Copier JSON, export Reactive Resume,
+ * sélection de modèle, indicateur de brouillon dynamique, snapshots ⟲.
+ * Port de la barre d'outils éditeur de l'app Flask (templates/index.html).
  */
 export default function EditorPane() {
   const [tab, setTab] = useState<Tab>("form");
+  const [expert, setExpert] = useState(false);
+  const [saveLabel, setSaveLabel] = useState("✓ Brouillon sauvegardé");
+  const [snapshotsOpen, setSnapshotsOpen] = useState(false);
+  const [importTextOpen, setImportTextOpen] = useState(false);
+  const [importPdfOpen, setImportPdfOpen] = useState(false);
+
   const docType = useDocStore((s) => s.docType);
   const html = useDocStore((s) => s.html);
   const css = useDocStore((s) => s.css);
+  const templateId = useDocStore((s) => s.templateId);
   const setHtml = useDocStore((s) => s.setHtml);
   const setCss = useDocStore((s) => s.setCss);
+  const setJson = useDocStore((s) => s.setJson);
+  const setTemplate = useDocStore((s) => s.setTemplate);
+
+  const isResumeType = docType !== "Lettre";
+
+  // Indicateur de sauvegarde dynamique : « Enregistrement… » puis « ✓ Brouillon sauvegardé »
+  // (calqué sur le debounce de 1 s de useAutoDraft).
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const unsub = useDocStore.subscribe((state, prev) => {
+      if (state.html === prev.html && state.css === prev.css && state.json === prev.json) return;
+      setSaveLabel("Enregistrement…");
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => setSaveLabel("✓ Brouillon sauvegardé"), 1100);
+    });
+    return () => {
+      unsub();
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, []);
+
+  const toggleExpert = () => {
+    const next = !expert;
+    setExpert(next);
+    setTab(next ? "html" : "form");
+  };
+
+  const onPasteJson = async () => {
+    const raw = await uiPrompt("Colle le JSON du document :", "", "Coller un JSON");
+    if (raw === null) return;
+    try {
+      const parsed = JSON.parse(raw);
+      setJson(isResumeType ? normalizeResume(parsed) : normalizeLetter(parsed));
+      toast("JSON importé.", "success");
+    } catch {
+      toast("JSON invalide.", "error");
+    }
+  };
+
+  const onCopyJson = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(useDocStore.getState().json, null, 2),
+      );
+      toast("JSON copié dans le presse-papier.", "success");
+    } catch {
+      toast("Impossible de copier le JSON.", "error");
+    }
+  };
+
+  const onExportRr = () => {
+    const json = JSON.stringify(
+      resumeToJsonResume(useDocStore.getState().json as Resume),
+      null,
+      2,
+    );
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const name = (useDocStore.getState().json as Resume).name?.trim() || "cv";
+    a.href = url;
+    a.download = `${name.replace(/[^\w-]+/g, "_") || "cv"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast("CV exporté (format Reactive Resume).", "success");
+  };
 
   return (
     <>
@@ -36,25 +122,99 @@ export default function EditorPane() {
           >
             Formulaire
           </button>
+
           <button
             type="button"
-            className={`tab${tab === "html" ? " active" : ""}`}
-            onClick={() => setTab("html")}
+            className={`tab tab--expert${expert ? " active" : ""}`}
+            title="Activer le mode expert (HTML/CSS)"
+            onClick={toggleExpert}
           >
-            HTML
+            Mode Expert
           </button>
+
+          {expert ? (
+            <div className="expert-tabs">
+              <span className="expert-divider" />
+              <button
+                type="button"
+                className={`tab${tab === "html" ? " active" : ""}`}
+                onClick={() => setTab("html")}
+              >
+                HTML
+              </button>
+              <button
+                type="button"
+                className={`tab${tab === "css" ? " active" : ""}`}
+                onClick={() => setTab("css")}
+              >
+                CSS
+              </button>
+              <button
+                type="button"
+                className={`tab${tab === "import" ? " active" : ""}`}
+                onClick={() => setTab("import")}
+              >
+                Importer
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <span className="autosave">{saveLabel}</span>
+
+        <div className="actions-mini">
+          <button type="button" className="form-btn-mini" title="Coller/Importer un document au format JSON" onClick={onPasteJson}>
+            Coller JSON
+          </button>
+          <button type="button" className="form-btn-mini" title="Copier les données JSON" onClick={onCopyJson}>
+            JSON
+          </button>
+          {isResumeType ? (
+            <button type="button" className="form-btn-mini" title="Exporter au format JSON Resume (Reactive Resume)" onClick={onExportRr}>
+              Reactive Resume
+            </button>
+          ) : null}
+          <select
+            className="toolbar-select"
+            value={templateId}
+            title="Charger un modèle"
+            onChange={(e) => setTemplate(e.target.value as TemplateId)}
+          >
+            {TEMPLATE_IDS.map((id) => (
+              <option key={id} value={id}>
+                {TEMPLATE_LABELS[id]}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
-            className={`tab${tab === "css" ? " active" : ""}`}
-            onClick={() => setTab("css")}
+            className="btn-snapshots"
+            title="Snapshots de brouillons"
+            onClick={() => setSnapshotsOpen(true)}
           >
-            CSS
+            ⟲
           </button>
         </div>
       </div>
 
       {tab === "form" ? (
         docType === "Lettre" ? <LetterForm /> : <FormEditor />
+      ) : tab === "import" ? (
+        <div className="import-pane">
+          <p className="import-hint">
+            Importe un CV existant : l&apos;IA en extrait les données pour remplir le formulaire.
+          </p>
+          <div className="import-pane-actions">
+            <button type="button" className="form-btn-add" onClick={() => setImportTextOpen(true)}>
+              Importer un texte
+            </button>
+            {isResumeType ? (
+              <button type="button" className="form-btn-add" onClick={() => setImportPdfOpen(true)}>
+                Importer un PDF
+              </button>
+            ) : null}
+          </div>
+        </div>
       ) : (
         <div className="pane-body editor-monaco">
           <Editor
@@ -72,6 +232,10 @@ export default function EditorPane() {
           />
         </div>
       )}
+
+      <SnapshotsModal open={snapshotsOpen} onClose={() => setSnapshotsOpen(false)} />
+      <ImportTextModal open={importTextOpen} onClose={() => setImportTextOpen(false)} />
+      <ImportPdfModal open={importPdfOpen} onClose={() => setImportPdfOpen(false)} />
     </>
   );
 }

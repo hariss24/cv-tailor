@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useDocStore } from "@/state/docStore";
-import { streamSse } from "@/lib/ai/client";
-import { TEMPLATES } from "@/lib/resume/templates";
+import { postJson, streamSse } from "@/lib/ai/client";
+import { normalizeResume, isEmptyResume } from "@/lib/resume/normalize";
+import type { Resume } from "@/lib/resume/schema";
 import { toast } from "@/state/uiStore";
 
 /**
- * Import texte → HTML (streaming SSE). Port de `btn-text-to-html` (app.js l.2083-2114).
+ * Import texte → données structurées. Port de `btn-text-to-html` (app.js).
  *
- * Le texte brut est converti par l'IA en HTML, affiché en direct dans l'aperçu (mode expert :
- * on écrit dans `html` au fil du flux). À la fin, on applique le CSS d'import (sobre pour un CV,
- * vide pour une Lettre — port de `_applyImportCss`). Le `doc_type` suit le type courant.
+ * - CV (et types assimilés) : le texte est envoyé à `/api/text-to-resume` qui renvoie un CV JSON
+ *   normalisé → `setJson` (remplit le formulaire). Garde anti-vidage (`isEmptyResume`).
+ * - Lettre : conversion texte → HTML en streaming (flux historique conservé), puis CSS d'import.
  */
 
 export default function ImportTextModal({
@@ -32,17 +33,29 @@ export default function ImportTextModal({
       toast("Colle d'abord le contenu de ton CV.", "error");
       return;
     }
-    const { docType, setHtml, setCss } = useDocStore.getState();
+    const { docType, setJson, setHtml, setCss } = useDocStore.getState();
     setBusy(true);
     try {
-      const html = await streamSse(
-        "/api/text-to-html",
-        { text: content, doc_type: docType },
-        (partial) => setHtml(partial),
-      );
-      setHtml(html);
-      setCss(docType === "Lettre" ? "" : TEMPLATES.sobre.css);
-      toast("Texte converti en HTML avec succès.", "success");
+      if (docType === "Lettre") {
+        const html = await streamSse(
+          "/api/text-to-html",
+          { text: content, doc_type: docType },
+          (partial) => setHtml(partial),
+        );
+        setHtml(html);
+        setCss("");
+        toast("Texte converti avec succès.", "success");
+      } else {
+        const { resume: raw } = await postJson<{ resume: unknown }>("/api/text-to-resume", {
+          text: content,
+        });
+        const resume = normalizeResume(raw);
+        if (isEmptyResume(resume)) {
+          throw new Error("Extraction vide : aucune donnée exploitable dans ce texte.");
+        }
+        setJson(resume as Resume);
+        toast("CV importé dans le formulaire.", "success");
+      }
       onClose();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Échec de la conversion.", "error");
@@ -62,7 +75,7 @@ export default function ImportTextModal({
       >
         <h2 className="ui-dialog__title">Importer un texte</h2>
         <p className="import-hint">
-          Colle le contenu brut de ton CV (ou ta lettre) : l&apos;IA le met en forme en HTML.
+          Colle le contenu brut de ton CV (ou ta lettre) : l&apos;IA en extrait les données.
         </p>
 
         <textarea
@@ -79,7 +92,7 @@ export default function ImportTextModal({
             Annuler
           </button>
           <button type="button" className="go" onClick={run} disabled={busy}>
-            {busy ? "Conversion…" : "Convertir en HTML"}
+            {busy ? "Conversion…" : "Importer"}
           </button>
         </div>
       </div>

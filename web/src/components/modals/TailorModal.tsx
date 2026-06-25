@@ -5,6 +5,10 @@ import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
 import { normalizeResume, isEmptyResume } from "@/lib/resume/normalize";
 import JobExtractor from "./JobExtractor";
+import AtsPanel from "./AtsPanel";
+import PackModal from "./PackModal";
+import DiffModal from "./DiffModal";
+import { loadMasterResume } from "@/lib/storage/master";
 import type { Resume } from "@/lib/resume/schema";
 import type { TailorLevel } from "@/lib/ai/prompts";
 import { toast } from "@/state/uiStore";
@@ -12,18 +16,19 @@ import { toast } from "@/state/uiStore";
 /**
  * Modale d'adaptation IA d'un CV à une offre (4 niveaux). Port de `_tailorResumeFields` (app.js).
  *
- * Flux métier :
- * - la photo (base64) est retirée avant l'appel et restaurée localement au retour (jamais à l'IA) ;
- * - réponse normalisée côté client (comme `loadData`) ; garde anti-vidage (`isEmptyResume`).
+ * Disposition 2 colonnes (comme l'original Flask) :
+ *  - gauche : extraction d'offre + texte de l'offre ;
+ *  - droite : niveau d'adaptation · case « CV Maître » · Adapter · Pack candidature · panneau ATS.
  *
- * Le CV Maître (adaptation depuis un CV de référence stocké) est reporté en Phase 6 (storage).
+ * Flux métier : la photo (base64) est retirée avant l'appel et restaurée localement ;
+ * réponse normalisée + garde anti-vidage (`isEmptyResume`).
  */
 
 const LEVELS: { id: TailorLevel; label: string; hint: string }[] = [
-  { id: "peu", label: "Léger", hint: "Ajustements minimes" },
+  { id: "peu", label: "Peu adapté", hint: "Ajustements minimes" },
   { id: "adapte", label: "Adapté", hint: "Équilibré (recommandé)" },
-  { id: "hyper", label: "Poussé", hint: "Optimisation forte" },
-  { id: "sur-mesure", label: "Sur-mesure", hint: "Adaptation maximale" },
+  { id: "hyper", label: "Hyper-adapté", hint: "Optimisation forte" },
+  { id: "sur-mesure", label: "Sur-mesure 🔥", hint: "Adaptation maximale" },
 ];
 
 export default function TailorModal({
@@ -35,13 +40,17 @@ export default function TailorModal({
 }) {
   const [jobDesc, setJobDesc] = useState("");
   const [level, setLevel] = useState<TailorLevel>("adapte");
+  const [useMaster, setUseMaster] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [packOpen, setPackOpen] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const tailorBefore = useDocStore((s) => s.tailorBefore);
 
   if (!open) return null;
 
   const run = async () => {
     const { docType, json, setJson } = useDocStore.getState();
-    if (docType !== "CV") {
+    if (docType !== "CV" && docType !== "Maître") {
       toast("L'adaptation IA ne s'applique qu'aux CV.", "error");
       return;
     }
@@ -51,8 +60,12 @@ export default function TailorModal({
       return;
     }
 
+    // Base de l'adaptation : le CV Maître si la case est cochée et qu'il existe, sinon le CV courant.
+    const master = useMaster ? await loadMasterResume() : null;
+    const base = (master ?? json) as Resume;
+
     // Photo jamais envoyée (allègement des tokens) ; restaurée localement au retour.
-    const { photo: originalPhoto, ...clean } = json as Resume;
+    const { photo: originalPhoto, ...clean } = base;
 
     setBusy(true);
     try {
@@ -66,13 +79,15 @@ export default function TailorModal({
       if (isEmptyResume(adapted)) {
         throw new Error("Le CV adapté reçu est vide — CV conservé.");
       }
-      
+
       const { html, css, setTailorBefore } = useDocStore.getState();
       setTailorBefore({ html, css });
-      
-      setJson({ ...adapted, photo: originalPhoto });
-      toast("CV adapté avec succès.", "success");
-      onClose();
+
+      setJson({ ...adapted, photo: originalPhoto || (json as Resume).photo || "" });
+      toast(
+        master ? "CV adapté depuis le CV Maître." : "CV adapté avec succès.",
+        "success",
+      );
     } catch (err) {
       toast(err instanceof Error ? err.message : "Échec de l'adaptation.", "error");
     } finally {
@@ -83,50 +98,101 @@ export default function TailorModal({
   return (
     <div className="ui-overlay" role="presentation" onClick={busy ? undefined : onClose}>
       <div
-        className="ui-dialog tailor-modal"
+        className="ui-dialog tailor-modal-content"
         role="dialog"
         aria-modal="true"
         aria-label="Adapter le CV à une offre"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="ui-dialog__title">Adapter à une offre</h2>
+        <div className="ui-dialog__head">
+          <h2 className="ui-dialog__title">Adapter à une offre d&apos;emploi</h2>
+          <button type="button" className="ui-dialog__close" aria-label="Fermer" onClick={onClose} disabled={busy}>
+            &times;
+          </button>
+        </div>
 
-        <JobExtractor onExtracted={(text) => setJobDesc(text)} disabled={busy} />
-
-        <textarea
-          className="form-textarea"
-          rows={6}
-          placeholder="Colle ici le texte de l'offre d'emploi, ou utilise l'extracteur ci-dessus…"
-          value={jobDesc}
-          onChange={(e) => setJobDesc(e.target.value)}
-          disabled={busy}
-        />
-
-        <div className="tailor-levels" role="radiogroup" aria-label="Niveau d'adaptation">
-          {LEVELS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              role="radio"
-              aria-checked={level === l.id}
-              title={l.hint}
-              className={`tab tailor-level${level === l.id ? " active" : ""}`}
-              onClick={() => setLevel(l.id)}
+        <div className="tailor-body-inner">
+          {/* Colonne gauche : l'offre */}
+          <div className="tailor-col-left">
+            <div className="tailor-section-header">
+              <span className="tailor-section-title">Offre d&apos;emploi</span>
+            </div>
+            <JobExtractor onExtracted={(text) => setJobDesc(text)} disabled={busy} />
+            <textarea
+              id="job-desc-input"
+              className="form-textarea"
+              placeholder="Colle ici le texte de l'offre d'emploi, ou utilise l'extracteur ci-dessus…"
+              value={jobDesc}
+              onChange={(e) => setJobDesc(e.target.value)}
               disabled={busy}
-            >
-              {l.label}
-            </button>
-          ))}
+            />
+          </div>
+
+          {/* Colonne droite : paramètres & actions */}
+          <div className="tailor-col-right">
+            <div className="tailor-settings-box">
+              <div className="level-selector" role="radiogroup" aria-label="Niveau d'adaptation">
+                <span className="level-label">Niveau d&apos;adaptation</span>
+                <div className="level-segment">
+                  {LEVELS.map((l) => (
+                    <button
+                      key={l.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={level === l.id}
+                      title={l.hint}
+                      className={`level-btn${level === l.id ? " active" : ""}`}
+                      onClick={() => setLevel(l.id)}
+                      disabled={busy}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="tailor-check">
+                <input
+                  type="checkbox"
+                  checked={useMaster}
+                  onChange={(e) => setUseMaster(e.target.checked)}
+                  disabled={busy}
+                />
+                <span>Utiliser le CV Maître comme base <em>(si disponible)</em></span>
+              </label>
+            </div>
+
+            <div className="tailor-actions-box">
+              <div className="tailor-action-group">
+                <button type="button" className="tailor-btn tailor-btn-block" onClick={run} disabled={busy}>
+                  {busy ? "Adaptation…" : "Adapter le CV"}
+                </button>
+                {tailorBefore ? (
+                  <button type="button" className="form-btn-mini" onClick={() => setDiffOpen(true)} disabled={busy}>
+                    Voir les modifications
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="tailor-divider" />
+
+              <div className="tailor-action-group">
+                <button
+                  type="button"
+                  className="tailor-btn tailor-btn-block pack-btn-variant"
+                  onClick={() => setPackOpen(true)}
+                  disabled={busy}
+                >
+                  Créer le Pack candidature
+                </button>
+              </div>
+            </div>
+
+            <AtsPanel jobDesc={jobDesc} />
+          </div>
         </div>
 
-        <div className="ui-dialog__actions">
-          <button type="button" className="form-btn-mini" onClick={onClose} disabled={busy}>
-            Annuler
-          </button>
-          <button type="button" className="go" onClick={run} disabled={busy}>
-            {busy ? "Adaptation…" : "Adapter"}
-          </button>
-        </div>
+        <PackModal open={packOpen} onClose={() => setPackOpen(false)} />
+        <DiffModal open={diffOpen} onClose={() => setDiffOpen(false)} />
       </div>
     </div>
   );

@@ -45,7 +45,8 @@ function renderDoc(docType: DocType, json: DocData): string {
     : renderResume(json as Resume);
 }
 
-function defaultJson(docType: DocType): DocData {
+/** JSON par défaut pour un type de document (Lettre → lettre, sinon CV). */
+export function defaultJsonFor(docType: DocType): DocData {
   return docType === "Lettre"
     ? structuredClone(DEFAULT_LETTER)
     : structuredClone(DEFAULT_RESUME);
@@ -88,7 +89,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
   setTailorBefore: (tailorBefore) => set({ tailorBefore }),
 
   setDocType: (docType) => {
-    const json = defaultJson(docType);
+    const json = defaultJsonFor(docType);
     set({ docType, json, html: renderDoc(docType, json) });
   },
 
