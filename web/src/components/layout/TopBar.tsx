@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useDocStore } from "@/state/docStore";
 import { DEFAULT_RESUME, type Resume } from "@/lib/resume/schema";
@@ -11,6 +11,21 @@ import ChatPanel from "@/components/modals/ChatPanel";
 
 const STORAGE_KEY_APIKEY = "userApiKey";
 
+function slug(s: string): string {
+  return s.trim()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildFilename(name: string, docType: string, company: string, role: string, includeDate: boolean): string {
+  const parts = [slug(name), slug(docType)];
+  if (company) parts.push(slug(company));
+  if (role) parts.push(slug(role));
+  if (includeDate) parts.push(new Date().toISOString().slice(0, 10));
+  return parts.filter(Boolean).join("_");
+}
+
 /**
  * Barre du haut : logo, nom du fichier PDF, et actions globales
  * (Nouveau CV, Historique, thème, paramètres API, conversion PDF).
@@ -20,17 +35,15 @@ export default function TopBar() {
   const docType = useDocStore((s) => s.docType);
   const templateId = useDocStore((s) => s.templateId);
   const json = useDocStore((s) => s.json);
+  const company = useDocStore((s) => s.company);
+  const role = useDocStore((s) => s.role);
+  const includeDate = useDocStore((s) => s.includeDate);
   const setJson = useDocStore((s) => s.setJson);
   const [busy, setBusy] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Initialisation du thème depuis localStorage.
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") document.documentElement.setAttribute("data-theme", "dark");
-  }, []);
-
-  const filename = `${(json as Resume).name?.trim() || docType} - ${docType}.pdf`;
+  const personName = (json as Resume).name?.trim() || docType;
+  const filename = buildFilename(personName, docType, company, role, includeDate);
 
   const toggleTheme = () => {
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
@@ -62,7 +75,8 @@ export default function TopBar() {
     }
   };
 
-  const onConvert = async () => {
+  const onConvert = useCallback(async () => {
+    if (busy) return;
     const { html, css, atsBoost, company, role } = useDocStore.getState();
     const name = (json as Resume).name?.trim() || docType;
     const boostKeywords = atsBoost.enabled ? atsBoost.keywords : [];
@@ -71,7 +85,7 @@ export default function TopBar() {
       const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html, css, filename: `${name} - ${docType}`, boostKeywords }),
+        body: JSON.stringify({ html, css, filename: buildFilename(name, docType, company, role, useDocStore.getState().includeDate), boostKeywords }),
       });
       if (!res.ok) {
         const { error } = await res.json().catch(() => ({ error: "Échec de la conversion." }));
@@ -82,7 +96,7 @@ export default function TopBar() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${name} - ${docType}.pdf`;
+      a.download = `${buildFilename(name, docType, company, role, useDocStore.getState().includeDate)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       toast("PDF téléchargé.", "success");
@@ -109,7 +123,16 @@ export default function TopBar() {
     } finally {
       setBusy(false);
     }
-  };
+  }, [busy, docType, json, templateId]);
+
+  useEffect(() => {
+    const handleConvert = () => {
+      void onConvert();
+    };
+
+    window.addEventListener("cvforge:convert", handleConvert);
+    return () => window.removeEventListener("cvforge:convert", handleConvert);
+  }, [onConvert]);
 
   return (
     <>

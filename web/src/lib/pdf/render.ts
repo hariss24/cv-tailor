@@ -39,7 +39,9 @@ async function launchBrowser(): Promise<Browser> {
       headless: true,
     });
   }
-  return chromium.launch();
+  // chromium_headless_shell (défaut Playwright ≥ 1.44) ne supporte pas page.pdf().
+  // En dev local : utiliser Chrome système (supporte page.pdf()).
+  return chromium.launch({ channel: "chrome" });
 }
 
 // ---- anti-SSRF : aucune sous-ressource réseau --------------------------------
@@ -94,7 +96,7 @@ export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise
   try {
     const page = await browser.newPage();
     await page.route("**/*", blockExternalResources); // anti-SSRF : inline only
-    await page.setContent(html, { waitUntil: "networkidle", timeout: 30_000 });
+    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30_000 });
     return await page.pdf({
       format,
       printBackground: background,

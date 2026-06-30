@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listHistoryEntries, deleteHistoryEntry, updateHistoryEntryStat, type HistoryEntry } from "@/lib/storage/db";
+import { listHistoryEntries, deleteHistoryEntry, updateHistoryEntryStat, saveDraft, type HistoryEntry } from "@/lib/storage/db";
 import { uiConfirm, uiAlert, toast } from "@/state/uiStore";
 import { useDocStore } from "@/state/docStore";
 import { useRouter } from "next/navigation";
@@ -22,8 +22,12 @@ export default function HistoryList() {
   const setCss = useDocStore(s => s.setCss);
   const setPreviewOverride = useDocStore(s => s.setPreviewOverride);
 
+  useEffect(() => { load(); }, []);
+
   useEffect(() => {
-    load();
+    const reload = () => { void load(); };
+    window.addEventListener("cvforge:history-changed", reload);
+    return () => window.removeEventListener("cvforge:history-changed", reload);
   }, []);
 
   async function load() {
@@ -31,12 +35,11 @@ export default function HistoryList() {
   }
 
   async function handleViewPdf(id: string) {
-    const entry = entries.find((e) => e.id === id);
+    const entry = entries.find(e => e.id === id);
     if (!entry || !entry.html) {
       await uiAlert("HTML introuvable. Chargez ce document dans l'éditeur et générez le PDF au moins une fois.", "PDF indisponible");
       return;
     }
-
     try {
       toast("Génération du PDF...", "info");
       const res = await fetch("/api/convert", {
@@ -44,55 +47,47 @@ export default function HistoryList() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ html: entry.html, css: entry.css, format: "A4", margin: "0", background: true, filename: entry.filename }),
       });
-      if (!res.ok) {
-        await uiAlert("Erreur lors de la génération du PDF.", "Erreur");
-        return;
-      }
+      if (!res.ok) { await uiAlert("Erreur lors de la génération du PDF.", "Erreur"); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      
       await updateHistoryEntryStat(id, "pdf_views");
       await load();
-    } catch (e) {
+    } catch {
       await uiAlert("Erreur réseau.", "Erreur");
     }
   }
 
   async function handleReload(id: string) {
-    const entry = entries.find((e) => e.id === id);
+    const entry = entries.find(e => e.id === id);
     if (!entry) return;
-
-    if (!(await uiConfirm("Recharger ce document dans l'éditeur ? Votre travail actuel sera remplacé.", "Recharger"))) {
-      return;
-    }
-
+    if (!(await uiConfirm("Recharger ce document dans l'éditeur ? Votre travail actuel sera remplacé.", "Recharger"))) return;
     await updateHistoryEntryStat(id, "editor_reloads");
-
+    await saveDraft({
+      id: `draft-${entry.doc_type}`,
+      html: entry.html,
+      css: entry.css,
+      json: entry.json,
+      templateId: entry.templateId,
+      updatedAt: Date.now(),
+    });
     setDocType(entry.doc_type);
-    if (entry.json) {
-      setJson(entry.json);
-    } else {
-      setHtml(entry.html);
-      setCss(entry.css);
-    }
+    if (entry.json) setJson(entry.json);
+    else setHtml(entry.html);
+    setCss(entry.css);
     setPreviewOverride(null);
     toast("Document rechargé.", "success");
     router.push("/");
   }
 
   async function handleDelete(id: string) {
-    const entry = entries.find((e) => e.id === id);
-    if (!entry) return;
-    
-    if (!(await uiConfirm(`Supprimer cette entrée ? Action irréversible.`, "Supprimer"))) return;
-
+    if (!(await uiConfirm("Supprimer cette entrée ? Action irréversible.", "Supprimer"))) return;
     await deleteHistoryEntry(id);
     await load();
   }
 
-  const filtered = entries.filter((e) => {
+  const filtered = entries.filter(e => {
     const f = filter.toLowerCase();
     if (!f) return true;
     return (
@@ -106,47 +101,65 @@ export default function HistoryList() {
   });
 
   return (
-    <div>
+    <>
       <input
         type="text"
-        className="form-input"
-        placeholder="Rechercher (entreprise, poste, type...)"
+        className="hist-search"
+        placeholder="Rechercher entreprise, poste, notes..."
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        style={{ marginBottom: "20px", width: "100%", maxWidth: "400px" }}
+        onChange={e => setFilter(e.target.value)}
       />
 
       {filtered.length === 0 ? (
-        <div style={{ opacity: 0.6, padding: "20px 0" }}>Aucun document dans l&apos;historique.</div>
+        <div className="hist-empty">Aucun document.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {filtered.map((e) => {
+        <div className="card-list">
+          {filtered.map(e => {
             const dateStr = fmtDate(e.created_at);
             const [day, time] = dateStr.split(", ");
-            const isCV = e.doc_type === "CV";
+            const typeKey = (e.doc_type || "").toLowerCase();
+            const pdfViews = e.pdf_views || 0;
+            const editorReloads = e.editor_reloads || 0;
 
             return (
-              <div key={e.id} style={{ display: "flex", gap: "15px", padding: "15px", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "8px", alignItems: "center" }}>
-                <div style={{ minWidth: "80px", textAlign: "center" }}>
-                  <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{day || dateStr}</div>
-                  <div style={{ opacity: 0.7, fontSize: "0.8rem" }}>{time}</div>
+              <div key={e.id} className="history-card">
+                <div className="card-date">
+                  <div className="card-date-day">{day || dateStr}</div>
+                  <div className="card-date-time">{time || ""}</div>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px", background: isCV ? "#3b82f633" : "#10b98133", color: isCV ? "#60a5fa" : "#34d399", fontWeight: 600 }}>
-                      {e.doc_type}
-                    </span>
-                    <span style={{ fontWeight: 600 }}>{e.filename || "Sans nom"}</span>
-                  </div>
-                  <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                    {e.pdf_views > 0 && <span style={{ marginRight: "10px" }}>👁 {e.pdf_views} {e.last_viewed_at && `(dernier: ${fmtDate(e.last_viewed_at)})`}</span>}
-                    {e.editor_reloads > 0 && <span>↩ {e.editor_reloads} rechargements</span>}
-                  </div>
+                <div className="card-type">
+                  <span className={`type-badge type-${typeKey}`}>{e.doc_type}</span>
                 </div>
 
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button className="neu-btn-sm" onClick={() => handleViewPdf(e.id)}>Voir PDF</button>
+                <div className="card-company">
+                  <div className="card-label">Entreprise</div>
+                  <div className="card-val">{e.company || "-"}</div>
+                </div>
+
+                <div className="card-role">
+                  <div className="card-label">Poste</div>
+                  <div className="card-val" title={e.job_desc || ""}>{e.role || "-"}</div>
+                </div>
+
+                <div className="card-filename">
+                  <span title={e.filename || ""}>{e.filename || ""}</span>
+                  {(pdfViews > 0 || editorReloads > 0) && (
+                    <div className="card-stats">
+                      {pdfViews > 0 && (
+                        <span className="stat-chip" title={e.last_viewed_at ? `Vu ${pdfViews} fois · dernier : ${fmtDate(e.last_viewed_at)}` : `Vu ${pdfViews} fois`}>
+                          👁 {pdfViews}
+                        </span>
+                      )}
+                      {editorReloads > 0 && (
+                        <span className="stat-chip" title="Chargements dans l'éditeur">↩ {editorReloads}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="card-actions">
+                  <button className="neu-btn-sm view-pdf" onClick={() => handleViewPdf(e.id)}>Voir PDF</button>
                   <button className="neu-btn-sm" onClick={() => handleReload(e.id)}>Recharger</button>
                   <button className="neu-btn-sm danger" onClick={() => handleDelete(e.id)}>Supprimer</button>
                 </div>
@@ -155,6 +168,6 @@ export default function HistoryList() {
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }

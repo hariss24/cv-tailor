@@ -60,7 +60,9 @@ export async function POST(req: Request): Promise<Response> {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Échec de la conversion PDF.";
+    const raw = err instanceof Error ? err.message : "Échec de la conversion PDF.";
+    // Extrait la première ligne utile (avant les logs Playwright/Chromium).
+    const message = raw.split(/\n|=+ logs/)[0].trim() || "Échec de la conversion PDF.";
     // Format/marge hors whitelist → 400 ; le reste → 500.
     const status = /non support/i.test(message) ? 400 : 500;
     return NextResponse.json({ error: message }, { status });

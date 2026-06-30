@@ -19,9 +19,11 @@ export default function MetaBar() {
   const docType = useDocStore((s) => s.docType);
   const company = useDocStore((s) => s.company);
   const role = useDocStore((s) => s.role);
+  const includeDate = useDocStore((s) => s.includeDate);
   const setDocType = useDocStore((s) => s.setDocType);
   const setCompany = useDocStore((s) => s.setCompany);
   const setRole = useDocStore((s) => s.setRole);
+  const setIncludeDate = useDocStore((s) => s.setIncludeDate);
 
   return (
     <div className="meta">
@@ -58,6 +60,19 @@ export default function MetaBar() {
           value={role}
           onChange={(e) => setRole(e.target.value)}
         />
+      </div>
+      <div className="field" style={{ flex: "0 0 auto" }}>
+        <label htmlFor="include_date">Nom PDF</label>
+        <label htmlFor="include_date" style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "13px", height: "37px" }}>
+          <input
+            type="checkbox"
+            id="include_date"
+            checked={includeDate}
+            onChange={(e) => setIncludeDate(e.target.checked)}
+            style={{ accentColor: "var(--orange)", width: "14px", height: "14px", cursor: "pointer" }}
+          />
+          + date
+        </label>
       </div>
     </div>
   );

@@ -24,6 +24,8 @@ export interface Draft {
   css: string;
   json: DocData | null;
   templateId: TemplateId | null;
+  company?: string;
+  role?: string;
   updatedAt: number;
 }
 

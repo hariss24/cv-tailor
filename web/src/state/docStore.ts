@@ -36,6 +36,8 @@ export type Doc = {
   atsBoost: { enabled: boolean; keywords: string[] };
   /** État HTML/CSS avant adaptation (Tailor) pour le DiffModal. */
   tailorBefore: { html: string; css: string } | null;
+  /** Option : inclure la date dans le nom du fichier PDF. */
+  includeDate: boolean;
 };
 
 /** Rend le HTML d'un document selon son type. */
@@ -63,6 +65,7 @@ export type DocStore = Doc & {
   setPreviewOverride: (html: string | null) => void;
   setAtsBoost: (atsBoost: { enabled: boolean; keywords: string[] }) => void;
   setTailorBefore: (state: { html: string; css: string } | null) => void;
+  setIncludeDate: (v: boolean) => void;
 };
 
 const INITIAL_TEMPLATE: TemplateId = "sobre";
@@ -78,6 +81,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
   previewOverride: null,
   atsBoost: { enabled: false, keywords: [] },
   tailorBefore: null,
+  includeDate: typeof window !== "undefined" ? localStorage.getItem("pdfIncludeDate") === "true" : false,
 
   setJson: (json) => set({ json, html: renderDoc(get().docType, json) }),
   setHtml: (html) => set({ html }),
@@ -87,6 +91,10 @@ export const useDocStore = create<DocStore>((set, get) => ({
   setPreviewOverride: (previewOverride) => set({ previewOverride }),
   setAtsBoost: (atsBoost) => set({ atsBoost }),
   setTailorBefore: (tailorBefore) => set({ tailorBefore }),
+  setIncludeDate: (includeDate) => {
+    if (typeof window !== "undefined") localStorage.setItem("pdfIncludeDate", String(includeDate));
+    set({ includeDate });
+  },
 
   setDocType: (docType) => {
     const json = defaultJsonFor(docType);
