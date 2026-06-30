@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CV Forge",
+  title: "CV Tailor",
   description: "Éditeur de CV avec aperçu live, conversion PDF et adaptation IA.",
 };
 
@@ -28,6 +28,11 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark");}catch{}`,
+          }}
+        />
         {children}
         <UiHost />
       </body>

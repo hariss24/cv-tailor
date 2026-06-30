@@ -3,7 +3,7 @@ import HistoryActions from "@/components/history/HistoryActions";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Historique — CV Forge",
+  title: "Historique — CV Tailor",
 };
 
 export default function HistoryPage() {

@@ -14,7 +14,7 @@ test("la page charge sans erreur console", async ({ page }) => {
   page.on("pageerror", (err) => errors.push(err.message));
 
   await page.goto("/");
-  await expect(page.getByText("CV Forge")).toBeVisible();
+  await expect(page.getByText("CV Tailor")).toBeVisible();
   // Laisse le rendu/aperçu initial se stabiliser.
   await expect(page.locator(".preview-frame")).toBeVisible();
 

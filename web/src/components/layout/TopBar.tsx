@@ -138,10 +138,9 @@ export default function TopBar() {
     <>
     <header className="topbar">
       <div className="logo-badge">
-        <div className="logo-icon"><div className="logo-icon-inner">F</div></div>
+        <div className="logo-icon"><div className="logo-icon-inner">T</div></div>
         <div className="logo-text">
-          <span className="logo-title">CV Forge</span>
-          <span className="logo-sub">HTML → PDF</span>
+          <span className="logo-title">CV Tailor</span>
         </div>
       </div>
 
