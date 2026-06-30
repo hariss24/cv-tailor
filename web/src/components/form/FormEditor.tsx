@@ -192,26 +192,21 @@ function BulletsEditor({ bullets, onChange }: { bullets: string[]; onChange: (b:
   return (
     <div className="form-field">
       <label className="form-label">Réalisations</label>
-      {bullets.map((b, i) => (
-        <div key={i} className="form-row">
-          <input
-            className="form-input"
-            value={b}
-            onChange={(e) => onChange(replaceAt(bullets, i, e.target.value))}
-          />
-          <button
-            type="button"
-            className="form-btn-mini"
-            aria-label="Supprimer la puce"
-            onClick={() => onChange(removeAt(bullets, i))}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-      <button type="button" className="form-btn-mini" onClick={() => onChange([...bullets, ""])}>
-        + Ajouter une puce
-      </button>
+      <textarea
+        className="form-textarea form-bullets"
+        rows={5}
+        placeholder="Une réalisation par ligne — collez plusieurs lignes d'un coup."
+        value={bullets.join("\n")}
+        onChange={(e) => onChange(e.target.value.split("\n"))}
+        onBlur={(e) =>
+          onChange(
+            e.target.value
+              .split("\n")
+              .map((l) => l.trim())
+              .filter((l) => l !== "")
+          )
+        }
+      />
     </div>
   );
 }
