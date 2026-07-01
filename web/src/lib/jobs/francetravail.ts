@@ -18,12 +18,13 @@ export interface RawOffer {
   origineOffre?: { urlOrigine?: string };
 }
 
-/** Offre normalisée pour l'affichage et le scoring. */
+/** Offre normalisée pour l'affichage et le scoring (contrat unique client ⇄ serveur). */
 export interface JobOffer {
   id: string;
   title: string;
   company: string;
-  location: string;
+  location: string;        // libellé lisible (affichage)
+  commuteDestination: string; // "lat,lng" si dispo, sinon libellé (calcul trajet) ; "" si absent
   url: string;
   jobText: string;
 }
@@ -93,13 +94,24 @@ export function isExcluded(offer: RawOffer, excludedWords: string[]): boolean {
   return text.replace(/-/g, " ").split(/\s+/).includes("stage");
 }
 
-/** Offre brute → offre normalisée (avec description tronquée). */
+/** Destination pour le trajet : coordonnées si dispo, sinon libellé du lieu, sinon "". */
+function commuteDestination(offer: RawOffer): string {
+  const lieu = offer.lieuTravail;
+  if (!lieu) return "";
+  if (typeof lieu.latitude === "number" && typeof lieu.longitude === "number") {
+    return `${lieu.latitude},${lieu.longitude}`;
+  }
+  return lieu.libelle ?? "";
+}
+
+/** Offre brute → offre normalisée (description tronquée + destination de trajet). */
 export function mapOffer(offer: RawOffer, maxDescriptionChars: number): JobOffer {
   return {
     id: offer.id ?? "",
     title: offer.intitule ?? "",
     company: offer.entreprise?.nom ?? "",
     location: offer.lieuTravail?.libelle ?? "",
+    commuteDestination: commuteDestination(offer),
     url: offer.origineOffre?.urlOrigine ?? "",
     jobText: (offer.description ?? "").slice(0, maxDescriptionChars),
   };

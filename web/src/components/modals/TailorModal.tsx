@@ -38,7 +38,11 @@ export default function TailorModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const [jobDesc, setJobDesc] = useState("");
+  // Pré-remplissage depuis l'onglet Offres : la page est remontée à la navigation, donc l'offre
+  // en attente est lue à l'initialisation (évite un setState React dans un effet).
+  const [jobDesc, setJobDesc] = useState(() =>
+    typeof window !== "undefined" ? useDocStore.getState().pendingJobDesc ?? "" : "",
+  );
   const [level, setLevel] = useState<TailorLevel>("adapte");
   const [useMaster, setUseMaster] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -46,20 +50,10 @@ export default function TailorModal({
   const [diffOpen, setDiffOpen] = useState(false);
   const tailorBefore = useDocStore((s) => s.tailorBefore);
 
-  // Pré-remplissage depuis l'onglet Offres à l'ouverture : `setJobDesc` est un ajustement d'état
-  // au rendu (pattern React « adjust state while rendering »), et la consommation du pending
-  // (setter zustand) se fait dans un effet — évite un setState React dans l'effet.
-  const [prevOpen, setPrevOpen] = useState(open);
-  if (open !== prevOpen) {
-    setPrevOpen(open);
-    const pending = useDocStore.getState().pendingJobDesc;
-    if (open && pending) setJobDesc(pending);
-  }
+  // Consommer l'offre en attente une fois lue (setter zustand, pas un setState React).
   useEffect(() => {
-    if (open && useDocStore.getState().pendingJobDesc) {
-      useDocStore.getState().setPendingJobDesc(null);
-    }
-  }, [open]);
+    if (useDocStore.getState().pendingJobDesc) useDocStore.getState().setPendingJobDesc(null);
+  }, []);
 
   if (!open) return null;
 

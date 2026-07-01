@@ -29,22 +29,26 @@ describe("isExcluded", () => {
 });
 
 describe("mapOffer", () => {
-  it("normalise et tronque la description", () => {
+  it("normalise, tronque et déduit la destination (coordonnées prioritaires)", () => {
     const raw: RawOffer = {
       id: "42",
       intitule: "Webmaster",
       description: "x".repeat(5000),
       entreprise: { nom: "ACME" },
-      lieuTravail: { libelle: "75 - Paris" },
+      lieuTravail: { libelle: "75 - Paris", latitude: 48.8, longitude: 2.3 },
       origineOffre: { urlOrigine: "https://ex.fr/42" },
     };
     const out = mapOffer(raw, 3000);
-    expect(out).toMatchObject({ id: "42", title: "Webmaster", company: "ACME", location: "75 - Paris", url: "https://ex.fr/42" });
+    expect(out).toMatchObject({ id: "42", title: "Webmaster", company: "ACME", location: "75 - Paris", url: "https://ex.fr/42", commuteDestination: "48.8,2.3" });
     expect(out.jobText).toHaveLength(3000);
   });
 
+  it("destination = libellé sans coordonnées", () => {
+    expect(mapOffer({ lieuTravail: { libelle: "75 - Paris" } }, 3000).commuteDestination).toBe("75 - Paris");
+  });
+
   it("tolère les champs manquants", () => {
-    expect(mapOffer({}, 3000)).toEqual({ id: "", title: "", company: "", location: "", url: "", jobText: "" });
+    expect(mapOffer({}, 3000)).toEqual({ id: "", title: "", company: "", location: "", commuteDestination: "", url: "", jobText: "" });
   });
 });
 

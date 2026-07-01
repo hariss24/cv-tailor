@@ -4,23 +4,12 @@
  */
 
 import type { CommuteMode, JobSearchProfile } from "./profile";
-import type { RawOffer } from "./francetravail";
 
 const MATRIX_URL = "https://maps.googleapis.com/maps/api/distancematrix/json";
 
 interface MatrixResponse {
   status?: string;
   rows?: { elements?: { status?: string; duration?: { text?: string } }[] }[];
-}
-
-/** Destination exploitable pour l'offre : coordonnées si dispo, sinon libellé du lieu. */
-function offerDestination(offer: RawOffer): string | null {
-  const lieu = offer.lieuTravail;
-  if (!lieu) return null;
-  if (typeof lieu.latitude === "number" && typeof lieu.longitude === "number") {
-    return `${lieu.latitude},${lieu.longitude}`;
-  }
-  return lieu.libelle ?? null;
 }
 
 /** Durée d'un mode donné, ou "N/A" / "Erreur". */
@@ -45,15 +34,14 @@ async function commuteForMode(
 }
 
 /**
- * Temps de trajet depuis `profile.homeAddress` pour chaque mode de `profile.commuteModes`.
- * Renvoie un dict `{ [mode]: durée }`. Si l'offre n'a pas de lieu exploitable, tout est "N/A".
+ * Temps de trajet depuis `profile.homeAddress` vers `destination` (coordonnées ou libellé),
+ * pour chaque mode de `profile.commuteModes`. Dict `{ [mode]: durée }` ; tout "N/A" si destination vide.
  */
 export async function getCommuteTimes(
-  offer: RawOffer,
+  destination: string,
   profile: JobSearchProfile,
   key: string,
 ): Promise<Partial<Record<CommuteMode, string>>> {
-  const destination = offerDestination(offer);
   if (!destination) {
     return Object.fromEntries(profile.commuteModes.map((m) => [m, "N/A"]));
   }

@@ -79,15 +79,15 @@ implémenter maintenant, mais ne pas fermer la porte) :
 - [x] Route `/api/jobs/search` + test (+ `resolveProfile`).
 - [x] Route `/api/jobs/score` + test.
 - [x] Table Dexie `jobs` (db.ts v2) + `jobExists/saveJob/listJobs/setJobStatus` (couverture e2e étape 5).
-- [ ] Page `/jobs` + cartes + progression + états d'erreur/config.
-- [x] Jonction « Adapter mon CV » (store `pendingJobDesc` + TailorModal + ActionsBar) — e2e à l'étape 5.
+- [x] Page `/jobs` + cartes + progression + états config + lien TopBar + CSS.
+- [x] Jonction « Adapter mon CV » (store `pendingJobDesc` + TailorModal + ActionsBar) — e2e `jobs.spec.ts` (4 verts).
 - [ ] Doc (README/CLAUDE.md : variables d'env) + vérif bout-en-bout en prod.
 
 ### ➡️ Prochaine action
-Plan validé (`C:\Users\tahet\.claude\plans\majestic-questing-dewdrop.md`). **Étapes 1-4 faites**
-(socle `lib/jobs/`, routes API, Dexie, jonction). **Étape 5 en cours** : écran `/jobs` (page +
-`components/jobs/{JobsView,ScanProgress,JobCard}` + lien TopBar + CSS + état config) + e2e `jobs.spec.ts`.
-Puis 6 (doc + vérif prod). NB : commits locaux non poussés — pousser après l'UI (jalon backend+UI).
+Plan validé (`C:\Users\tahet\.claude\plans\majestic-questing-dewdrop.md`). **Étapes 1-5 faites**
+(socle `lib/jobs/`, routes API, Dexie, jonction, écran `/jobs`). **Étape 6** : doc README (variables
+d'env FT/Maps) puis **pousser** (jalon backend+UI → auto-deploy Vercel) et **vérifier en prod**
+(`/api/jobs/search` + scan réel depuis l'UI). Commits locaux non encore poussés.
 
 ### Blocages / décisions en attente
 - (aucun pour l'instant)
@@ -137,3 +137,18 @@ Puis 6 (doc + vérif prod). NB : commits locaux non poussés — pousser après 
   ⚠️ Contrainte lint React 19 `react-hooks/set-state-in-effect` : interdit `setState` React dans un effet →
   d'où ces deux patterns (init paresseux / ajustement au rendu). Vérif : `eslint` clean, `tsc` OK, `vitest`
   171 verts, `build` OK. (e2e de la jonction à l'étape 5.)
+- 2026-07-01 — **Étape 5 (écran /jobs)**. `app/jobs/page.tsx` + `components/jobs/{JobsView,ScanProgress,JobCard}.tsx`
+  (scan piloté navigateur : search → dédup Dexie → boucle score jusqu'au plafond → save si ≥ seuil ;
+  arrêt propre 429 ; écran config). Lien « Offres » dans `TopBar`. Styles néomorphiques dans `globals.css`.
+  **Refactor contrat de données** : `JobOffer` porte `commuteDestination` ; `maps.getCommuteTimes(destination,…)`
+  et `score.scoreOffer(offer,…)` opèrent sur l'offre normalisée ; `/api/jobs/search` renvoie aussi
+  `scoreLimit`/`minScore` (le client applique les seuils du profil). Tests mis à jour. `TailorModal` :
+  init `jobDesc` via initialiseur paresseux (page remontée à la navigation) + consommation du pending en effet.
+  Vérif : `tsc` OK, `eslint` clean, `vitest` **171 verts**, `build` OK, **e2e `jobs.spec.ts` 4/4 verts**
+  (scan, jonction pré-remplie, masquer, config).
+  ⚠️ **e2e préexistants cassés (hors périmètre)** : 8 e2e échouent sur la baseline (`tailor`,`editor`,`ats`,
+  `pack`,`import-*`) — vérifié en remisant le WIP : ils échouent AUSSI sans mes changements et sans le WIP
+  (ex. `tailor.spec` cherche `.tailor-modal`, classe non appliquée ; `editor.spec` teste `EditorPane` non touché).
+  Cassés par la refonte UI antérieure (classes renommées, tests non mis à jour). **Pas des régressions Offres.**
+  NB : le working tree contient aussi du WIP « CADRAGE » non commité (EditorPane/FormEditor/PackModal/… +
+  `web/CADRAGE_FIXES.md`) NON lié aux Offres → ne pas le committer avec la feature.

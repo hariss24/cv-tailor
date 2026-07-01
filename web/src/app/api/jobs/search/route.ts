@@ -39,7 +39,8 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    return NextResponse.json({ offers });
+    // scoreLimit/minScore viennent du profil → le client applique les mêmes seuils (paramétrable).
+    return NextResponse.json({ offers, scoreLimit: profile.scoreLimit, minScore: profile.minScore });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Échec de la recherche d'offres.";
     return NextResponse.json({ error: message }, { status: 502 });

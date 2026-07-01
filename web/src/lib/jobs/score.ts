@@ -8,7 +8,10 @@ import { Type, type Schema } from "@google/genai";
 import { completeJson } from "@/lib/ai/clients";
 import { parseAiJson } from "@/lib/ai/json";
 import type { CommuteMode, JobSearchProfile } from "./profile";
-import type { RawOffer } from "./francetravail";
+import type { JobOffer } from "./francetravail";
+
+/** Champs d'offre nécessaires au scoring (sous-ensemble de JobOffer). */
+export type ScorableOffer = Pick<JobOffer, "title" | "company" | "jobText">;
 
 export interface JobScore {
   score_tech: number;
@@ -67,14 +70,14 @@ function toInt(v: unknown, fallback = 0): number {
 
 /** Note une offre pour le profil donné. `key` optionnelle : sinon clé Gemini serveur (env). */
 export async function scoreOffer(
-  offer: RawOffer,
+  offer: ScorableOffer,
   commute: Partial<Record<CommuteMode, string>>,
   profile: JobSearchProfile,
   key?: string | null,
 ): Promise<JobScore> {
-  const title = offer.intitule ?? "";
-  const company = offer.entreprise?.nom ?? "Inconnue";
-  const description = (offer.description ?? "").slice(0, profile.maxDescriptionChars);
+  const title = offer.title ?? "";
+  const company = offer.company || "Inconnue";
+  const description = (offer.jobText ?? "").slice(0, profile.maxDescriptionChars);
 
   const system =
     "Tu es un recruteur expert. Évalue cette offre pour le candidat suivant :\n" +

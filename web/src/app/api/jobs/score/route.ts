@@ -3,7 +3,7 @@ import { resolveProfile } from "@/lib/jobs/resolveProfile";
 import { getCommuteTimes, commuteSummary } from "@/lib/jobs/maps";
 import { scoreOffer } from "@/lib/jobs/score";
 import { aiErrorResponse } from "@/lib/ai/http";
-import type { RawOffer } from "@/lib/jobs/francetravail";
+import type { JobOffer } from "@/lib/jobs/francetravail";
 
 // Google Maps (fetch) + Gemini : runtime Node.js.
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ export const maxDuration = 60;
  * - clé Gemini serveur absente → 400.
  */
 export async function POST(req: Request): Promise<Response> {
-  let body: { offer?: RawOffer };
+  let body: { offer?: JobOffer };
   try {
     body = await req.json();
   } catch {
@@ -40,7 +40,7 @@ export async function POST(req: Request): Promise<Response> {
   const profile = resolveProfile(req);
 
   try {
-    const commute = await getCommuteTimes(offer, profile, mapsKey);
+    const commute = await getCommuteTimes(offer.commuteDestination ?? "", profile, mapsKey);
     const breakdown = await scoreOffer(offer, commute, profile); // clé Gemini serveur (env)
     return NextResponse.json({
       score: breakdown.total_score,
