@@ -24,10 +24,17 @@ le texte de l'offre ; relancer une recherche ne re-note pas les offres déjà vu
 | Accès API | France Travail + Google Maps + Gemini disponibles (clés configurées) |
 | Déroulement du scan | **Option A** : orchestré par le navigateur (routes API courtes), pas de tâche de fond serveur |
 | Stockage des offres | **Local** (Dexie/IndexedDB), comme les CV — pas de base serveur |
-| Ampleur | Plafond ~**40 offres notées** par recherche (constante ajustable) |
-| Profil de scoring | **Figé** sur le profil de Hariss (repris du bot) |
+| Ampleur | Plafond ~**40 offres notées** par recherche (paramètre de la config) |
+| Profil de recherche & scoring | **Config par défaut = Hariss**, mais **entièrement paramétrable** : tous les paramètres (adresse, postes visés, modes de transport, filtres, seuils) vivent dans une **structure typée unique passée en argument** — jamais en dur dans la logique. Cf. §3.1 et §7. |
 | Jonction | « Adapter mon CV » pré-remplit `TailorModal` via le store |
 | Quota Gemini (429) | **Arrêt propre** du scan (garder les offres déjà notées + message), pas de retry bloquant |
+
+> **Principe directeur (demande explicite 2026-07-01) :** écrire le code dès maintenant
+> **adaptable et prêt pour le multi-utilisateur**, sans rigidité. Aucune valeur métier codée en dur
+> dans les fonctions ; tout passe par un objet de configuration (`JobSearchProfile`). Aujourd'hui,
+> une seule instance par défaut (Hariss) ; demain, une config par compte, sans refonte du cœur.
+> ⚠️ **Ne PAS** implémenter le multi-utilisateur / l'UI de réglages / les comptes maintenant (YAGNI) —
+> seulement structurer pour que ce soit un simple branchement plus tard.
 
 **Pourquoi Option A :** Vercel = fonctions serverless courtes et sans filesystem persistant. Un
 thread de fond + SQLite (comme le plan Flask) est impossible. Découper en petits appels pilotés
@@ -37,21 +44,48 @@ n'interrompt pas le reste) et garde les données locales (cohérent avec le rest
 ## 3. Architecture
 
 ### 3.1 Modules de logique — `web/src/lib/jobs/`
-Isolés et **paramétrables** (profil + clés passés en argument, pas en dur au cœur de la logique)
-pour préparer l'évolution SaaS (cf. §7).
+Isolés et **paramétrables** : le profil et les clés sont **passés en argument**, jamais lus en dur
+au cœur des fonctions. C'est le socle de l'évolution SaaS (cf. §7).
 
-- `profile.ts` — constantes du profil Hariss reprises du bot : `KEYWORDS` (28 intitulés SEO/web),
-  `HOME_ADDRESS` (« 4 rue jean bouton 75012 Paris »), `MIN_SCORE = 70`, `MAX_DESCRIPTION_CHARS = 3000`,
-  `EXCLUDED_WORDS` (stages/alternances), `SCORE_LIMIT` (plafond 40), + le prompt/schéma de scoring.
-- `francetravail.ts` — `getToken(clientId, clientSecret)` (OAuth client_credentials), `fetchOffers(token, keyword)`
-  (recherche : région 11 Île-de-France, `typeContrat=CDI,CDD`, `natureContrat=E1`, offres < 30 jours,
-  `range=0-99`), `isExcluded(offer)` (filtre stages/alternances), `mapOffer(offer)` → objet carte.
-- `maps.ts` — `getCommuteTimes(destination, key)` : Google Maps Distance Matrix depuis `HOME_ADDRESS`
-  (modes transit / bicycling / walking), retourne `{ transit, bicycling, walking }`. Port de
-  `get_commute_times` (`agent-taff/bot.py`).
-- `score.ts` — `scoreOffer(offer, commute, key)` : appelle Gemini avec le système de scoring
-  (profil Hariss) et un **response schema JSON** structuré → `{ score_tech, score_seniority,
-  score_sector, score_geo, score_red_flags, total_score, red_flags_reasons }`.
+**`profile.ts` — la structure de configuration (pièce centrale de la paramétrabilité)**
+Définit le type `JobSearchProfile` qui regroupe **tous** les paramètres modifiables :
+
+```ts
+type CommuteMode = "transit" | "driving" | "bicycling" | "walking";
+
+interface JobSearchProfile {
+  homeAddress: string;          // adresse de départ pour le trajet
+  keywords: string[];           // postes visés (intitulés recherchés)
+  commuteModes: CommuteMode[];  // modes de transport à calculer
+  contractTypes: string[];      // ex. ["CDI", "CDD"]
+  region: string;               // code région France Travail (ex. "11" = IdF)
+  maxAgeDays: number;           // ancienneté max des offres
+  excludedWords: string[];      // filtre stages/alternances…
+  minScore: number;             // seuil de rétention (défaut 70)
+  scoreLimit: number;           // plafond d'offres notées / recherche (défaut 40)
+  maxDescriptionChars: number;  // troncature description
+  candidateSummary: string;     // profil candidat injecté dans le prompt de scoring
+  scoringCriteria: string;      // barème (tech/séniorité/secteur/géo/red flags)
+}
+```
+
+Et exporte **une seule instance par défaut**, `DEFAULT_PROFILE` (valeurs de Hariss, reprises du
+bot : 28 intitulés SEO/web, « 4 rue jean bouton 75012 Paris », `["transit","bicycling"]`,
+`["CDI","CDD"]`, région `"11"`, 30 jours, mots exclus stages/alternances, `minScore 70`,
+`scoreLimit 40`, résumé candidat + barème). C'est **la future "config utilisateur"** ; aujourd'hui
+il n'y en a qu'une. Aucune de ces valeurs n'est dupliquée ailleurs.
+
+**Fonctions (toutes prennent le profil — ou ses sous-parties — en argument) :**
+- `francetravail.ts` — `getToken(clientId, clientSecret)` ; `fetchOffers(token, keyword, profile)`
+  (recherche paramétrée par `region`/`contractTypes`/`maxAgeDays`, `natureContrat=E1`, `range=0-99`) ;
+  `isExcluded(offer, profile.excludedWords)` ; `mapOffer(offer, profile)` → objet carte.
+- `maps.ts` — `getCommuteTimes(destination, profile, key)` : Google Maps Distance Matrix depuis
+  `profile.homeAddress` pour chaque mode de `profile.commuteModes`. Retourne un dict `{ [mode]: durée }`.
+  Port de `get_commute_times` (`agent-taff/bot.py`), généralisé à la liste de modes.
+- `score.ts` — `scoreOffer(offer, commute, profile, key)` : construit le système de scoring à partir
+  de `profile.candidateSummary` + `profile.scoringCriteria` (au lieu d'un prompt figé) et appelle
+  Gemini avec un **response schema JSON** structuré → `{ score_tech, score_seniority, score_sector,
+  score_geo, score_red_flags, total_score, red_flags_reasons }`.
 
 > Le scoring exige un appel Gemini avec `response_schema` structuré. `lib/ai/clients.ts` expose
 > déjà l'accès Gemini (`@google/genai`) ; prévoir un helper `completeJson(schema, system, prompt)`
@@ -60,13 +94,18 @@ pour préparer l'évolution SaaS (cf. §7).
 ### 3.2 Routes API — `web/src/app/api/jobs/`
 Toutes en `export const runtime = "nodejs"` ; lisent les clés via `process.env`.
 
-- `POST /api/jobs/search` — appelée 1 fois par recherche. Obtient le token FT, interroge l'API pour
-  chaque `KEYWORD`, agrège, applique `isExcluded`, dédoublonne par `id`, tronque les descriptions.
+- `POST /api/jobs/search` — appelée 1 fois par recherche. Résout le profil (**aujourd'hui
+  `DEFAULT_PROFILE`** ; demain : profil du compte). Obtient le token FT, interroge l'API pour chaque
+  `keyword` du profil, agrège, applique `isExcluded`, dédoublonne par `id`, tronque les descriptions.
   Réponse : `{ offers: [{ id, title, company, location, url, jobText }] }`. Si clés FT manquantes →
   400 `{ error: "config", message }`.
-- `POST /api/jobs/score` — appelée en boucle (1 offre). Body `{ offer }`. Calcule le trajet (Maps)
-  puis le score (Gemini). Réponse `{ score, breakdown, commute }`. 429 quota Gemini → statut 429
-  distinct pour que le client arrête proprement. Clés Maps/Gemini manquantes → 400 `config`.
+- `POST /api/jobs/score` — appelée en boucle (1 offre). Body `{ offer }`. Résout le profil (idem),
+  calcule le trajet (Maps) puis le score (Gemini). Réponse `{ score, breakdown, commute }`. 429 quota
+  Gemini → statut 429 distinct pour que le client arrête proprement. Clés Maps/Gemini manquantes → 400 `config`.
+
+> **Point d'extension multi-utilisateur :** les deux routes passent par un helper `resolveProfile(req)`
+> qui renvoie `DEFAULT_PROFILE` aujourd'hui. Demain, il lira le profil du compte (ou du body) — les
+> modules `lib/jobs/` n'ont pas à changer, ils reçoivent déjà le profil en argument.
 
 ### 3.3 Stockage — `web/src/lib/storage/db.ts` (Dexie)
 Nouvelle table **`jobs`** : `id` (PK), `createdAt`, `title`, `company`, `location`, `commute`
@@ -120,10 +159,18 @@ Configurées en prod Vercel + `web/.env.local` (gitignoré) le 2026-07-01. À do
 - **v1 (accès libre, 1 utilisateur) : risque accepté.** La recherche consomme les clés de Hariss
   (FT / Maps / Gemini). Tant que Hariss est seul à connaître l'URL, acceptable. À protéger
   (mot de passe sur l'onglet, ou auth globale) **avant toute diffusion**.
-- **Ambition SaaS (hors périmètre v1, à ne pas fermer) :** profil de scoring par utilisateur
-  (aujourd'hui figé), clés par utilisateur (ne pas servir tout le monde avec celles de Hariss),
-  auth réelle + stockage par compte. → C'est pourquoi `lib/jobs/` prend profil et clés en
-  **arguments** : la bascule multi-utilisateur ne touchera pas le cœur de la logique.
+- **Ambition SaaS (hors périmètre v1, à ne pas fermer).** Ce qui deviendra paramétrable par
+  utilisateur — **déjà prévu dans `JobSearchProfile`** (§3.1), donc sans refonte du cœur :
+  - **adresse de départ** pour le trajet (`homeAddress`) ;
+  - **postes visés** (`keywords`) ;
+  - **modes de transport** voiture / vélo / à pied / transports (`commuteModes`) ;
+  - **filtres** : type de contrat, région/zone, ancienneté, mots exclus, seuil de score, plafond ;
+  - **profil candidat & barème** de scoring (`candidateSummary`, `scoringCriteria`).
+  - À ajouter côté infra le moment venu : **auth réelle + stockage du profil par compte**, et
+    **clés par utilisateur** (ne pas servir tout le monde avec celles de Hariss) — via `resolveProfile`
+    et l'injection de clés déjà en place. Aucune de ces évolutions ne requiert de réécrire `lib/jobs/`.
+  - ⚠️ **Rien de tout ça n'est implémenté en v1** (pas d'UI de réglages, pas de comptes) : on
+    structure seulement pour que ce soit un branchement, pas une réécriture.
 
 ## 8. Tests
 - **Unitaires (Vitest) :** `isExcluded` (stages/alternances), dédoublonnage, respect du plafond 40,

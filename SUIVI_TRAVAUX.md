@@ -35,7 +35,10 @@ d'adaptation existante (`TailorModal` → `/api/tailor-resume`). Port du plan Fl
   routes API courtes, affiche la progression, stocke les offres **localement (Dexie)**.
   Pas de tâche de fond serveur, pas de base en ligne (incompatible serverless + inutile en mono-utilisateur).
 - **Ampleur** : plafond ~**40 offres notées** par recherche (ajustable), pour préserver le quota Gemini.
-- **Profil de scoring** : **figé** sur le profil de Hariss (mots-clés SEO/web, domicile, critères), repris du bot.
+- **Profil de recherche & scoring** : **config par défaut = Hariss**, mais **tout paramétrable** via
+  une structure typée `JobSearchProfile` passée en argument (adresse, postes visés, modes de transport,
+  filtres, seuils, profil candidat). Aucune valeur métier en dur dans la logique. ⚠️ Multi-user NON
+  implémenté en v1 (pas d'UI réglages ni comptes) — seulement **préparé** (demande explicite 2026-07-01).
 - **Jonction** : « Adapter mon CV » pré-remplit `TailorModal` (via le store) et navigue vers l'éditeur.
 - **Sécurité (v1)** : app en accès libre, **1 seul utilisateur pour l'instant → risque accepté**.
   ⚠️ La recherche consomme les clés de Hariss (FT/Maps/Gemini). À protéger avant toute diffusion.
@@ -104,3 +107,8 @@ vérifier que `agent-taff/bot.py` existe (source du code à porter : get_commute
   ~43 k, SUIVI+Offres+archive présents, emojis/accents OK. Commit `1567c71`. (2) Spec feature Offres
   écrite dans `docs/superpowers/specs/2026-07-01-offres-nextjs-design.md` (objectif, décisions, archi
   lib/jobs + routes + Dexie + jonction, flux, erreurs, sécurité/SaaS, tests). ⏳ En attente de relecture.
+- 2026-07-01 — **Spec révisée : paramétrabilité renforcée** (demande explicite). Introduction du type
+  `JobSearchProfile` (adresse, postes, modes de transport voiture/vélo/à pied/TC, filtres, seuils,
+  profil candidat) + `DEFAULT_PROFILE` (Hariss) unique ; toutes les fonctions `lib/jobs/` prennent le
+  profil en argument ; routes via helper `resolveProfile(req)` (défaut aujourd'hui, compte/body demain).
+  §7 SaaS détaille les futurs paramètres. Multi-user reste **hors périmètre v1** (YAGNI). Commit spec révisée.
