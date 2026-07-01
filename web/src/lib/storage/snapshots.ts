@@ -20,3 +20,9 @@ export async function takeSnapshot(customLabel?: string) {
 
   await saveSnapshot(snap);
 }
+
+/** Snapshot manuel (bouton « Créer un snapshot maintenant ») : libellé « Manuel · <date> ». */
+export async function takeManualSnapshot() {
+  const label = "Manuel · " + new Date().toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  await takeSnapshot(label);
+}

@@ -43,13 +43,13 @@ export default function DiffModal({ open, onClose }: DiffModalProps) {
   if (!open || !tailorBefore) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose} style={{ display: 'flex' }}>
-      <div className="modal diff-modal" onClick={(e) => e.stopPropagation()} style={{ width: '90vw', maxWidth: '1400px', height: '90vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-panel)' }}>
-        <div className="modal-header">
-          <h2>Différence (Avant / Après)</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Fermer">✕</button>
+    <div className="ui-overlay" role="presentation" onClick={onClose}>
+      <div className="ui-dialog diff-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ui-dialog__head">
+          <h2 className="ui-dialog__title">Différence (Avant / Après)</h2>
+          <button type="button" className="ui-dialog__close" onClick={onClose} aria-label="Fermer">&times;</button>
         </div>
-        <div className="modal-body" style={{ flex: 1, display: 'flex', gap: '20px', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', gap: '20px', overflow: 'hidden' }}>
           
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ textAlign: 'center', marginBottom: '10px' }}>Avant adaptation</h3>

@@ -6,6 +6,7 @@ import { postJson } from "@/lib/ai/client";
 import { stripBase64ForChat } from "@/lib/ai/base64";
 import { mergeHtml } from "@/lib/resume/mergeHtml";
 import { toast } from "@/state/uiStore";
+import { saveDraft } from "@/lib/storage/db";
 import JobExtractor from "./JobExtractor";
 
 /**
@@ -74,10 +75,18 @@ export default function PackModal({ open, onClose }: { open: boolean; onClose: (
   };
 
   // Insère la lettre dans l'éditeur en basculant sur le type « Lettre » (mode expert HTML/CSS).
-  const loadLetter = () => {
+  const loadLetter = async () => {
     if (!result) return;
     const { setDocType, setHtml, setCss } = useDocStore.getState();
-    setDocType("Lettre"); // réinitialise le doc → on écrase ensuite avec la lettre générée.
+    await saveDraft({
+      id: "draft-Lettre",
+      html: result.letter_html,
+      css: result.letter_css,
+      json: null,
+      templateId: null,
+      updatedAt: 0,
+    });
+    setDocType("Lettre");
     setHtml(result.letter_html);
     setCss(result.letter_css);
     toast("Lettre chargée dans l'éditeur (type « Lettre »).", "success");
