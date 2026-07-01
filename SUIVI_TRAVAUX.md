@@ -78,15 +78,15 @@ implémenter maintenant, mais ne pas fermer la porte) :
 - [x] `lib/jobs/` (profil paramétrable, FT, trajet, scoring) + `completeJson` + tests (20 verts).
 - [x] Route `/api/jobs/search` + test (+ `resolveProfile`).
 - [x] Route `/api/jobs/score` + test.
-- [ ] Table Dexie `jobs` + fonctions + tests.
+- [x] Table Dexie `jobs` (db.ts v2) + `jobExists/saveJob/listJobs/setJobStatus` (couverture e2e étape 5).
 - [ ] Page `/jobs` + cartes + progression + états d'erreur/config.
 - [ ] Jonction « Adapter mon CV » (store + TailorModal valeur initiale) + e2e.
 - [ ] Doc (README/CLAUDE.md : variables d'env) + vérif bout-en-bout en prod.
 
 ### ➡️ Prochaine action
-Plan validé (`C:\Users\tahet\.claude\plans\majestic-questing-dewdrop.md`). **Étapes 1-2 faites**
-(socle `lib/jobs/` + routes API). **Étape 3 en cours** : table Dexie `jobs` (db.ts v2) + fonctions
-`jobExists/saveJob/listJobs/setJobStatus` + tests. Puis 4 (jonction), 5 (écran /jobs), 6 (doc + vérif prod).
+Plan validé (`C:\Users\tahet\.claude\plans\majestic-questing-dewdrop.md`). **Étapes 1-3 faites**
+(socle `lib/jobs/`, routes API, Dexie table `jobs`). **Étape 4 en cours** : jonction « Adapter mon CV »
+(`docStore.pendingJobDesc` + init `TailorModal` + `useEffect` `ActionsBar`). Puis 5 (écran /jobs), 6 (doc + vérif prod).
 NB : rien n'est encore poussé/déployé (commits locaux) — pousser à un jalon (backend + UI).
 
 ### Blocages / décisions en attente
@@ -125,3 +125,8 @@ NB : rien n'est encore poussé/déployé (commits locaux) — pousser à un jalo
   `app/api/jobs/score/route.ts` (nodejs : trajet Maps + `scoreOffer` ; `{score,breakdown,commute,commuteText}` ;
   400 `config` si clé Maps absente ; **429** via `aiErrorResponse` si quota Gemini). Tests routes (7).
   Vérif : `tsc` OK, `vitest` (27 verts jobs+routes), `npm run build` OK (routes ƒ enregistrées), `eslint` clean.
+- 2026-07-01 — **Étape 3 (Dexie table jobs)**. `web/src/lib/storage/db.ts` : interface `JobEntry`,
+  table `jobs` en `version(2).stores({ jobs: "id, score, status, createdAt" })` (tables v1 héritées),
+  fonctions `jobExists/saveJob/listJobs(status)/setJobStatus` (style try/catch + console.warn existant).
+  Pas de test unitaire Dexie (le projet n'en a pas : pas de fake-indexeddb ; couverture via e2e étape 5).
+  Vérif : `tsc` OK, `vitest run` = **171 tests verts**, 0 régression.

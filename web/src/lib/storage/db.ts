@@ -48,6 +48,20 @@ export interface HistoryEntry {
   templateId: TemplateId | null;
 }
 
+/** Offre d'emploi retenue (feature « Offres »). Stockée localement, comme les CV. */
+export interface JobEntry {
+  id: string;          // id France Travail (clé primaire, sert au dédoublonnage)
+  createdAt: number;   // horodatage d'enregistrement local
+  title: string;
+  company: string;
+  location: string;
+  commute: string;     // résumé texte « TC: … | Vélo: … »
+  score: number;       // note IA /100
+  url: string;         // lien vers l'offre d'origine
+  jobText: string;     // description (pour « Adapter mon CV »)
+  status: "new" | "dismissed";
+}
+
 // ---------------------------------------------------------------------------
 // DB DEFINITION
 // ---------------------------------------------------------------------------
@@ -56,6 +70,7 @@ export class AppDatabase extends Dexie {
   snapshots!: Table<Snapshot, number>; // Primary key: ts
   drafts!: Table<Draft, string>;       // Primary key: id
   history!: Table<HistoryEntry, string>; // Primary key: id
+  jobs!: Table<JobEntry, string>;      // Primary key: id
 
   constructor() {
     // Nouveau nom pour éviter les collisions si on lance sur le même port que Flask
@@ -65,6 +80,11 @@ export class AppDatabase extends Dexie {
       snapshots: "ts",
       drafts: "id",
       history: "id, created_at, company, role, doc_type",
+    });
+
+    // v2 : ajout de la table des offres (tables existantes héritées de la v1).
+    this.version(2).stores({
+      jobs: "id, score, status, createdAt",
     });
   }
 }
@@ -193,5 +213,46 @@ export async function updateHistoryEntryStat(id: string, field: 'pdf_views' | 'e
     }
   } catch (e) {
     console.warn("History update error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// JOBS API (feature « Offres »)
+// ---------------------------------------------------------------------------
+
+/** True si l'offre est déjà en base (retenue ou masquée) — sert au dédoublonnage du scan. */
+export async function jobExists(id: string): Promise<boolean> {
+  try {
+    return (await db.jobs.get(id)) !== undefined;
+  } catch (e) {
+    console.warn("jobExists error:", e);
+    return false;
+  }
+}
+
+export async function saveJob(entry: JobEntry) {
+  try {
+    await db.jobs.put(entry);
+  } catch (e) {
+    console.warn("saveJob error:", e);
+  }
+}
+
+/** Offres d'un statut donné, triées par score décroissant (puis plus récentes d'abord). */
+export async function listJobs(status: JobEntry["status"] = "new"): Promise<JobEntry[]> {
+  try {
+    const all = await db.jobs.where("status").equals(status).toArray();
+    return all.sort((a, b) => b.score - a.score || b.createdAt - a.createdAt);
+  } catch (e) {
+    console.warn("listJobs error:", e);
+    return [];
+  }
+}
+
+export async function setJobStatus(id: string, status: JobEntry["status"]) {
+  try {
+    await db.jobs.update(id, { status });
+  } catch (e) {
+    console.warn("setJobStatus error:", e);
   }
 }
