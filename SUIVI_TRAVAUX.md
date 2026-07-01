@@ -18,9 +18,11 @@
 
 ---
 
-## 🎯 Chantier en cours : Feature « Offres » (chasseur d'offres intégré)
+## 🎯 Chantier : Feature « Offres » (chasseur d'offres intégré)
 
-**Statut : CADRAGE** (design validé, spec à rédiger, puis plan d'implémentation).
+**Statut : ✅ v1 LIVRÉE & VÉRIFIÉE EN PROD (2026-07-01).** Étapes 1-6 faites, poussées, déployées.
+Onglet Offres en ligne : https://cv-tailor-drab-rho.vercel.app/jobs
+Prochain chantier possible : nettoyer les e2e préexistants cassés (hors périmètre), ou évolutions SaaS.
 
 ### Objectif
 Onglet « Offres » dans l'app : bouton « Chercher des offres » → recherche France Travail +
@@ -82,13 +84,13 @@ implémenter maintenant, mais ne pas fermer la porte) :
 - [x] Page `/jobs` + cartes + progression + états config + lien TopBar + CSS.
 - [x] Jonction « Adapter mon CV » (store `pendingJobDesc` + TailorModal + ActionsBar) — e2e `jobs.spec.ts` (4 verts).
 - [x] Doc README (variables d'env FT/Maps/Gemini).
-- [ ] Push (auto-deploy) + vérif bout-en-bout en prod.
+- [x] Push (auto-deploy) + vérif bout-en-bout en prod ✅.
 
 ### ➡️ Prochaine action
-Plan validé (`C:\Users\tahet\.claude\plans\majestic-questing-dewdrop.md`). **Étapes 1-5 faites**
-(socle `lib/jobs/`, routes API, Dexie, jonction, écran `/jobs`). **Étape 6** : doc README (variables
-d'env FT/Maps) puis **pousser** (jalon backend+UI → auto-deploy Vercel) et **vérifier en prod**
-(`/api/jobs/search` + scan réel depuis l'UI). Commits locaux non encore poussés.
+**Feature Offres v1 terminée et en prod.** Pistes possibles (à décider avec l'utilisateur) :
+- Nettoyer les **e2e préexistants cassés** (tailor/editor/ats/pack/import-*) — dette de la refonte UI, hors périmètre Offres.
+- Évolutions produit : réglages du profil (adresse/postes/transport) → 1re marche vers le SaaS multi-user.
+- Le WIP « CADRAGE » non commité (EditorPane/FormEditor/PackModal/… + `web/CADRAGE_FIXES.md`) reste à trancher.
 
 ### Blocages / décisions en attente
 - (aucun pour l'instant)
@@ -153,3 +155,11 @@ d'env FT/Maps) puis **pousser** (jalon backend+UI → auto-deploy Vercel) et **v
   Cassés par la refonte UI antérieure (classes renommées, tests non mis à jour). **Pas des régressions Offres.**
   NB : le working tree contient aussi du WIP « CADRAGE » non commité (EditorPane/FormEditor/PackModal/… +
   `web/CADRAGE_FIXES.md`) NON lié aux Offres → ne pas le committer avec la feature.
+- 2026-07-01 — **Étape 6 (doc) + déploiement + VÉRIF PROD ✅**. README : section variables d'env
+  (GEMINI/AUTH/FT_CLIENT_ID/FT_CLIENT_SECRET/GOOGLE_MAPS_API_KEY). Poussé toutes les étapes (commits
+  `1567c71`→`51664ac`) → auto-deploy Vercel **READY**. **Vérification bout-en-bout sur la prod** :
+  `GET /jobs` → 200 ; `POST /api/jobs/search` → 200 en ~9,5 s, **87 offres réelles** France Travail
+  (+ scoreLimit 40, minScore 70, commuteDestination lat/lng) ; `POST /api/jobs/score` sur une vraie
+  offre → 200 en ~3,5 s, **score 70/100** + breakdown + red flags rédigés + **trajets Google Maps réels**
+  (TC 33 min / vélo 24 min / marche 1h07). France Travail + Google Maps + Gemini opérationnels en prod.
+  **Feature Offres v1 = LIVRÉE.** (Perf attendue d'un scan complet : ~9 s recherche + 40 × ~3,5 s notation.)
