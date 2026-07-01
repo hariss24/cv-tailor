@@ -22,7 +22,9 @@ export default function FormEditor() {
   const json = useDocStore((s) => s.json);
   const setJson = useDocStore((s) => s.setJson);
 
-  if (docType !== "CV") {
+  // Le formulaire structuré couvre tous les types « CV » (CV, CV Maître, Autre).
+  // Seule la Lettre a son propre formulaire (routé en amont par EditorPane).
+  if (docType === "Lettre") {
     return (
       <div className="pane-body">
         <div className="pane-placeholder">Le formulaire Lettre arrivera bientôt.</div>
@@ -39,6 +41,8 @@ export default function FormEditor() {
     const reader = new FileReader();
     reader.onload = () => update({ photo: String(reader.result) });
     reader.readAsDataURL(file);
+    // Réinitialise l'input pour permettre de re-sélectionner le même fichier après un retrait.
+    e.target.value = "";
   };
 
   return (
@@ -55,12 +59,28 @@ export default function FormEditor() {
           </div>
           <div className="form-field">
             <label className="form-label">Photo</label>
-            <input type="file" accept="image/*" onChange={onPhoto} />
-            {cv.photo ? (
-              <button type="button" className="form-btn-mini" onClick={() => update({ photo: "" })}>
-                Retirer la photo
-              </button>
-            ) : null}
+            <div className="photo-upload-wrapper">
+              {cv.photo ? (
+                <img src={cv.photo} alt="Aperçu" className="photo-preview" />
+              ) : (
+                <div className="photo-preview photo-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+              )}
+              <div className="photo-upload-actions">
+                <label className="btn-upload" style={{ color: "var(--orange)" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  {cv.photo ? "Changer" : "Ajouter une photo"}
+                  <input type="file" accept="image/*" onChange={onPhoto} style={{ display: "none" }} />
+                </label>
+                {cv.photo ? (
+                  <button type="button" className="form-btn-mini" onClick={() => update({ photo: "" })} style={{ color: "var(--orange)" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Retirer
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </div>
         </section>
 
