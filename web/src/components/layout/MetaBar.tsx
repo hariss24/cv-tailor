@@ -3,12 +3,11 @@
 import { useDocStore } from "@/state/docStore";
 import type { DocType } from "@/lib/resume/schema";
 
-const DOC_TYPES: DocType[] = ["CV", "Lettre", "Maître", "Autre"];
+const DOC_TYPES: DocType[] = ["CV", "Lettre", "Maître"];
 const DOC_TYPE_LABELS: Record<DocType, string> = {
   CV: "CV",
   Lettre: "Lettre",
   Maître: "CV Maître",
-  Autre: "Autre",
 };
 
 /**

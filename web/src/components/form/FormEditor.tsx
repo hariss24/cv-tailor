@@ -22,7 +22,7 @@ export default function FormEditor({ onImportPdf }: { onImportPdf?: () => void }
   const json = useDocStore((s) => s.json);
   const setJson = useDocStore((s) => s.setJson);
 
-  // Le formulaire structuré couvre tous les types « CV » (CV, CV Maître, Autre).
+  // Le formulaire structuré couvre tous les types « CV » (CV, CV Maître).
   // Seule la Lettre a son propre formulaire (routé en amont par EditorPane).
   if (docType === "Lettre") {
     return (

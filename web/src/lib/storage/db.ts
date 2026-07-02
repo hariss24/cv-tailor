@@ -88,6 +88,21 @@ export class AppDatabase extends Dexie {
     this.version(2).stores({
       jobs: "id, score, status, createdAt",
     });
+
+    // v3 : le type de document « Autre » a été supprimé → reclasser les données existantes en « CV ».
+    this.version(3).stores({}).upgrade(async (tx) => {
+      await tx.table("snapshots").filter((s) => (s.doc_type as string) === "Autre")
+        .modify({ doc_type: "CV" });
+      await tx.table("history").filter((h) => (h.doc_type as string) === "Autre")
+        .modify({ doc_type: "CV" });
+      // Brouillon « draft-Autre » → « draft-CV » (sans écraser un brouillon CV déjà présent).
+      const autre = await tx.table("drafts").get("draft-Autre");
+      if (autre) {
+        const cv = await tx.table("drafts").get("draft-CV");
+        if (!cv) await tx.table("drafts").put({ ...autre, id: "draft-CV" });
+        await tx.table("drafts").delete("draft-Autre");
+      }
+    });
   }
 }
 
