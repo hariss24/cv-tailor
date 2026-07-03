@@ -181,3 +181,13 @@ implémenter maintenant, mais ne pas fermer la porte) :
   offre → 200 en ~3,5 s, **score 70/100** + breakdown + red flags rédigés + **trajets Google Maps réels**
   (TC 33 min / vélo 24 min / marche 1h07). France Travail + Google Maps + Gemini opérationnels en prod.
   **Feature Offres v1 = LIVRÉE.** (Perf attendue d'un scan complet : ~9 s recherche + 40 × ~3,5 s notation.)
+- 2026-07-04 — **Modèle Graphique : titre du poste sous le nom, sans point médian** (retour utilisateur
+  avec captures avant/après souhaité). `web/src/lib/resume/templates.ts` (overrides graphique) :
+  `title-row` passe de flex ligne (wrap) à **colonne** ; `desired-job-title` en `display: block` ;
+  le `::before` « · » remplacé par `content: none` — ⚠️ pas supprimé, car le CSS graphique hérite du
+  sobre dont le `::before { content: ", " }` serait réapparu. Vérifié : capture Playwright (modèle
+  graphique + titre long : nom sur sa ligne, titre bleu dessous, aucun séparateur), tsc clean,
+  184/184 unitaires. Piège Windows rencontré : `.next/dev/types/routes.d.ts` généré corrompu par le
+  serveur dev (écriture partielle) → tsc en échec hors code ; purge de `.next/dev/types` (régénéré).
+  NB : les CV existants gardent leur CSS enregistré — re-sélectionner « Graphique » dans le menu des
+  modèles pour appliquer le correctif à un document déjà créé.
