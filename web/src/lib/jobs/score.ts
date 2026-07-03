@@ -7,7 +7,7 @@
 import { Type, type Schema } from "@google/genai";
 import { completeJson } from "@/lib/ai/clients";
 import { parseAiJson } from "@/lib/ai/json";
-import type { CommuteMode, JobSearchProfile } from "./profile";
+import type { CommuteMode, JobSearchProfile, ScoringCriterion } from "./profile";
 import type { JobOffer } from "./francetravail";
 
 /** Champs d'offre nécessaires au scoring (sous-ensemble de JobOffer). */
@@ -68,6 +68,11 @@ function toInt(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? Math.round(n) : fallback;
 }
 
+/** Barème structuré → lignes du prompt (`score_<key> (0-<max>) : <description>`). */
+export function criteriaPromptLines(criteria: ScoringCriterion[]): string {
+  return criteria.map((c) => `score_${c.key} (0-${c.max}) : ${c.description}`).join("\n");
+}
+
 /** Note une offre pour le profil donné. `key` optionnelle : sinon clé Gemini serveur (env). */
 export async function scoreOffer(
   offer: ScorableOffer,
@@ -83,7 +88,7 @@ export async function scoreOffer(
     "Tu es un recruteur expert. Évalue cette offre pour le candidat suivant :\n" +
     `${profile.candidateSummary}\n\n` +
     "Évalue sur 100 :\n" +
-    profile.scoringCriteria;
+    criteriaPromptLines(profile.scoringCriteria);
 
   const prompt =
     `Titre: ${title}\nEntreprise: ${company}\n` +

@@ -10,6 +10,14 @@
 
 export type CommuteMode = "transit" | "driving" | "bicycling" | "walking";
 
+/** Un critère de la grille de notation (barème + affichage). */
+export interface ScoringCriterion {
+  key: string;         // → champ `score_<key>` renvoyé par l'IA
+  label: string;       // libellé affiché
+  max: number;         // points maximum
+  description: string; // ce que le critère mesure
+}
+
 export interface JobSearchProfile {
   /** Adresse de départ pour le calcul du trajet. */
   homeAddress: string;
@@ -33,8 +41,12 @@ export interface JobSearchProfile {
   maxDescriptionChars: number;
   /** Résumé du candidat injecté dans le prompt de scoring. */
   candidateSummary: string;
-  /** Barème de notation injecté dans le prompt de scoring. */
-  scoringCriteria: string;
+  /** Barème de notation (structuré) : alimente le prompt IA ET l'encart de transparence. */
+  scoringCriteria: ScoringCriterion[];
+  /** Mots-clés de compétences pour le pré-tri gratuit (minuscules). */
+  prefilterKeywords: string[];
+  /** Nombre max d'offres envoyées à l'IA par recherche. */
+  aiShortlist: number;
 }
 
 /** Profil par défaut = Hariss (repris à l'identique de `agent-taff/bot.py`). */
@@ -85,10 +97,17 @@ export const DEFAULT_PROFILE: JobSearchProfile = {
     "Formation: Master 2 E-commerce (UPEC)\n" +
     "Expériences: 3 stages/alternances (Webmastering Drupal/WP, SEO/SEA, Analytics, UI/UX, Gestion de projet agile).\n" +
     "Compétences: HTML/CSS/JS/PHP, CMS (Drupal, WordPress), SEO on-page, SEA (Google Ads), Analytics (GA4, Looker), UI/UX (Figma).",
-  scoringCriteria:
-    "score_tech (0-40) : Match avec sa stack (CMS, intégration, SEO, analytics).\n" +
-    "score_seniority (0-20) : Adapté à un profil Junior (Bac+5 avec 1-2 ans d'expérience en stage).\n" +
-    "score_sector (0-15) : Pertinence dans le secteur web/e-commerce.\n" +
-    "score_geo (0-15) : Ajuste avec les temps de trajet fournis (pénalise si > 45 min depuis Paris 12e).\n" +
-    "score_red_flags (0-10) : 10 = aucun piège (salaire flou, travail dissimulé, ou alternance masquée).",
+  scoringCriteria: [
+    { key: "tech", label: "Technique", max: 40, description: "Match avec sa stack (CMS, intégration, SEO, analytics)." },
+    { key: "seniority", label: "Séniorité", max: 20, description: "Adapté à un profil Junior (Bac+5 avec 1-2 ans d'expérience en stage)." },
+    { key: "sector", label: "Secteur", max: 15, description: "Pertinence dans le secteur web/e-commerce." },
+    { key: "geo", label: "Géo (trajet)", max: 15, description: "Ajuste avec les temps de trajet fournis (pénalise si > 45 min depuis Paris 12e)." },
+    { key: "red_flags", label: "Pièges", max: 10, description: "10 = aucun piège (salaire flou, travail dissimulé, ou alternance masquée)." },
+  ],
+  prefilterKeywords: [
+    "seo", "référencement", "wordpress", "drupal", "cms", "éditorial", "contenu",
+    "rédaction", "sea", "google ads", "analytics", "webmaster", "digital",
+    "e-commerce", "shopify", "community", "marketing", "web",
+  ],
+  aiShortlist: 20,
 };

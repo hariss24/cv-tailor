@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { scoreOffer } from "./score";
+import { scoreOffer, criteriaPromptLines } from "./score";
 import { DEFAULT_PROFILE } from "./profile";
 
 // Mock du client Gemini : on contrôle le JSON renvoyé par completeJson.
@@ -41,5 +41,17 @@ describe("scoreOffer", () => {
     completeJson.mockResolvedValue(JSON.stringify({ total_score: 70 }));
     const out = await scoreOffer({ title: "x", company: "", jobText: "" }, {}, DEFAULT_PROFILE, "KEY");
     expect(out.red_flags_reasons).toEqual([]);
+  });
+});
+
+describe("criteriaPromptLines", () => {
+  it("reproduit le barème attendu depuis la grille structurée", () => {
+    expect(criteriaPromptLines(DEFAULT_PROFILE.scoringCriteria)).toBe(
+      "score_tech (0-40) : Match avec sa stack (CMS, intégration, SEO, analytics).\n" +
+        "score_seniority (0-20) : Adapté à un profil Junior (Bac+5 avec 1-2 ans d'expérience en stage).\n" +
+        "score_sector (0-15) : Pertinence dans le secteur web/e-commerce.\n" +
+        "score_geo (0-15) : Ajuste avec les temps de trajet fournis (pénalise si > 45 min depuis Paris 12e).\n" +
+        "score_red_flags (0-10) : 10 = aucun piège (salaire flou, travail dissimulé, ou alternance masquée).",
+    );
   });
 });
