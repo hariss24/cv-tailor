@@ -92,6 +92,24 @@ implémenter maintenant, mais ne pas fermer la porte) :
 - Évolutions produit : réglages du profil (adresse/postes/transport) → 1re marche vers le SaaS multi-user.
 - Le WIP « CADRAGE » non commité (EditorPane/FormEditor/PackModal/… + `web/CADRAGE_FIXES.md`) reste à trancher.
 
+### 📋 Backlog (demandes utilisateur, à planifier)
+- **Suivi des candidatures (onglet Offres)** — demandé le 2026-07-04. But : savoir à quelles offres
+  on a réellement postulé. Design pressenti (à brainstormer avant d'implémenter) :
+  - Bouton emoji ✅ sur chaque `JobCard` → marque l'offre « postulée » ; bulle/badge « Postulé »
+    (même famille visuelle que le badge « Nouveau » existant).
+  - **Réutiliser le champ `status` existant** de `JobEntry` (Dexie, déjà indexé : `new/seen/dismissed`)
+    en ajoutant un statut `applied` + un horodatage `appliedAt` — pas de nouvelle table.
+  - Une offre postulée ne doit plus être re-proposée au scan (déjà le cas via `jobExists`) ni masquée
+    par erreur : à séparer visuellement (filtre ou section « Candidatures envoyées », triée par date).
+  - Piste bonus : proposer de marquer « postulé » automatiquement après un pack candidature / une
+    adaptation lancée depuis cette offre (jonction `pendingJobDesc` existante).
+- **Formulaire Lettre vide après insertion du pack** (bug, constaté le 2026-07-04) : `PackModal.loadLetter`
+  enregistre `json: null` → l'aperçu affiche la lettre (HTML) mais le formulaire Lettre reste vide.
+  Correction pressentie : le pack renvoie aussi la lettre **structurée** (schéma `letterSchema`) pour
+  alimenter le formulaire en même temps que l'aperçu.
+- **Audit fonctionnel complet** (désynchronisations formulaire/aperçu/Mode Expert + défauts d'affichage,
+  parcours navigateur avec captures) — proposé, en attente de go.
+
 ### Blocages / décisions en attente
 - (aucun pour l'instant)
 
