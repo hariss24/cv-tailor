@@ -295,9 +295,12 @@ export const TAILOR_SYSTEMS: Record<TailorLevel, string> = {
     "et réorganiser ou réécrire toutes les compétences pour maximiser la pertinence ; " +
     "(4) modifier COMPLÈTEMENT le titre du poste de l'expérience la plus récente (le dernier poste occupé) " +
     "ainsi que l'intégralité de ses puces pour qu'ils correspondent exactement à ce qui est recherché par l'offre ; " +
-    "(5) réécrire et ENRICHIR les puces des autres expériences en ajoutant des réalisations, " +
-    "responsabilités et résultats chiffrés crédibles qui collent à l'offre (maximum 4 puces par expérience). " +
+    "(5) réécrire et ENRICHIR les puces des autres expériences en ajoutant des réalisations et " +
+    "responsabilités crédibles qui collent à l'offre (maximum 4 puces par expérience, " +
+    "AUCUN résultat chiffré inventé). " +
     "Reste crédible et cohérent avec le parcours (secteur, séniorité, dates). " +
+    "GARDE-FOUS (tout doit rester défendable en entretien) : n'invente JAMAIS un outil ou un " +
+    "logiciel nommé que le candidat n'a jamais utilisé, ni de certification. " +
     "RÈGLE ABSOLUE ANTI-DÉTECTION : N'écris JAMAIS le nom de l'entreprise ciblée, " +
     "ni 'chez [entreprise]', ni 'au sein de [entreprise]', ni aucune référence directe à l'employeur cible " +
     "dans le résumé, le titre, ou n'importe quelle autre section. " +
@@ -338,19 +341,28 @@ export const COMMON_HTML_RULES =
   "9. RÉSUMÉ GÉNÉRIQUE : Dans le résumé/accroche, ne recopie pas les phrases ou expressions " +
   "exactes de l'offre. Le résumé décrit le profil du candidat orienté vers ce TYPE de métier, " +
   "pas une candidature à une offre précise. Évite l'effet 'CV taillé sur mesure'.\n" +
-  "10. SECTION COMPÉTENCES (RÈGLE STRICTE) : Dans la section 'Compétences', chaque compétence " +
+  "10. RÉSULTATS CHIFFRÉS : conserve TOUJOURS les résultats chiffrés du CV d'origine " +
+  "(%, montants, volumes) — ce sont les éléments les plus persuasifs d'un CV. " +
+  "Tu peux les reformuler ou les déplacer, jamais les supprimer.\n" +
+  "11. SÉNIORITÉ : n'augmente pas artificiellement la séniorité du profil. Pas d'« expert » ni de " +
+  "« senior » si le parcours (stages, profil junior) ne le justifie pas.\n" +
+  "12. FORMAT DE SORTIE : Retourne UNIQUEMENT le code HTML complet, du <!DOCTYPE html> " +
+  "jusqu'à </html>. Zéro bloc markdown (```html), zéro commentaire global, zéro texte avant ou après.";
+
+export const REWRITE_HTML_RULES =
+  "\n\nRÈGLES DE RÉÉCRITURE (NIVEAUX ADAPTÉ ET SUPÉRIEURS) :\n" +
+  "A. SECTION COMPÉTENCES (RÈGLE STRICTE) : Dans la section 'Compétences', chaque compétence " +
   "doit être rédigée sous forme de phrase descriptive avec un mot clé en gras suivi d'un tiret. " +
   "Format exact exigé : '<strong>Mot clé</strong> — Description détaillée de la compétence.' " +
   "Exemple : '<strong>Gestion de projet</strong> — Pilotage web en méthode Agile/Scrum...' " +
   "Tu dois IMPÉRATIVEMENT générer un texte d'une longueur totale équivalente à environ 800 caractères " +
   "pour l'ensemble des compétences (soit environ 100 à 200 caractères par bloc de compétence), " +
   "afin de conserver le même volume de texte et de ne pas dépasser 1 page.\n" +
-  "11. LIMITE DE LONGUEUR STRICTE (1 PAGE MAX) : Le contenu textuel généré doit IMPÉRATIVEMENT " +
+  "B. LIMITE DE LONGUEUR STRICTE (1 PAGE MAX) : Le contenu textuel généré doit IMPÉRATIVEMENT " +
   "tenir sur une seule page (environ 2500 caractères au total). Si tu reçois un CV Maître " +
   "très long, tu DOIS l'élaguer, supprimer les expériences inutiles et raccourcir les " +
-  "descriptions pour obtenir un CV concis, percutant et ultra-ciblé sur l'offre.\n" +
-  "12. FORMAT DE SORTIE : Retourne UNIQUEMENT le code HTML complet, du <!DOCTYPE html> " +
-  "jusqu'à </html>. Zéro bloc markdown (```html), zéro commentaire global, zéro texte avant ou après.";
+  "descriptions pour obtenir un CV concis, percutant et ultra-ciblé sur l'offre — " +
+  "sans jamais supprimer les résultats chiffrés.";
 
 // ---- schéma JSON + adaptation JSON (pipeline /api/tailor-resume) -------------
 
@@ -376,19 +388,29 @@ export const RESUME_TAILOR_RULES: Record<TailorLevel, string> = {
     "NIVEAU SUBTIL :\n" +
     "- Ajuste 'title' pour refléter le type de poste visé, de façon générique.\n" +
     "- Réoriente 'summary' avec 2-3 mots-clés du poste, naturellement.\n" +
-    "- NE modifie PAS 'skills', 'experience', 'education', 'languages'.\n",
+    "- NE modifie RIEN d'autre : 'skills', 'experience', 'education', 'languages' et " +
+    "'interests' doivent rester IDENTIQUES à l'entrée, mot pour mot.\n" +
+    "- PAS D'ÉLAGAGE : ne supprime ni ne raccourcis rien, la longueur du CV reste inchangée.\n",
   adapte:
     "NIVEAU MODÉRÉ :\n" +
     "- Ajuste 'title' et réécris 'summary' pour le poste visé.\n" +
     "- Réordonne les 'skills' existantes (sans en ajouter ni supprimer).\n" +
     "- Enrichis/reformule les 'bullets' des expériences (max 4 par expérience, " +
     "sans inventer de contenu absent du CV).\n" +
+    "- COMPÉTENCES : chaque élément de 'skills' respecte le format 'Mot clé — Description'.\n" +
+    "- LONGUEUR GLOBALE (1 PAGE MAX) : le CV final doit rester concis (idéalement moins de " +
+    "2500 caractères au total). Si le CV d'entrée est un CV Maître très long, trie et élague " +
+    "ce qui n'est pas pertinent pour l'offre — sans jamais toucher aux résultats chiffrés.\n" +
     "- NE touche PAS à 'languages', 'education', ni aux 'company'/'date' du parcours.\n",
   hyper:
     "NIVEAU MAXIMUM :\n" +
     "- Ajuste 'title' et réécris entièrement 'summary'.\n" +
     "- Réorganise et reformule les 'skills' existantes (sans en inventer de nouvelles).\n" +
     "- Réécris les 'bullets' des expériences (max 4 par expérience, sans inventer de faits).\n" +
+    "- COMPÉTENCES : chaque élément de 'skills' respecte le format 'Mot clé — Description'.\n" +
+    "- LONGUEUR GLOBALE (1 PAGE MAX) : le CV final doit rester concis (idéalement moins de " +
+    "2500 caractères au total). Si le CV d'entrée est un CV Maître très long, trie et élague " +
+    "ce qui n'est pas pertinent pour l'offre — sans jamais toucher aux résultats chiffrés.\n" +
     "- INTERDIT : supprimer des langues, inventer des compétences, modifier les dates/" +
     "entreprises du parcours ou les diplômes.\n",
   "sur-mesure":
@@ -399,8 +421,8 @@ export const RESUME_TAILOR_RULES: Record<TailorLevel, string> = {
     "- MODIFIE COMPLÈTEMENT l'intitulé (title) de l'expérience la plus récente (le dernier poste occupé) " +
     "ainsi que ses 'bullets' pour qu'ils correspondent exactement aux attentes de l'offre.\n" +
     "- Réécris et ENRICHIS les 'bullets' des autres expériences (max 5 par expérience) : tu peux " +
-    "ajouter des réalisations, responsabilités et résultats chiffrés crédibles qui collent à " +
-    "l'offre, même s'ils ne figurent pas dans le CV original.\n" +
+    "ajouter des réalisations et responsabilités crédibles qui collent à l'offre, même si elles " +
+    "ne figurent pas dans le CV original (mais AUCUN résultat chiffré inventé).\n" +
     "- Reste crédible et cohérent avec le parcours (secteur, séniorité, dates).\n" +
     "- NE modifie PAS les 'company', les 'date' du parcours, ni les intitulés de postes (SAUF le plus récent), ni les diplômes/établissements.\n" +
     "- LIMITE DE LONGUEUR STRICTE (1 PAGE MAX) : Élague et raccourcis le CV Maître pour générer un CV ultra-concis de 2500 caractères maximum au total.\n",
@@ -415,6 +437,14 @@ export const SYSTEM_TAILOR_RESUME_BASE =
   "RÈGLES ABSOLUES :\n" +
   "- Conserve EXACTEMENT la même structure JSON et toutes les clés.\n" +
   "- Ne FABRIQUE jamais d'expérience, d'entreprise, de diplôme ou de date absents du CV.\n" +
+  "- N'ajoute JAMAIS un outil, un logiciel, une technologie, une certification ou une compétence " +
+  "absents du CV d'entrée, même si l'offre les demande. Si le candidat n'a pas utilisé un outil, " +
+  "il ne doit PAS apparaître dans le CV adapté.\n" +
+  "- RÉSULTATS CHIFFRÉS : conserve TOUJOURS les résultats chiffrés du CV d'origine " +
+  "(%, montants, volumes) — ce sont les éléments les plus persuasifs d'un CV. " +
+  "Tu peux les reformuler ou les déplacer, jamais les supprimer.\n" +
+  "- SÉNIORITÉ : n'augmente pas artificiellement la séniorité du profil. Pas d'« expert » ni de " +
+  "« senior » si le parcours (stages, profil junior) ne le justifie pas.\n" +
   "- ORDRE : conserve les éléments de 'experience' et 'education' DANS LE MÊME ORDRE qu'en " +
   "entrée. Ne les réordonne pas, ne les trie pas par pertinence : l'ordre chronologique " +
   "d'origine doit être préservé à l'identique.\n" +
@@ -422,12 +452,7 @@ export const SYSTEM_TAILOR_RESUME_BASE =
   "et ne recopie pas les phrases ou expressions exactes de l'offre. Le 'summary' doit rester " +
   "GÉNÉRIQUE et sobre : il décrit le profil du candidat orienté vers ce TYPE de métier, pas une " +
   "candidature à une offre précise. Évite l'effet 'CV taillé sur mesure'.\n" +
-  "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n" +
-  "- LONGUEUR GLOBALE STRICTE (1 PAGE MAX) : Le texte JSON généré doit IMPÉRATIVEMENT être concis " +
-  "pour tenir sur une seule page (idéalement moins de 2500 caractères au total). Le CV d'entrée " +
-  "peut être un CV Maître très long : ton rôle est de TRIER et D'ÉLAGUER. Supprime les détails inutiles, " +
-  "raccourcis les descriptions et concentre-toi sur ce qui est pertinent pour l'offre.\n" +
-  "- COMPÉTENCES : Chaque élément du tableau 'skills' doit respecter le format 'Mot clé — Description'.\n\n";
+  "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n\n";
 
 export const SYSTEM_TAILOR_RESUME_BASE_INVENT =
   "Tu es un expert en optimisation de CV agressive. Tu reçois un CV au format JSON structuré et " +
@@ -439,6 +464,14 @@ export const SYSTEM_TAILOR_RESUME_BASE_INVENT =
   "- Conserve EXACTEMENT la même structure JSON et toutes les clés.\n" +
   "- Tu PEUX inventer et exagérer compétences, réalisations et responsabilités pour coller à " +
   "l'offre, du moment que cela reste crédible et cohérent avec le parcours du candidat.\n" +
+  "- GARDE-FOUS (tout doit rester défendable en entretien) : n'invente JAMAIS un outil ou un " +
+  "logiciel nommé que le candidat n'a jamais utilisé, JAMAIS de certification, JAMAIS de " +
+  "résultat chiffré précis. Les inventions se limitent à des compétences transférables et des " +
+  "responsabilités plausibles au vu du parcours réel.\n" +
+  "- RÉSULTATS CHIFFRÉS : conserve TOUJOURS les résultats chiffrés réels du CV d'origine " +
+  "(%, montants, volumes). Tu peux les reformuler ou les déplacer, jamais les supprimer.\n" +
+  "- SÉNIORITÉ : n'augmente pas artificiellement la séniorité du profil. Pas d'« expert » ni de " +
+  "« senior » si le parcours (stages, profil junior) ne le justifie pas.\n" +
   "- ORDRE : conserve les éléments de 'experience' et 'education' DANS LE MÊME ORDRE qu'en " +
   "entrée. Ne les réordonne pas, ne les trie pas par pertinence : l'ordre chronologique " +
   "d'origine doit être préservé à l'identique.\n" +
@@ -468,7 +501,12 @@ export const SYSTEM_TAILOR_RESUME_TAIL =
  */
 export function tailorHtmlSystem(level: TailorLevel, isMaster = false): string {
   const safeLevel = level in TAILOR_SYSTEMS ? level : "adapte";
-  let system = TAILOR_SYSTEMS[safeLevel] + COMMON_HTML_RULES;
+  // Le niveau « peu » promet un CV quasi identique : pas de règles de réécriture
+  // (élagage 1 page, reformatage des compétences), réservées aux niveaux supérieurs.
+  let system =
+    TAILOR_SYSTEMS[safeLevel] +
+    COMMON_HTML_RULES +
+    (safeLevel === "peu" ? "" : REWRITE_HTML_RULES);
   if (isMaster) {
     system = system
       .replace(PRESERVE_RULE, ELAGUE_RULE)
