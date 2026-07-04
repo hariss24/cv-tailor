@@ -54,13 +54,13 @@
 
 ## Prochaine action
 
-➡️ **Phase 2 — dérouler les tâches du plan** `docs/superpowers/plans/2026-07-04-react-pdf-phase-2.md` :
-T1 `docEngine` (sélecteur pur : pdf ssi CV + graphique + !htmlSource, TDD dans docStore.test) ;
-T2 `generateResumePdfBlob` (imports dynamiques) + `PdfPreview` (canvases pdfjs) + branche dans
-`PreviewPane` (debounce 500 ms, garde d'obsolescence, badge pages exact) + vérif runtime
-Playwright ; T3 export client sans `/api/convert` quand engine pdf ; T4 e2e `pdf-preview.spec.ts`
-(bascule Graphique + export sans serveur) → suite 23/23. Fin de phase : push + contrôle prod puis
-🛑 **CHECKPOINT UTILISATEUR** (captures + feu vert explicite avant Phase 3).
+➡️ **Phase 2 — T3 et T4 du plan** `docs/superpowers/plans/2026-07-04-react-pdf-phase-2.md`
+(T1+T2 livrées : `ccdef0d`, `d49a9b9`) : T3 export client sans `/api/convert` quand engine pdf
+(TopBar.onConvert : `generateResumePdfBlob` + même téléchargement/historique, helper commun) +
+vérif runtime réseau ; T4 e2e `pdf-preview.spec.ts` (bascule Graphique → canvas ; export sans
+requête serveur) → suite 23/23 + build. Fin de phase : push + contrôle prod puis 🛑
+**CHECKPOINT UTILISATEUR** (captures + feu vert explicite avant Phase 3) — mettre alors
+« Prochaine action » = « en attente du checkpoint utilisateur ».
 
 ## Blocages (migration React PDF)
 
