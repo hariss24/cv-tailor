@@ -44,8 +44,9 @@
 - [x] **Phase 1 — Moteur de rendu React PDF** ✅ (2026-07-04) : `lib/pdfgen/` complet — fonts
       TTF (Roboto/Inter), ResumeDocument (Graphique), LetterDocument, AtsBoost ; PDF Node sans
       Chromium, typo validée visuellement, 196/196 + e2e 21/21.
-- [ ] **Phase 2 — Aperçu PDF.js + génération client + interrupteur `engine`** (Graphique seul).
-      → 🛑 **checkpoint utilisateur** à la fin.
+- [x] **Phase 2 — Aperçu PDF.js + génération client + interrupteur `engine`** ✅ (2026-07-05) :
+      `docEngine` + `PdfPreview` + export client sans serveur (Graphique seul), 198/198 +
+      e2e 23/23. → 🛑 **checkpoint utilisateur EN COURS** (validation visuelle avant Phase 3).
 - [ ] **Phase 3 — Flux IA 100 % JSON** (generate-pack → `Letter` JSON, editor-chat JSON,
       `text-to-letter`, Mode Expert → onglet JSON Monaco).
 - [ ] **Phase 4 — Porter Sobre, Moderne, Classique, Minimal** (primitives partagées).
@@ -54,13 +55,11 @@
 
 ## Prochaine action
 
-➡️ **Phase 2 — T3 et T4 du plan** `docs/superpowers/plans/2026-07-04-react-pdf-phase-2.md`
-(T1+T2 livrées : `ccdef0d`, `d49a9b9`) : T3 export client sans `/api/convert` quand engine pdf
-(TopBar.onConvert : `generateResumePdfBlob` + même téléchargement/historique, helper commun) +
-vérif runtime réseau ; T4 e2e `pdf-preview.spec.ts` (bascule Graphique → canvas ; export sans
-requête serveur) → suite 23/23 + build. Fin de phase : push + contrôle prod puis 🛑
-**CHECKPOINT UTILISATEUR** (captures + feu vert explicite avant Phase 3) — mettre alors
-« Prochaine action » = « en attente du checkpoint utilisateur ».
+🛑 **EN ATTENTE DU CHECKPOINT UTILISATEUR** (Phase 2 livrée et poussée). Ne PAS entamer la
+Phase 3 sans le feu vert explicite de l'utilisateur sur le rendu visuel du template Graphique
+(aperçu + export PDF). Une fois le feu vert obtenu : « Prochaine action » = rédiger le plan
+détaillé de la Phase 3 (flux IA 100 % JSON : generate-pack → `Letter` JSON, editor-chat JSON,
+`text-to-letter`, Mode Expert → onglet JSON Monaco).
 
 ## Blocages (migration React PDF)
 
