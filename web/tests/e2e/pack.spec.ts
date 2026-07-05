@@ -1,11 +1,15 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Pack candidature (Phase 5). `/api/generate-pack` est mocké via `page.route`.
+ * Pack candidature (Phase 3). `/api/generate-pack` est mocké via `page.route`.
  * On vérifie : génération → aperçu lettre + email, puis insertion dans l'éditeur (type « Lettre »).
  */
 
-const LETTER_HTML = "<body><h1>Madame, Monsieur</h1><p>Lettre générée par l'IA.</p></body>";
+const LETTER_JSON = {
+  sender_name: "John Doe",
+  recipient_name: "Madame, Monsieur",
+  body: "Lettre générée par l'IA.",
+};
 const EMAIL_TEXT = "Bonjour,\n\nVeuillez trouver ma candidature.\n\nCordialement.";
 
 test("le pack candidature génère lettre + email et insère la lettre dans l'éditeur", async ({
@@ -15,7 +19,7 @@ test("le pack candidature génère lettre + email et insère la lettre dans l'é
   await page.route("**/api/generate-pack", async (route) => {
     sentBody = route.request().postDataJSON();
     await route.fulfill({
-      json: { letter_html: LETTER_HTML, letter_css: "h1 { color: navy; }", email: EMAIL_TEXT },
+      json: { letter: LETTER_JSON, email: EMAIL_TEXT },
     });
   });
 
@@ -39,9 +43,9 @@ test("le pack candidature génère lettre + email et insère la lettre dans l'é
   expect(Math.abs(letterBox!.y - emailBox!.y)).toBeLessThan(5);
   expect(emailBox!.x).toBeGreaterThan(letterBox!.x + letterBox!.width - 1);
 
-  // Le CV (HTML) a bien été envoyé au serveur (clé cv_html présente).
+  // Le CV (JSON) a bien été envoyé au serveur (clé cv_json présente).
   expect(sentBody).not.toBeNull();
-  expect(sentBody!.cv_html).toBeTruthy();
+  expect(sentBody!.cv_json).toBeTruthy();
 
   // Insertion dans l'éditeur → bascule sur le type « Lettre » et l'aperçu montre la lettre.
   await page.getByRole("button", { name: /Insérer dans l'éditeur/ }).click();

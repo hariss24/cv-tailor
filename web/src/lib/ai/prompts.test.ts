@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  SYSTEM_PACK,
   TAILOR_SYSTEMS,
   SYSTEM_TEXT_TO_LETTER,
   RESUME_TAILOR_RULES,
@@ -124,5 +125,13 @@ describe('prompts — text to letter', () => {
     expect(SYSTEM_TEXT_TO_LETTER).toContain('JSON PUR');
     expect(SYSTEM_TEXT_TO_LETTER).toContain('recipient_name');
     expect(SYSTEM_TEXT_TO_LETTER).toContain('sender_name');
+  });
+});
+
+describe('prompts — pack', () => {
+  it('SYSTEM_PACK demande un JSON avec une lettre structuree et un email', () => {
+    expect(SYSTEM_PACK).toContain('JSON PUR');
+    expect(SYSTEM_PACK).toContain('"letter":');
+    expect(SYSTEM_PACK).toContain('"email":');
   });
 });

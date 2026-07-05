@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
-import { stripBase64ForChat } from "@/lib/ai/base64";
-import { mergeHtml } from "@/lib/resume/mergeHtml";
+import { renderLetter } from "@/lib/resume/render";
+import type { Letter } from "@/lib/resume/schema";
 import { toast } from "@/state/uiStore";
 import { saveDraft } from "@/lib/storage/db";
 import JobExtractor from "./JobExtractor";
@@ -12,17 +12,15 @@ import { useEscapeClose } from "@/lib/useEscapeClose";
 
 /**
  * Modale « Pack candidature » : génère une lettre + un email cohérents avec le CV courant,
- * à partir d'une offre d'emploi. Port de `_openPackModal`/`btn-create-pack` (app.js l.2520-2609).
+ * à partir d'une offre d'emploi.
  *
  * Flux métier :
  * - CV only (la lettre est dérivée du CV courant) ;
- * - la photo base64 est strippée avant l'appel (jamais envoyée à l'IA, et inutile à la lettre) ;
- * - aperçu de la lettre + email avec copie / insertion dans l'éditeur (type « Lettre »).
- *
- * Le snapshot « Avant pack candidature » est reporté en Phase 6 (storage).
+ * - la photo est strippée (ne part pas à l'IA) ;
+ * - génère un JSON de Lettre et un texte d'email.
  */
 
-type PackResult = { letter_html: string; letter_css: string; email: string };
+type PackResult = { letter: Letter; email: string };
 
 export default function PackModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [jobDesc, setJobDesc] = useState("");
@@ -41,23 +39,21 @@ export default function PackModal({ open, onClose }: { open: boolean; onClose: (
       toast("Colle d'abord une offre d'emploi.", "error");
       return;
     }
-    const { html, css } = useDocStore.getState();
-    if (!html.trim()) {
+    const { json: cvJson } = useDocStore.getState();
+    if (!("name" in cvJson)) {
       toast("Charge d'abord un CV dans l'éditeur.", "error");
       return;
     }
-    // Photo jamais envoyée à l'IA (allègement + inutile à la lettre).
-    const { html: cleanHtml } = stripBase64ForChat(html);
+    // Photo jamais envoyée à l'IA
+    const cleanJson = { ...cvJson, photo: "" };
 
     setBusy(true);
     try {
       const res = await postJson<PackResult>("/api/generate-pack", {
-        cv_html: cleanHtml,
-        cv_css: css,
+        cv_json: cleanJson,
         job_desc: desc,
         company: company.trim(),
         role: role.trim(),
-        // Date du jour côté client (M2) : l'IA ne doit pas inventer la date de la lettre.
         today: new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
       });
       setResult(res);
@@ -79,23 +75,21 @@ export default function PackModal({ open, onClose }: { open: boolean; onClose: (
     }
   };
 
-  // Insère la lettre dans l'éditeur en basculant sur le type « Lettre » (mode expert HTML/CSS).
+  // Insère la lettre dans l'éditeur en basculant sur le type « Lettre »
   const loadLetter = async () => {
     if (!result) return;
-    const { setDocType, setHtml, setCss, setCompany, setRole } = useDocStore.getState();
+    const { setDocType, setJson, setCompany, setRole } = useDocStore.getState();
     await saveDraft({
       id: "draft-Lettre",
-      html: result.letter_html,
-      css: result.letter_css,
-      json: null,
+      html: "",
+      css: "",
+      json: result.letter,
       templateId: null,
-      htmlSource: true,
+      htmlSource: false,
       updatedAt: 0,
     });
     setDocType("Lettre");
-    setHtml(result.letter_html);
-    setCss(result.letter_css);
-    // Reprend Entreprise/Poste saisis dans la modale (nommage PDF + historique).
+    setJson(result.letter);
     if (company.trim()) setCompany(company.trim());
     if (role.trim()) setRole(role.trim());
     toast("Lettre chargée dans l'éditeur (type « Lettre »).", "success");
@@ -154,7 +148,7 @@ export default function PackModal({ open, onClose }: { open: boolean; onClose: (
                 className="pack-letter-frame"
                 title="Aperçu de la lettre"
                 sandbox=""
-                srcDoc={mergeHtml(result.letter_html, result.letter_css)}
+                srcDoc={renderLetter(result.letter)}
               />
               <button type="button" className="go" onClick={loadLetter} disabled={busy}>
                 {"Insérer dans l'éditeur (Lettre)"}
