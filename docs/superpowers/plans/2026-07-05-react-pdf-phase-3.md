@@ -86,12 +86,18 @@ Mode Expert = onglets HTML/CSS Monaco (`setHtml`/`setCss` → `htmlSource: true`
    `letterSchema`.safeParse + `normalize` → `setJson` ; invalide → indicateur discret
    (« JSON invalide » dans la barre), pas d'application partielle, jamais de perte de
    saisie (l'éditeur garde le texte local tant que c'est invalide).
-2. La garde C1 (`htmlSource` + bandeau) reste en place pour les chemins legacy encore
+2. **Photo base64 masquée** (question utilisateur du 05/07) : le JSON affiché remplace la
+   valeur de `photo` par un placeholder court (ex. `"(photo gérée par le formulaire)"`) —
+   même principe que le strip photo des flux IA. À l'application : placeholder inchangé →
+   la photo réelle du store est réinjectée ; `""` → photo supprimée ; toute autre valeur
+   (`data:`/URL) → prise telle quelle. Jamais le pavé base64 dans Monaco (illisible,
+   lent, corruptible). Test unitaire du strip/restore.
+3. La garde C1 (`htmlSource` + bandeau) reste en place pour les chemins legacy encore
    HTML (historique « Recharger », snapshots) — ne pas y toucher en Phase 3 (démontage
    en Phase 5). Après cette task, plus **aucun flux IA** ne pose `htmlSource: true`.
-3. e2e : `editor.spec.ts` « Mode Expert affiche Monaco (onglet HTML) » → onglet JSON
+4. e2e : `editor.spec.ts` « Mode Expert affiche Monaco (onglet HTML) » → onglet JSON
    (éditer le nom via Monaco `model.applyEdits` → l'aperçu ET le formulaire suivent).
-4. Vérifs : vitest, tsc, lint, build, **e2e complets**.
+5. Vérifs : vitest, tsc, lint, build, **e2e complets**.
 
 ---
 
