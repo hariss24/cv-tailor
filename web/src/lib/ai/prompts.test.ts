@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   TAILOR_SYSTEMS,
+  SYSTEM_TEXT_TO_LETTER,
   RESUME_TAILOR_RULES,
   RESUME_SCHEMA_DESC,
   SYSTEM_TAILOR_RESUME_BASE_INVENT,
@@ -115,5 +116,13 @@ describe("prompts — cohérence des niveaux (pas de contradiction base/niveau)"
     const sys = tailorHtmlSystem("sur-mesure");
     expect(sys).toContain("GARDE-FOUS");
     expect(sys).not.toContain("résultats chiffrés crédibles");
+  });
+});
+
+describe('prompts — text to letter', () => {
+  it('SYSTEM_TEXT_TO_LETTER demande un JSON pur avec les cles obligatoires', () => {
+    expect(SYSTEM_TEXT_TO_LETTER).toContain('JSON PUR');
+    expect(SYSTEM_TEXT_TO_LETTER).toContain('recipient_name');
+    expect(SYSTEM_TEXT_TO_LETTER).toContain('sender_name');
   });
 });

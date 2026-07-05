@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 /**
  * Import texte → CV structuré. `/api/text-to-resume` est mocké via `page.route` : le texte est
  * envoyé à l'IA qui renvoie un CV JSON → le formulaire (et l'aperçu) se remplissent.
- * (Le flux SSE `text-to-html` ne subsiste que pour le type « Lettre ».)
+ * (La lettre utilise `text-to-letter` pour extraire un JSON de la même manière.)
  */
 
 test("l'import texte remplit le formulaire et l'aperçu depuis un CV JSON", async ({ page }) => {

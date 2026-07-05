@@ -169,6 +169,10 @@ export function normalizeLetter(input: unknown): Letter {
  * Un CV « vide » n'a ni nom, ni expérience, ni compétences, ni formation.
  * Sert au garde-fou `rejectEmpty` (loadData) : ne jamais écraser le formulaire avec du vide.
  */
+export function isEmptyLetter(l: Letter): boolean {
+  return l.body === DEFAULT_LETTER.body && l.subject === DEFAULT_LETTER.subject;
+}
+
 export function isEmptyResume(r: Resume): boolean {
   return !r.name && !r.experience.length && !r.skills.length && !r.education.length;
 }

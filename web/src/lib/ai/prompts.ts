@@ -6,202 +6,7 @@
  * squelettes doit rester synchrone avec `lib/resume/templates.ts` (modèle « sobre »).
  */
 
-// ---- squelettes HTML (import texte/PDF → HTML) ------------------------------
 
-export const CV_HTML_SKELETON = `<div class="resume-template-1 resume-template-renderer">
-
-  <section class="resume-template-renderer-section personal-data">
-    <h2 class="resume-template-renderer-section__title">Informations personnelles</h2>
-    <div class="personal-data__photo" style="background:#eee;">
-      <!-- URL_DE_VOTRE_PHOTO_ICI -->
-    </div>
-    <div class="personal-data__title-row">
-      <span class="personal-data__name">Prenom Nom</span><span class="personal-data__desired-job-title">Titre du poste</span>
-    </div>
-    <div class="personal-data__contact-row">
-      Ville, Pays &middot; email@example.com &middot; +33 6 00 00 00 00 &middot; linkedin.com/in/profil
-    </div></section>
-
-  <section class="resume-template-renderer-section summary-objective">
-    <h2 class="resume-template-renderer-section__title summary-objective__title">A propos</h2>
-    <div class="summary-objective__content">
-      Bref resume professionnel.
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section entry-list">
-    <h2 class="resume-template-renderer-section__title">Experience</h2>
-    <div class="entry-list__item">
-      <span class="entry-list__title">Poste occupe</span>
-      <span class="entry-list__date">Jan 2024 - Present</span>
-      <div class="entry-list__company-row">
-        <span class="entry-list__subtitle">Entreprise</span><span class="entry-list__location">Ville</span>
-      </div>
-      <div class="entry-list__description">
-        <ul>
-          <li>Realisation.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section entry-list">
-    <h2 class="resume-template-renderer-section__title">Formation</h2>
-    <div class="entry-list__item">
-      <span class="entry-list__title">Diplome</span>
-      <span class="entry-list__date">2020 - 2022</span>
-      <div class="entry-list__company-row">
-        <span class="entry-list__subtitle">Etablissement</span><span class="entry-list__location">Ville</span>
-      </div>
-      <div class="entry-list__description">
-        <p>Description, specialites ou matieres principales.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section plain-list">
-    <h2 class="resume-template-renderer-section__title">Competences</h2>
-    <div class="plain-list__items">
-      <span class="plain-list__item">Competence 1</span>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section entry-list">
-    <h2 class="resume-template-renderer-section__title">Projets</h2>
-    <div class="entry-list__item">
-      <span class="entry-list__title">Nom du projet</span>
-      <span class="entry-list__date">2024</span>
-      <div class="entry-list__description">
-        <p>Description du projet.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section plain-list">
-    <h2 class="resume-template-renderer-section__title">Certifications</h2>
-    <div class="plain-list__items">
-      <span class="plain-list__item">Certification 1</span>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section entry-list">
-    <h2 class="resume-template-renderer-section__title">Benevolat</h2>
-    <div class="entry-list__item">
-      <span class="entry-list__title">Role</span>
-      <span class="entry-list__date">2023 - 2024</span>
-      <div class="entry-list__company-row">
-        <span class="entry-list__subtitle">Organisation</span><span class="entry-list__location">Ville</span>
-      </div>
-      <div class="entry-list__description">
-        <ul>
-          <li>Activite.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section languages">
-    <h2 class="resume-template-renderer-section__title">Langues</h2>
-    <div class="languages__items">
-      <div class="languages__item">
-        <span class="languages__name">Francais</span>
-        <span class="languages__description">Natif</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="resume-template-renderer-section plain-list">
-    <h2 class="resume-template-renderer-section__title">Centres d'interet</h2>
-    <div class="plain-list__items">
-      <span class="plain-list__item">Interet 1</span>
-    </div>
-  </section>
-
-</div>`;
-
-export const LETTRE_SKELETON = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Lettre de Motivation</title>
-  <style>
-    @page { size: A4; margin: 0; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Inter", "Helvetica", "Arial", sans-serif; font-size: 9.5pt; line-height: 1.6; color: #333; padding: 48px 58px 40px; }
-    .header { display: flex; justify-content: space-between; margin-bottom: 36px; }
-    .sender strong, .recipient strong { font-size: 10.5pt; color: #000; }
-    .sender p, .recipient p { margin-top: 2px; color: #555; font-size: 9pt; }
-    .recipient { text-align: left; }
-    .sender { text-align: right; }
-    .subject { font-weight: 600; font-size: 9.5pt; color: #000; margin-bottom: 24px; border-bottom: 2px solid #c9c6c1; padding-bottom: 8px; }
-    .salutation { margin-bottom: 16px; }
-    .body p { margin-bottom: 16px; text-align: justify; }
-    .closing { margin-top: 32px; }
-    .closing p { margin-bottom: 6px; }
-    .signature { margin-top: 24px; font-weight: 600; font-size: 10pt; color: #000; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="recipient">
-      <strong>A l'attention du responsable de recrutement</strong>
-      <p>Service ou contact</p>
-      <p>Adresse de l'entreprise</p>
-    </div>
-    <div class="sender">
-      <strong>Prenom Nom</strong>
-      <p>Titre du poste</p>
-      <p>Ville, Pays</p>
-      <p>+33 6 00 00 00 00</p>
-      <p>email@example.com</p>
-      <p style="margin-top: 16px;">Ville, le JJ mois AAAA</p>
-    </div>
-  </div>
-  <div class="subject">Objet : Candidature au poste de [Poste]</div>
-  <div class="salutation">Madame, Monsieur,</div>
-  <div class="body">
-    <p>Paragraphe d'introduction.</p>
-    <p>Paragraphe sur les competences et experiences.</p>
-    <p>Paragraphe de conclusion.</p>
-  </div>
-  <div class="closing">
-    <p>Je vous adresse mes sinceres salutations,</p>
-  </div>
-  <div class="signature">Prenom Nom</div>
-</body>
-</html>`;
-
-export const SYSTEM_CV_IMPORT =
-  "Tu reçois le contenu d'un CV (texte ou image). Remplis ce squelette HTML avec les données du CV fourni.\n\n" +
-  "RÈGLES — RESPECTE-LES À LA LETTRE :\n" +
-  "1. Conserve EXACTEMENT la structure HTML et toutes les classes CSS du squelette. Ne les modifie jamais.\n" +
-  "2. Remplace uniquement le contenu textuel par les données réelles du CV.\n" +
-  "3. Blocs répétables — inclus TOUS les éléments du CV, sans en omettre aucun :\n" +
-  "   • entry-list__item : un bloc par expérience, par diplôme, par projet, par activité bénévole\n" +
-  "     → Pour chaque diplôme/projet : inclus la description dans entry-list__description si présente dans le CV.\n" +
-  "     → Pour chaque expérience/bénévolat : inclus TOUTES les réalisations dans entry-list__description.\n" +
-  "   • plain-list__item : un <span> par compétence, par certification, par centre d'intérêt\n" +
-  "   • languages__item : un bloc par langue\n" +
-  "4. Si une section est absente du CV (pas de projets, pas de certifications, pas de bénévolat,\n" +
-  "   pas de centres d'intérêt, pas de résumé, pas de langues…), omets la section entière.\n" +
-  "5. Sous-éléments optionnels — si un sous-élément du squelette (entry-list__description, entry-list__company-row…)\n" +
-  "   n'a pas de contenu correspondant dans le CV, supprime entièrement cette balise.\n" +
-  "   Ne laisse jamais de balise vide ni de texte placeholder.\n" +
-  '6. N\'ajoute AUCUNE balise <style>, AUCUN attribut style inline (sauf style="background:#eee;" déjà présent).\n' +
-  "7. Laisse <!-- URL_DE_VOTRE_PHOTO_ICI --> exactement tel quel, sans le modifier.\n" +
-  "8. Retourne UNIQUEMENT le HTML rempli, sans balise markdown, sans commentaire, sans explication.\n\n" +
-  "Squelette à remplir :\n" +
-  CV_HTML_SKELETON;
-
-export const SYSTEM_LETTRE_IMPORT =
-  "Tu reçois le contenu d'une lettre de motivation (texte ou image). Remplis ce squelette HTML.\n\n" +
-  "RÈGLES — RESPECTE-LES À LA LETTRE :\n" +
-  "1. Conserve EXACTEMENT la structure HTML, toutes les classes CSS, et la balise <style> du squelette.\n" +
-  "2. Remplace uniquement le contenu textuel par les données réelles de la lettre.\n" +
-  "3. Ne modifie PAS les styles CSS.\n" +
-  "4. Retourne le document HTML COMPLET (DOCTYPE inclus), sans markdown, sans commentaire.\n\n" +
-  "Squelette à remplir :\n" +
-  LETTRE_SKELETON;
 
 // ---- règles de préservation / élagage ---------------------------------------
 
@@ -665,4 +470,26 @@ export const SYSTEM_TEXT_TO_RESUME =
   "- 'date' = la période telle qu'écrite (ex : 'Jan 2024 - Présent', '2020 - 2022').\n" +
   '- Si une information est absente, mets une chaîne vide "" (ou une liste vide).\n' +
   "- N'inclus PAS de photo.\n" +
+  "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
+
+
+export const SYSTEM_TEXT_TO_LETTER =
+  "Tu es un moteur d'extraction de lettre de motivation. Tu reçois le contenu texte brut d'une lettre " +
+  "(copié depuis un document Word, un PDF, etc.). " +
+  "Tu produis UNIQUEMENT un objet JSON structuré reprenant TOUTES les informations présentes.\n\n" +
+  "SCHÉMA JSON OBLIGATOIRE :\n" +
+  "{\n" +
+  '  "sender_name": "...", "sender_address": "...", "sender_contact": "...",\n' +
+  '  "date": "...",\n' +
+  '  "recipient_name": "...", "recipient_service": "...", "recipient_address": "...",\n' +
+  '  "subject": "...",\n' +
+  '  "greeting": "...",\n' +
+  '  "body": "...",\n' +
+  '  "signoff": "...",\n' +
+  '  "signature": "..."\n' +
+  "}\n\n" +
+  "RÈGLES :\n" +
+  "- N'invente RIEN : n'extrais que ce qui est réellement écrit dans le texte.\n" +
+  "- 'body' contient le corps principal de la lettre, avec des sauts de ligne (\\n) pour séparer les paragraphes.\n" +
+  '- Si une information est absente, mets une chaîne vide "".\n' +
   "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";

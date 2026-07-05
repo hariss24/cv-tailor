@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useDocStore } from "@/state/docStore";
-import { postJson, streamSse } from "@/lib/ai/client";
-import { normalizeResume, isEmptyResume } from "@/lib/resume/normalize";
-import type { Resume } from "@/lib/resume/schema";
+import { postJson } from "@/lib/ai/client";
+import { normalizeResume, isEmptyResume, normalizeLetter, isEmptyLetter } from "@/lib/resume/normalize";
+import type { Resume, Letter } from "@/lib/resume/schema";
 import { toast, uiConfirm } from "@/state/uiStore";
 import { useEscapeClose } from "@/lib/useEscapeClose";
 
@@ -43,18 +43,19 @@ export default function ImportTextModal({
       ))
     )
       return;
-    const { docType, setJson, setHtml, setCss } = useDocStore.getState();
+    const { docType, setJson } = useDocStore.getState();
     setBusy(true);
     try {
       if (docType === "Lettre") {
-        const html = await streamSse(
-          "/api/text-to-html",
-          { text: content, doc_type: docType },
-          (partial) => setHtml(partial),
-        );
-        setHtml(html);
-        setCss("");
-        toast("Texte converti avec succès.", "success");
+        const { letter: raw } = await postJson<{ letter: unknown }>("/api/text-to-letter", {
+          text: content,
+        });
+        const letter = normalizeLetter(raw);
+        if (isEmptyLetter(letter)) {
+          throw new Error("Extraction vide : aucune donnée exploitable dans ce texte.");
+        }
+        setJson(letter as Letter);
+        toast("Lettre importée dans le formulaire.", "success");
       } else {
         const { resume: raw } = await postJson<{ resume: unknown }>("/api/text-to-resume", {
           text: content,
