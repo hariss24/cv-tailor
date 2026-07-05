@@ -56,6 +56,8 @@
 
 ## Prochaine action
 
+⚠️ **LOOP ARRÊTÉ le 2026-07-05 (demande utilisateur : plus de tokens) — travail MANUEL
+désormais, ne PAS relancer de loop/ScheduleWakeup.** Reste à faire :
 **Phase 3 — exécuter le plan détaillé** `docs/superpowers/plans/2026-07-05-react-pdf-phase-3.md`
 (flux IA 100 % JSON : generate-pack → `Letter` JSON, editor-chat JSON, `text-to-letter`,
 Mode Expert → onglet JSON Monaco), task par task (TDD, vérifs, commit, journal).
