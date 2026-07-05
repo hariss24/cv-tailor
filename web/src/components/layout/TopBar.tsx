@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useDocStore } from "@/state/docStore";
+import { useDocStore, docEngine } from "@/state/docStore";
 import { DEFAULT_RESUME, type Resume, type Letter, type DocType } from "@/lib/resume/schema";
 import type { DocData } from "@/state/docStore";
+import { generateResumePdfBlob } from "@/lib/pdfgen/generatePdf";
 import { promptApiKey } from "@/lib/settings";
 import { toast, uiAlert, uiConfirm } from "@/state/uiStore";
 import { saveHistoryEntry } from "@/lib/storage/db";
@@ -68,26 +69,33 @@ export default function TopBar() {
 
   const onConvert = useCallback(async () => {
     if (busy) return;
-    const { html, css, atsBoost, company, role, htmlSource } = useDocStore.getState();
+    const { html, css, atsBoost, company, role, htmlSource, includeDate } = useDocStore.getState();
     const name = personNameFor(docType, json);
     const boostKeywords = atsBoost.enabled ? atsBoost.keywords : [];
+    const filename = buildFilename(name, docType, company, role, includeDate);
     setBusy(true);
     try {
-      const res = await fetch("/api/convert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html, css, filename: buildFilename(name, docType, company, role, useDocStore.getState().includeDate), boostKeywords }),
-      });
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({ error: "Échec de la conversion." }));
-        await uiAlert(error ?? "Échec de la conversion.", "Conversion PDF");
-        return;
+      let blob: Blob;
+      if (docEngine({ docType, templateId, htmlSource }) === "pdf") {
+        // Moteur react-pdf : le PDF est généré dans le navigateur — aucun appel serveur.
+        blob = await generateResumePdfBlob(json as Resume, "graphique", boostKeywords);
+      } else {
+        const res = await fetch("/api/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html, css, filename, boostKeywords }),
+        });
+        if (!res.ok) {
+          const { error } = await res.json().catch(() => ({ error: "Échec de la conversion." }));
+          await uiAlert(error ?? "Échec de la conversion.", "Conversion PDF");
+          return;
+        }
+        blob = await res.blob();
       }
-      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${buildFilename(name, docType, company, role, useDocStore.getState().includeDate)}.pdf`;
+      a.download = `${filename}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       toast("PDF téléchargé.", "success");
@@ -112,7 +120,7 @@ export default function TopBar() {
         templateId,
       });
     } catch {
-      await uiAlert("Impossible de joindre le serveur de conversion.", "Conversion PDF");
+      await uiAlert("Impossible de générer le PDF.", "Conversion PDF");
     } finally {
       setBusy(false);
     }
