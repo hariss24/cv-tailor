@@ -21,3 +21,14 @@ export async function generateResumePdfBlob(
     <ResumeDocument resume={resume} templateId={templateId} atsKeywords={atsKeywords} />,
   ).toBlob();
 }
+
+export async function generateLetterPdfBlob(
+  letter: import("@/lib/resume/schema").Letter,
+  atsKeywords: string[]
+): Promise<Blob> {
+  const [{ pdf }, { LetterDocument }] = await Promise.all([
+    import("@react-pdf/renderer"),
+    import("./LetterDocument"),
+  ]);
+  return pdf(<LetterDocument letter={letter} atsKeywords={atsKeywords} />).toBlob();
+}

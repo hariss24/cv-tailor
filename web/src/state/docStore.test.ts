@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useDocStore, docEngine } from "./docStore";
 import { DEFAULT_RESUME } from "@/lib/resume/schema";
 import { TEMPLATES } from "@/lib/resume/templates";
+import * as pdfGen from "@/lib/pdfgen/generatePdf";
 
 // Réinitialise le store avant chaque test (CV / sobre / défaut).
 beforeEach(() => {
@@ -33,10 +34,10 @@ describe("useDocStore", () => {
   });
 
   it("setTemplate change le css du document", () => {
-    useDocStore.getState().setTemplate("moderne");
+    useDocStore.getState().setTemplate("graphique");
     const s = useDocStore.getState();
-    expect(s.templateId).toBe("moderne");
-    expect(s.css).toBe(TEMPLATES.moderne.css);
+    expect(s.templateId).toBe("graphique");
+    expect(s.css).toBe(TEMPLATES.graphique.css);
   });
 
   it("setHtml et setCss écrasent directement (mode expert)", () => {
@@ -59,16 +60,16 @@ describe("useDocStore", () => {
   });
 });
 
-describe("docEngine", () => {
-  it("choisit react-pdf pour un CV en template graphique (json fiable)", () => {
-    expect(docEngine({ docType: "CV", templateId: "graphique", htmlSource: false })).toBe("pdf");
-    expect(docEngine({ docType: "Maître", templateId: "graphique", htmlSource: false })).toBe("pdf");
+describe("docStore (PDF Only)", () => {
+  it("ne contient plus les anciens templates", () => {
+    expect((TEMPLATES as any)["moderne"]).toBeUndefined();
+    expect((TEMPLATES as any)["classique"]).toBeUndefined();
+    expect((TEMPLATES as any)["minimal"]).toBeUndefined();
   });
+});
 
-  it("reste en HTML pour la Lettre, les templates non portés et le mode expert", () => {
-    expect(docEngine({ docType: "Lettre", templateId: "graphique", htmlSource: false })).toBe("html");
-    expect(docEngine({ docType: "CV", templateId: "sobre", htmlSource: false })).toBe("html");
-    // htmlSource : le HTML a été édité directement → json périmé, on n'en rend pas un PDF.
-    expect(docEngine({ docType: "CV", templateId: "graphique", htmlSource: true })).toBe("html");
+describe("generatePdf", () => {
+  it("exporte generateLetterPdfBlob", () => {
+    expect(pdfGen.generateLetterPdfBlob).toBeDefined();
   });
 });

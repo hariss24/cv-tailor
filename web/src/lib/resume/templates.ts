@@ -1,7 +1,7 @@
 // Templates HTML/CSS intégrés — port fidèle de TEMPLATES (static/js/app.js, l.70-409).
 // 5 modèles : sobre, moderne, classique, minimal, graphique. Chaque modèle = { html, css }.
 
-export type TemplateId = "sobre" | "moderne" | "classique" | "minimal" | "graphique";
+export type TemplateId = "sobre" | "graphique" | "kakuna";
 export type Template = { html: string; css: string };
 
 export const TEMPLATES = {
@@ -153,141 +153,8 @@ a { color: inherit; text-decoration: underline; }
 .resume-template-1.resume-template-renderer .languages .languages__items .languages__item .languages__description::before { content: "("; }
 .resume-template-1.resume-template-renderer .languages .languages__items .languages__item .languages__description::after { content: ")"; }`,
   },
-  moderne: {
-    html: `<header class="cv-head">
-  <!-- URL_DE_VOTRE_PHOTO_ICI -->
-  <h1>Prenom Nom</h1>
-  <p class="role">Titre du poste recherche</p>
-  <p class="contact">email@example.com &middot; +33 6 00 00 00 00 &middot; linkedin.com/in/profil &middot; Ville</p>
-</header>
-
-<section class="cv-section">
-  <h2>A propos</h2>
-  <p>Bref resume professionnel : 2 a 3 phrases qui presentent votre profil et ce que vous recherchez.</p>
-</section>
-
-<section class="cv-section">
-  <h2>Experience</h2>
-  <div class="job">
-    <div class="job-head">
-      <span><strong>Poste occupe</strong> &middot; Entreprise</span>
-      <span class="date">Jan 2024 - Present</span>
-    </div>
-    <ul>
-      <li>Realisation marquante avec metrique chiffree.</li>
-      <li>Autre realisation pertinente pour le poste vise.</li>
-    </ul>
-  </div>
-  <div class="job">
-    <div class="job-head">
-      <span><strong>Poste precedent</strong> &middot; Autre entreprise</span>
-      <span class="date">2022 - 2023</span>
-    </div>
-    <ul>
-      <li>Description courte de la mission.</li>
-    </ul>
-  </div>
-</section>
-
-<section class="cv-section">
-  <h2>Formation</h2>
-  <div class="job">
-    <div class="job-head">
-      <span><strong>Diplome</strong> &middot; Etablissement</span>
-      <span class="date">2020 - 2022</span>
-    </div>
-  </div>
-</section>
-
-<section class="cv-section">
-  <h2>Competences</h2>
-  <ul class="skills">
-    <li>JavaScript</li><li>TypeScript</li><li>Python</li><li>React</li><li>Node.js</li><li>SQL</li>
-  </ul>
-</section>`,
-    css: `@page { size: A4; margin: 0; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1e293b; line-height: 1.4; font-size: 9.5pt; padding: 12mm 14mm; }
-h1 { color: #2563eb; font-size: 18pt; font-weight: 700; margin-bottom: 2px; }
-.role { color: #475569; font-size: 10.5pt; margin-bottom: 4px; }
-.contact { color: #64748b; font-size: 9pt; }
-.cv-head { padding-bottom: 8px; border-bottom: 2px solid #2563eb; margin-bottom: 10px; }
-.cv-section { margin-bottom: 10px; }
-.cv-section h2 { color: #2563eb; font-size: 11pt; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.6px; }
-.cv-section p { margin-bottom: 4px; }
-.job { margin-bottom: 8px; }
-.job-head { display: flex; justify-content: space-between; margin-bottom: 2px; }
-.date { color: #94a3b8; font-weight: 400; font-size: 9pt; }
-.job ul { list-style: disc; padding-left: 16px; }
-.job ul li { margin-bottom: 2px; }
-ul.skills { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-ul.skills li { background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 12px; font-size: 9pt; font-weight: 500; }`,
-  },
-  minimal: {
-    html: `<!-- URL_DE_VOTRE_PHOTO_ICI -->
-<h1>Prenom Nom</h1>
-<p class="meta">Titre du poste &middot; email@example.com &middot; +33 6 00 00 00 00</p>
-
-<h2>Experience</h2>
-<p><strong>Poste occupe</strong>, Entreprise &mdash; Jan 2024 - Present</p>
-<p>Description courte de ce que vous avez accompli.</p>
-
-<p><strong>Poste precedent</strong>, Autre entreprise &mdash; 2022 - 2023</p>
-<p>Autre description courte.</p>
-
-<h2>Formation</h2>
-<p><strong>Diplome</strong>, Etablissement &mdash; 2020 - 2022</p>
-
-<h2>Competences</h2>
-<p>Competence 1, Competence 2, Competence 3, Competence 4, Competence 5.</p>`,
-    css: `@page { size: A4; margin: 0; }
-body { font: 10pt/1.4 Georgia, "Times New Roman", serif; color: #222; padding: 16mm; }
-h1 { font-size: 18pt; font-weight: normal; margin: 0 0 2px; }
-h2 { font-size: 12pt; font-weight: normal; margin: 12px 0 4px; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
-p { margin: 0 0 4px; }
-.meta { color: #666; margin-bottom: 12px; }
-strong { font-weight: 600; }`,
-  },
 } as unknown as Record<TemplateId, Template>;
 
-// Modèle « Moderne » : même structure que « sobre » (donc mêmes données rendues),
-// avec une variante visuelle (accent bleu, titres colorés). Réutilise le CSS sobre
-// + un bloc d'overrides ciblant les mêmes classes, pour zéro risque structurel.
-TEMPLATES.moderne = {
-  html: TEMPLATES.sobre.html,
-  css: TEMPLATES.sobre.css + `
-
-/* === Modele Moderne (overrides) === */
-:root { --resume-template-customization-color: #2563eb; }
-.resume-template-1.resume-template-renderer .resume-template-renderer-section .resume-template-renderer-section__title { color: #2563eb; font-weight: 700; }
-.resume-template-1.resume-template-renderer .personal-data .personal-data__name { color: #1e3a8a; }
-.resume-template-1.resume-template-renderer .personal-data .personal-data__desired-job-title { color: #2563eb; }`,
-};
-
-// Modèle « Classique » : serif élégant, accent brun sobre. Même structure que sobre.
-TEMPLATES.classique = {
-  html: TEMPLATES.sobre.html,
-  css: TEMPLATES.sobre.css + `
-
-/* === Modele Classique (overrides) === */
-:root { --resume-template-customization-color: #7a5c3e; }
-.resume-template-1.resume-template-renderer { font-family: Georgia, "Times New Roman", serif; }
-.resume-template-1.resume-template-renderer .resume-template-renderer-section .resume-template-renderer-section__title { color: #5a3e28; letter-spacing: 1px; }
-.resume-template-1.resume-template-renderer .personal-data .personal-data__name { color: #2a2a2a; }
-.resume-template-1.resume-template-renderer .personal-data .personal-data__desired-job-title { color: #5a3e28; }`,
-};
-
-// Modèle « Minimal » : épuré, sans bordures de section, titres discrets. Même structure que sobre.
-TEMPLATES.minimal = {
-  html: TEMPLATES.sobre.html,
-  css: TEMPLATES.sobre.css + `
-
-/* === Modele Minimal (overrides) === */
-.resume-template-1.resume-template-renderer .resume-template-renderer-section { border-top: none; padding-top: 14px; }
-.resume-template-1.resume-template-renderer .resume-template-renderer-section .resume-template-renderer-section__title { color: #999; letter-spacing: 2px; font-weight: 400; }
-.resume-template-1.resume-template-renderer .personal-data .personal-data__name { color: #111; }
-.resume-template-1.resume-template-renderer .personal-data .personal-data__desired-job-title { color: #666; }`,
-};
 
 // Modèle « Graphique » : inspiré du CV de Hariss (Timeline, en-tête flex)
 TEMPLATES.graphique = {
@@ -343,6 +210,12 @@ TEMPLATES.graphique = {
 .resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__description { color: #555 !important; display: inline !important; }
 .resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__description::before { content: " : " !important; }
 .resume-template-1.resume-template-renderer .section-languages .languages__items .languages__item .languages__description::after { content: "" !important; }`,
+};
+
+// Modèle « Kakuna » : port de Reactive Resume
+TEMPLATES.kakuna = {
+  html: TEMPLATES.sobre.html,
+  css: TEMPLATES.sobre.css,
 };
 
 export const TEMPLATE_IDS = Object.keys(TEMPLATES) as TemplateId[];

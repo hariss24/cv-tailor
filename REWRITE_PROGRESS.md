@@ -1,4 +1,4 @@
-﻿# Suivi des chantiers â€” cv-tailor (loop autonome)
+# Suivi des chantiers â€” cv-tailor (loop autonome)
 
 > Fichier d'Ã©tat du `/loop` autonome. **Toute session reprend ici.**
 
@@ -56,9 +56,8 @@
 
 ## Prochaine action
 
-âš ï¸ **LOOP ARRÃŠTÃ‰**
-**Phase 3 terminÃ©e.**
-Prochaine Ã©tape: **Phase 4 â€” Porter Sobre, Moderne, Classique, Minimal**.
+🚧 **Phase 5 en cours**
+Prochaine étape: **Phase 5 Task 2 — Refactorisation TopBar (Export)**.
 
 ## Blocages (migration React PDF)
 
@@ -279,6 +278,13 @@ Sauvegardes conservÃ©es : branche `gemini-backup-committed` (= bb5265d) et sta
 VÃ©rifiÃ© : Toolbar restaurÃ©, ClientLayout supprimÃ©, `tsc` OK, **144 tests Vitest verts**.
 
 ## Journal
+
+### 2026-07-06 : Phase 5 Task 1 (Nettoyage)
+- **Quoi :** Suppression de la logique conditionnelle `docEngine` dans `docStore.ts`, suppression des templates HTML inutilisés (`moderne`, `classique`, `minimal`), et ajout de l'export `generateLetterPdfBlob` via react-pdf.
+- **Pourquoi :** Amorçage de la suppression du moteur HTML (Phase 5) en forçant un usage orienté PDF au niveau du store.
+- **Fichiers touchés :** `web/src/state/docStore.ts`, `web/src/lib/resume/templates.ts`, `web/src/lib/pdfgen/generatePdf.tsx`, `web/src/state/docStore.test.ts`.
+- **Résultat vérifs :** Tests Vitest verts, typage OK.
+
 
 ### 2026-07-05 : Migration editor-chat (Phase 3)
 - Remplacement des flux HTML/CSS par des flux `doc_json` (Resume ou Letter).
