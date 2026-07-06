@@ -15,7 +15,7 @@ describe("useDocStore", () => {
     const s = useDocStore.getState();
     expect(s.docType).toBe("CV");
     expect(s.templateId).toBe("sobre");
-    expect(s.html).toContain(DEFAULT_RESUME.name);
+    expect(s.html).toBe("");
     expect(s.css).toBe(TEMPLATES.sobre.css);
   });
 
@@ -23,14 +23,14 @@ describe("useDocStore", () => {
     useDocStore.getState().setJson({ ...DEFAULT_RESUME, name: "Zoé Test" });
     const s = useDocStore.getState();
     expect((s.json as { name: string }).name).toBe("Zoé Test");
-    expect(s.html).toContain("Zoé Test");
+    expect(s.html).toBe("");
   });
 
   it("setDocType bascule vers Lettre et rend le markup de lettre", () => {
     useDocStore.getState().setDocType("Lettre");
     const s = useDocStore.getState();
     expect(s.docType).toBe("Lettre");
-    expect(s.html).toContain("Objet :");
+    expect(s.html).toBe("");
   });
 
   it("setTemplate change le css du document", () => {

@@ -15,14 +15,16 @@ test("la page charge sans erreur console", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.getByText("CV Tailor")).toBeVisible();
-  // Laisse le rendu/aperçu initial se stabiliser.
-  await expect(page.locator(".preview-frame")).toBeVisible();
+  // Laisse le rendu/aperçu initial se stabiliser (sobre est PDF par défaut).
+  await expect(page.getByTestId("pdf-preview").locator("canvas").first()).toBeVisible({ timeout: 15000 });
 
   expect(errors, errors.join("\n")).toEqual([]);
 });
 
 test("saisir un nom met à jour l'aperçu", async ({ page }) => {
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
 
   const nameInput = page
     .locator(".form-field", { hasText: "Nom complet" })
@@ -49,6 +51,8 @@ test("basculer CV → Lettre change le document", async ({ page }) => {
 
 test("le Mode Expert affiche l'éditeur Monaco (onglet JSON) et l'édition synchronise le formulaire et l'aperçu", async ({ page }) => {
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
 
   // Saisir un nom de base
   const nameInput = page.locator(".form-field", { hasText: "Nom complet" }).locator(".form-input");

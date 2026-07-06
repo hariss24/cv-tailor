@@ -36,6 +36,8 @@ test("l'ATS affiche un score local puis un score IA", async ({ page }) => {
 
 test("le booster ATS injecte des mots-clés invisibles dans l'aperçu", async ({ page }) => {
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
   await page.getByRole("button", { name: "Adapter à une offre" }).click();
   await page
     .locator("#job-desc-input")

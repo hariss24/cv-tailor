@@ -9,7 +9,8 @@ import { readFileSync } from "node:fs";
 
 test("le template Graphique bascule l'aperçu sur le moteur PDF", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".preview-frame")).toBeVisible();
+  // Since sobre is default and is PDF, it's pdf-preview
+  await expect(page.getByTestId("pdf-preview").locator("canvas").first()).toBeVisible({ timeout: 15000 });
 
   await page.locator(".toolbar-select").selectOption("graphique");
   const preview = page.getByTestId("pdf-preview");
@@ -17,8 +18,8 @@ test("le template Graphique bascule l'aperçu sur le moteur PDF", async ({ page 
   await expect(preview.locator("canvas").first()).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".page-badge")).toHaveText(/1 page/);
 
-  // Retour à un template non porté : l'iframe HTML reprend la main.
-  await page.locator(".toolbar-select").selectOption("sobre");
+  // Retour à un template non porté (ex. moderne) : l'iframe HTML reprend la main.
+  await page.locator(".toolbar-select").selectOption("moderne");
   await expect(page.locator(".preview-frame")).toBeVisible();
   await expect(preview).toHaveCount(0);
 });

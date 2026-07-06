@@ -6,7 +6,7 @@ import {
   type Letter,
   type DocType,
 } from "@/lib/resume/schema";
-import { renderResume, renderLetter } from "@/lib/resume/render";
+
 import { TEMPLATES, type TemplateId } from "@/lib/resume/templates";
 
 /**
@@ -47,12 +47,7 @@ export type Doc = {
   includeDate: boolean;
 };
 
-/** Rend le HTML d'un document selon son type. */
-function renderDoc(docType: DocType, json: DocData): string {
-  return docType === "Lettre"
-    ? renderLetter(json as Letter)
-    : renderResume(json as Resume);
-}
+
 
 /** JSON par défaut pour un type de document (Lettre → lettre, sinon CV). */
 export function defaultJsonFor(docType: DocType): DocData {
@@ -78,13 +73,13 @@ export type DocStore = Doc & {
 
 const INITIAL_TEMPLATE: TemplateId = "sobre";
 
-export const useDocStore = create<DocStore>((set, get) => ({
+export const useDocStore = create<DocStore>((set) => ({
   docType: "CV",
   company: "",
   role: "",
   templateId: INITIAL_TEMPLATE,
   json: structuredClone(DEFAULT_RESUME),
-  html: renderResume(DEFAULT_RESUME),
+  html: "",
   css: TEMPLATES[INITIAL_TEMPLATE].css,
   htmlSource: false,
   previewOverride: null,
@@ -93,7 +88,9 @@ export const useDocStore = create<DocStore>((set, get) => ({
   pendingJobDesc: null,
   includeDate: typeof window !== "undefined" ? localStorage.getItem("pdfIncludeDate") === "true" : false,
 
-  setJson: (json) => set({ json, html: renderDoc(get().docType, json), htmlSource: false }),
+  setJson: (json) => {
+    set({ json, html: "", htmlSource: false });
+  },
   setHtml: (html) => set({ html, htmlSource: true }),
   setCss: (css) => set({ css }),
   setCompany: (company) => set({ company }),
@@ -109,7 +106,7 @@ export const useDocStore = create<DocStore>((set, get) => ({
 
   setDocType: (docType) => {
     const json = defaultJsonFor(docType);
-    set({ docType, json, html: renderDoc(docType, json), htmlSource: false });
+    set({ docType, json, html: "", htmlSource: false });
   },
 
   setTemplate: (templateId) => set({ templateId, css: TEMPLATES[templateId].css }),

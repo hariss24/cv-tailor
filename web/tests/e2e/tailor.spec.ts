@@ -22,6 +22,8 @@ test("adapter à une offre met à jour l'aperçu", async ({ page }) => {
   });
 
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
   await page.getByRole("button", { name: "Adapter à une offre" }).click();
   await page
     .locator("#job-desc-input")

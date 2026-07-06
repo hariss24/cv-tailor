@@ -2,8 +2,9 @@ import type { Resume } from "@/lib/resume/schema";
 import { registerPdfFonts } from "./fonts";
 import { GraphiqueTemplate } from "./templates/GraphiqueTemplate";
 import { SobreTemplate } from "./templates/SobreTemplate";
+import { KakunaTemplate } from "./templates/KakunaTemplate";
 
-export type PdfTemplateId = "graphique" | "sobre" | "moderne" | "classique" | "minimal";
+export type PdfTemplateId = "graphique" | "sobre" | "moderne" | "classique" | "minimal" | "kakuna";
 
 export function ResumeDocument({
   resume,
@@ -19,6 +20,8 @@ export function ResumeDocument({
   switch (templateId) {
     case "sobre":
       return <SobreTemplate resume={resume} atsKeywords={atsKeywords} />;
+    case "kakuna":
+      return <KakunaTemplate resume={resume} atsKeywords={atsKeywords} />;
     case "graphique":
     default:
       return <GraphiqueTemplate resume={resume} atsKeywords={atsKeywords} />;

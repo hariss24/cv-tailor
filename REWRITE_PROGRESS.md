@@ -57,7 +57,7 @@
 ## Prochaine action
 
 🚧 **Phase 5 en cours**
-Prochaine étape: **Phase 5 Task 4 — Nettoyage PackModal et DiffModal**.
+Prochaine étape: **Phase 5 Task 5 — Suppression du code serveur et des dépendances inutiles**.
 
 ## Blocages (migration React PDF)
 
@@ -278,6 +278,12 @@ Sauvegardes conservÃ©es : branche `gemini-backup-committed` (= bb5265d) et sta
 VÃ©rifiÃ© : Toolbar restaurÃ©, ClientLayout supprimÃ©, `tsc` OK, **144 tests Vitest verts**.
 
 ## Journal
+
+### 2026-07-06 : Phase 5 Task 4 (Modales Pack et Diff)
+- **Quoi :** Remplacement des iframes HTML par `<PdfPreview>` dans `PackModal.tsx` et `DiffModal.tsx`. Le store Zustand stocke désormais le JSON (au lieu du HTML) pour `tailorBefore`. Nettoyage des vieux templates HTML dans `EditorPane.tsx`.
+- **Pourquoi :** Fin de la dépendance au HTML sandboxé pour les modales IA, et uniformisation sur le moteur de rendu react-pdf natif.
+- **Fichiers touchés :** `PackModal.tsx`, `DiffModal.tsx`, `TailorModal.tsx`, `docStore.ts`, `EditorPane.tsx`, `export.spec.ts`.
+- **Résultat vérifs :** Tests Vitest et e2e verts.
 
 ### 2026-07-06 : Phase 5 Task 2 et Task 3 (Refactorisation TopBar et PreviewPane)
 - **Quoi :** Refactorisation de `TopBar.tsx` pour générer le PDF de la Lettre et du CV directement côté client via react-pdf (suppression du fallback `/api/convert`). Refactorisation de `PreviewPane.tsx` pour n'utiliser que `<PdfPreview>` et supprimer l'iframe HTML. Ajout du test E2E `export.spec.ts`.

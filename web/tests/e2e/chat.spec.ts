@@ -31,6 +31,8 @@ test("le chat applique une proposition JSON à l'aperçu", async ({ page }) => {
   });
 
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
   await page.getByRole("button", { name: "Assistant IA" }).click();
 
   await page.locator(".chat-input").fill("Rends le titre plus percutant");

@@ -93,6 +93,11 @@ export function KakunaSectionTitle({ children }: { children: string }) {
   );
 }
 
+const kakunaTheme = {
+  ...defaultTheme,
+  accent: "#f97316", // orange
+};
+
 export function KakunaTemplate({
   resume,
   atsKeywords,
@@ -114,7 +119,7 @@ export function KakunaTemplate({
   const contacts = [d.location, d.email, d.phone, d.linkedin].filter((c) => t(c));
 
   return (
-    <ThemeContext.Provider value={defaultTheme}>
+    <ThemeContext.Provider value={kakunaTheme}>
       <Document>
         <Page size="A4" style={s.page}>
           <View style={s.header}>
@@ -141,7 +146,7 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {exp.length ? (
+          {exp.length > 0 ? (
             <View style={s.section}>
               <KakunaSectionTitle>EXPÉRIENCES</KakunaSectionTitle>
               {exp.map((e: ExperienceItem, i) => (
@@ -162,7 +167,7 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {edu.length ? (
+          {edu.length > 0 ? (
             <View style={s.section}>
               <KakunaSectionTitle>FORMATIONS</KakunaSectionTitle>
               {edu.map((e: EducationItem, i) => (
@@ -180,7 +185,7 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {skills.length ? (
+          {skills.length > 0 ? (
             <View style={s.section}>
               <KakunaSectionTitle>COMPÉTENCES</KakunaSectionTitle>
               <View style={{ paddingLeft: px(15) }}>
@@ -196,7 +201,7 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {projects.length ? (
+          {projects.length > 0 ? (
             <View style={s.section}>
               <KakunaSectionTitle>PROJETS</KakunaSectionTitle>
               {projects.map((p: ProjectItem, i) => (
@@ -213,7 +218,7 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {certs.length ? (
+          {certs.length > 0 ? (
             <View style={s.section}>
               <KakunaSectionTitle>CERTIFICATIONS</KakunaSectionTitle>
               <View style={{ paddingLeft: px(15) }}>
@@ -227,7 +232,7 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {volunteer.length ? (
+          {volunteer.length > 0 ? (
             <View style={s.section}>
               <KakunaSectionTitle>BÉNÉVOLAT</KakunaSectionTitle>
               {volunteer.map((v: VolunteerItem, i) => (
@@ -247,9 +252,9 @@ export function KakunaTemplate({
             </View>
           ) : null}
 
-          {langs.length || interests.length ? (
+          {langs.length > 0 || interests.length > 0 ? (
             <View style={s.twoCols}>
-              {langs.length ? (
+              {langs.length > 0 ? (
                 <View style={s.col}>
                   <KakunaSectionTitle>LANGUES</KakunaSectionTitle>
                   <View style={{ paddingLeft: px(15) }}>
@@ -265,8 +270,8 @@ export function KakunaTemplate({
                   </View>
                 </View>
               ) : null}
-              {langs.length && interests.length ? <View style={s.colSpacer} /> : null}
-              {interests.length ? (
+              {langs.length > 0 && interests.length > 0 ? <View style={s.colSpacer} /> : null}
+              {interests.length > 0 ? (
                 <View style={s.col}>
                   <KakunaSectionTitle>{"CENTRES D'INTÉRÊT"}</KakunaSectionTitle>
                   <View style={{ paddingLeft: px(15) }}>

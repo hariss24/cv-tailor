@@ -21,6 +21,8 @@ test("l'import PDF rend les pages et peuple le CV depuis la réponse IA", async 
   });
 
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
   await page.getByRole("button", { name: "Importer un PDF" }).click();
   await page.locator(".import-modal .import-file").setInputFiles("tests/e2e/fixtures/sample.pdf");
 

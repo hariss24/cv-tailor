@@ -16,6 +16,8 @@ test("l'import texte remplit le formulaire et l'aperçu depuis un CV JSON", asyn
   });
 
   await page.goto("/");
+  // Switch to HTML template to test text visibility
+  await page.locator(".toolbar-select").selectOption("moderne");
   // L'import texte vit sous Mode Expert → onglet « Importer ».
   await page.getByRole("button", { name: "Mode Expert" }).click();
   await page.locator(".expert-tabs").getByRole("button", { name: "Importer" }).click();

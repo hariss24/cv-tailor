@@ -181,7 +181,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {exp.length ? (
+          {exp.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionTitle}>EXPÉRIENCES</Text>
               {exp.map((e: ExperienceItem, i) => (
@@ -203,7 +203,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {edu.length ? (
+          {edu.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionTitle}>FORMATIONS</Text>
               {edu.map((e: EducationItem, i) => (
@@ -222,7 +222,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {skills.length ? (
+          {skills.length > 0 ? (
             <View style={s.section}>
               <View style={s.flexRow}>
                 <View style={s.leftCol}>
@@ -241,7 +241,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {projects.length ? (
+          {projects.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionTitle}>PROJETS</Text>
               {projects.map((p: ProjectItem, i) => (
@@ -259,7 +259,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {certs.length ? (
+          {certs.length > 0 ? (
             <View style={s.section}>
               <View style={s.flexRow}>
                 <View style={s.leftCol}>
@@ -276,7 +276,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {volunteer.length ? (
+          {volunteer.length > 0 ? (
             <View style={s.section}>
               <Text style={s.sectionTitle}>BÉNÉVOLAT</Text>
               {volunteer.map((v: VolunteerItem, i) => (
@@ -297,7 +297,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {langs.length ? (
+          {langs.length > 0 ? (
             <View style={s.section}>
               <View style={s.flexRow}>
                 <View style={s.leftCol}>
@@ -317,7 +317,7 @@ export function SobreTemplate({
             </View>
           ) : null}
 
-          {interests.length ? (
+          {interests.length > 0 ? (
             <View style={s.section}>
               <View style={s.flexRow}>
                 <View style={s.leftCol}>

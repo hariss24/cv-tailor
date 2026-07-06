@@ -104,7 +104,7 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {exp.length ? (
+          {exp.length > 0 ? (
             <View style={s.section}>
               <SectionTitle>EXPÉRIENCES</SectionTitle>
               {exp.map((e: ExperienceItem, i) => (
@@ -125,7 +125,7 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {edu.length ? (
+          {edu.length > 0 ? (
             <View style={s.section}>
               <SectionTitle>FORMATIONS</SectionTitle>
               {edu.map((e: EducationItem, i) => (
@@ -143,7 +143,7 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {skills.length ? (
+          {skills.length > 0 ? (
             <View style={s.skillsSection}>
               <SectionTitle>COMPÉTENCES</SectionTitle>
               <View style={{ paddingLeft: px(15) }}>
@@ -159,7 +159,7 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {projects.length ? (
+          {projects.length > 0 ? (
             <View style={s.section}>
               <SectionTitle>PROJETS</SectionTitle>
               {projects.map((p: ProjectItem, i) => (
@@ -176,7 +176,7 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {certs.length ? (
+          {certs.length > 0 ? (
             <View style={[s.section, { marginBottom: px(10) }]}>
               <SectionTitle>CERTIFICATIONS</SectionTitle>
               <View style={{ paddingLeft: px(15) }}>
@@ -190,7 +190,7 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {volunteer.length ? (
+          {volunteer.length > 0 ? (
             <View style={s.section}>
               <SectionTitle>BÉNÉVOLAT</SectionTitle>
               {volunteer.map((v: VolunteerItem, i) => (
@@ -210,9 +210,9 @@ export function GraphiqueTemplate({
             </View>
           ) : null}
 
-          {langs.length || interests.length ? (
+          {langs.length > 0 || interests.length > 0 ? (
             <View style={s.twoCols}>
-              {langs.length ? (
+              {langs.length > 0 ? (
                 <View style={s.col}>
                   <SectionTitle>LANGUES</SectionTitle>
                   <View style={{ paddingLeft: px(15) }}>
@@ -228,8 +228,8 @@ export function GraphiqueTemplate({
                   </View>
                 </View>
               ) : null}
-              {langs.length && interests.length ? <View style={s.colSpacer} /> : null}
-              {interests.length ? (
+              {langs.length > 0 && interests.length > 0 ? <View style={s.colSpacer} /> : null}
+              {interests.length > 0 ? (
                 <View style={s.col}>
                   <SectionTitle>{"CENTRES D'INTÉRÊT"}</SectionTitle>
                   <View style={{ paddingLeft: px(15) }}>
