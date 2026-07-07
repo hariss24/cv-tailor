@@ -1,3 +1,7 @@
+> **⚠️ ARCHIVÉ (2026-07-07)** : ce fichier est figé, ne plus y écrire. Le journal
+> actif est désormais `WORK_HISTORY.md` (racine du repo) ; ce document reste comme
+> détail historique exhaustif des réécritures Next.js et React PDF.
+
 # Suivi des chantiers â€” cv-tailor (loop autonome)
 
 > Fichier d'Ã©tat du `/loop` autonome. **Toute session reprend ici.**

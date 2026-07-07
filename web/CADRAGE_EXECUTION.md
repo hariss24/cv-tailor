@@ -42,10 +42,12 @@
 10. **Git : commit local par task autorisé** (message clair, en français, une task = un
     commit). **PUSH STRICTEMENT INTERDIT** : un push déploie la production Vercel.
     Le push est fait par l'humain ou l'agent de revue, jamais par toi.
-11. **Journal obligatoire** : après chaque task, ajoute une entrée datée dans la
-    section `## Journal` de `REWRITE_PROGRESS.md` (racine du repo) : quoi, pourquoi,
-    fichiers touchés, résultat des vérifs. Tu ne modifies RIEN d'autre dans ce
-    fichier, sauf la ligne « Prochaine action » de la section « CHANTIER EN COURS ».
+11. **Journal obligatoire** : après chaque task, ajoute une entrée datée en tête de
+    la section `## Journal` de `WORK_HISTORY.md` (racine du repo) : quoi, pourquoi,
+    fichiers touchés, résultat des vérifs. Mets aussi à jour la ligne « Prochaine
+    étape suggérée » de sa section « État actuel ». Tu ne modifies rien d'autre
+    dans ce fichier. (`docs/archive/REWRITE_PROGRESS.md` est l'archive figée des
+    réécritures passées — ne plus y écrire.)
 12. **La photo de profil (`photo`, base64) n'est JAMAIS envoyée à une IA** ni affichée
     brute dans un éditeur : strip avant envoi, restauration au retour (helpers dans
     `src/lib/ai/base64.ts` et flux existants à imiter).
@@ -76,8 +78,9 @@
 
 Dans cet ordre :
 1. Ce cadrage, en entier.
-2. `REWRITE_PROGRESS.md` — UNIQUEMENT la section « 🚧 CHANTIER EN COURS » (règles,
-   état des phases, « Prochaine action ») + les 5 dernières entrées du Journal.
+2. `WORK_HISTORY.md` (racine) — la section « État actuel » + les 5 dernières
+   entrées du Journal. Pour le détail exhaustif des réécritures passées (Next.js,
+   React PDF), voir `docs/archive/REWRITE_PROGRESS.md` si besoin.
 3. Le document de cadrage du chantier s'il est cité par le plan (ex.
    `docs/superpowers/plans/2026-07-04-migration-react-pdf.md`).
 4. **Le plan de la mission** (chemin en tête de ce document), en entier.
@@ -128,7 +131,7 @@ Pour chaque task du plan :
 - Critères du plan : [x] / [ ] (chaque point de la task)
 - tsc / lint / vitest / build / e2e : OK ou KO (+ extrait si KO)
 - Commit : <hash + message>
-- Journal REWRITE_PROGRESS.md : fait [x]
+- Journal WORK_HISTORY.md : fait [x]
 ```
 
 Puis une section « Points sur lesquels je me suis arrêté pour demander » (même vide).
