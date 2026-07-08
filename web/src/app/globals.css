@@ -4,12 +4,16 @@
 :root {
   --bg:            #E0E5EC;
   --text:          #4A5568;
-  --muted:         #8794A8;
-  --faint:         #B0BBC9;
+  --muted:         #566274;
+  --faint:         #5D6875;
   --orange:        #E85D04;
   --orange2:       #F07030;
   --orange-hover:  #C94E03;
-  --link:          #E85D04;
+  /* Orange utilisé comme couleur de TEXTE : version assombrie pour tenir
+     4.5:1 sur --bg clair (l'orange vif ne sert qu'en fond). */
+  --orange-text:   #A84402;
+  --on-orange:     #201200;
+  --link:          #A84402;
   --border:        rgba(0,0,0,0.04);
 
   --neu-raised:     -1.4px -1.4px 11px rgba(255,255,255,0.50), 1.8px 1.8px 13px rgba(163,177,198,0.99);
@@ -18,7 +22,7 @@
   --neu-inset:      inset -0.9px -0.9px 6px rgba(255,255,255,0.48), inset 1.1px 1.1px 8px rgba(163,177,198,1.0);
   --neu-inset-deep: inset -1.4px -1.4px 11px rgba(255,255,255,0.48), inset 1.8px 1.8px 13px rgba(163,177,198,1.0);
 
-  --success:       #2E7D32;
+  --success:       #256D2A;
   --warning:       #BF5000;
   --error:         #C62828;
   --blue:          #1565C0;
@@ -30,12 +34,14 @@
 [data-theme="dark"] {
   --bg:            #1E2228;
   --text:          #C9D1DB;
-  --muted:         #7A8494;
-  --faint:         #5A6271;
+  --muted:         #8C96A6;
+  --faint:         #828C9B;
   --orange:        #F07030;
   --orange2:       #F58A4A;
   --orange-hover:  #E85D04;
-  --link:          #F07030;
+  --orange-text:   #F58A4A;
+  --on-orange:     #201200;
+  --link:          #F58A4A;
   --border:        rgba(0,0,0,0.10);
 
   --neu-raised:     -4px -4px 11px rgba(255,255,255,0.05), 5px 5px 13px rgba(0,0,0,0.55);
@@ -120,6 +126,7 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
 .btn-orange {
   background: var(--orange);
   color: #fff;
+  font-weight: 600;
 }
 .btn-orange:hover {
   background: var(--orange-hover);
@@ -146,10 +153,10 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
   position: relative; z-index: 2; width: 34px; height: 32px;
   display: grid; place-items: center; transition: color 250ms; pointer-events: none;
 }
-.toggle-sun  { color: var(--orange); }
+.toggle-sun  { color: var(--orange-text); }
 .toggle-moon { color: var(--muted); }
 [data-theme="dark"] .toggle-sun  { color: var(--muted); }
-[data-theme="dark"] .toggle-moon { color: var(--orange); }
+[data-theme="dark"] .toggle-moon { color: var(--orange-text); }
 .toggle-knob {
   position: absolute; width: 28px; height: 28px; border-radius: 999px;
   background: var(--bg); box-shadow: var(--neu-raised-sm);
@@ -165,6 +172,8 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
 @media (max-width: 1180px) {
   .topbar .btn-nav, .topbar #btn-theme, .topbar #btn-settings { padding: 6px 10px; font-size: 12px; }
 }
+
+.meta-checkbox { accent-color: var(--orange); width: 14px; height: 14px; cursor: pointer; }
 
 /* ---- Toolbar ---- */
 .toolbar {
@@ -239,12 +248,18 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .pane.editor-pane { box-shadow: var(--neu-inset-deep); flex: 0 0 50%; }
 .pane.preview-pane { box-shadow: var(--neu-raised-lg); flex: 1 1 50%; }
 @media (max-width: 900px) {
+  /* Sur desktop la page ne défile jamais (panneaux internes scrollables) ; en
+     colonne mobile le contenu dépasse l'écran, donc on rend le défilement
+     vertical de la page à html/body. */
+  html, body { height: auto; overflow-x: hidden; overflow-y: auto; }
   .wrap { height: auto; min-height: 100vh; }
   .split { flex-direction: column; }
   .pane.editor-pane, .pane.preview-pane { flex: 1 1 auto; }
-  /* L'aperçu ne doit pas s'écraser (~150px) en colonne : hauteur minimale lisible. */
-  .pane.preview-pane { min-height: 70vh; }
+  /* La hauteur suit la page rendue ; plancher pour l'état vide seulement. */
+  .pane.preview-pane { min-height: 320px; }
 }
+/* Le reste des règles mobiles vit en FIN de fichier : à spécificité égale,
+   elles doivent venir après les règles de base pour les surcharger. */
 .pane-title {
   background: var(--bg);
   color: var(--muted);
@@ -290,7 +305,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .ui-toast__message { flex: 1; }
 .ui-toast__action {
   flex-shrink: 0; background: none; border: none; cursor: pointer;
-  color: var(--orange); font-weight: 700; font-size: 13px; padding: 2px 4px;
+  color: var(--orange-text); font-weight: 700; font-size: 13px; padding: 2px 4px;
 }
 
 /* ---- Modale d'adaptation IA ---- */
@@ -301,13 +316,24 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 /* ---- Modale Import texte / PDF ---- */
 .import-modal { max-width: 600px; }
 .snapshots-modal { max-width: 720px; max-height: 90vh; overflow-y: auto; }
+.snap-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
+}
+.snap-info { min-width: 0; }
+.snap-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .diff-modal { width: 90vw; max-width: 1400px; height: 90vh; }
 .section-card { background: var(--bg); border-radius: 12px; padding: 20px; box-shadow: var(--neu-raised); }
 .form-btn-mini.danger { color: var(--error); }
 .import-hint { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
-.import-file { width: 100%; margin: 6px 0; font-size: 13px; color: var(--text); }
+/* Input fichier natif masqué : le bouton « Choisir un PDF… » le déclenche.
+   (Masquage visuel seulement — les tests e2e font setInputFiles dessus.) */
+.import-file {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; white-space: nowrap;
+}
 .import-status { font-size: 13px; margin-top: 6px; }
-.import-status.status-busy { color: var(--orange); }
+.import-status.status-busy { color: var(--orange-text); }
 .import-status.status-err { color: var(--error); }
 
 /* ---- Modale Pack candidature ---- */
@@ -319,7 +345,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .pack-result { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin-top: 4px; }
 .pack-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .pack-col .go { width: 100%; }
-.pack-letter-title { font-size: 13px; font-weight: 700; color: var(--orange); margin-top: 6px; }
+.pack-letter-title { font-size: 13px; font-weight: 700; color: var(--orange-text); margin-top: 6px; }
 .pack-letter-frame {
   width: 100%; height: 320px; border: none; border-radius: 12px;
   background: #fff; box-shadow: var(--neu-inset);
@@ -333,7 +359,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 /* ---- Panneau Score ATS ---- */
 .ats-modal { max-width: 560px; max-height: 88vh; overflow-y: auto; }
 .ats-result { display: flex; flex-direction: column; gap: 8px; }
-.ats-ai-badge { font-size: 12px; font-weight: 700; color: var(--orange); }
+.ats-ai-badge { font-size: 12px; font-weight: 700; color: var(--orange-text); }
 .ats-score-row { display: flex; align-items: center; gap: 14px; }
 .ats-score-circle {
   width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center;
@@ -356,7 +382,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 }
 .ats-pill.match { color: var(--success); }
 .ats-pill.missing { color: var(--error); }
-.ats-pill.bonus { color: var(--orange); }
+.ats-pill.bonus { color: var(--orange-text); }
 .ats-sections { display: flex; flex-wrap: wrap; gap: 5px; }
 .ats-section-badge {
   font-size: 11px; padding: 3px 9px; border-radius: 8px; box-shadow: var(--neu-raised-sm); background: var(--bg);
@@ -370,7 +396,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 }
 .ats-ai-btn:hover:not(:disabled) { box-shadow: var(--neu-raised); }
 .ats-ai-btn:disabled { opacity: 0.5; cursor: default; }
-.ats-boost-btn.active { color: var(--orange); box-shadow: var(--neu-inset); }
+.ats-boost-btn.active { color: var(--orange-text); box-shadow: var(--neu-inset); }
 
 /* ---- Modale d'adaptation 2 colonnes (porté de static/css/main.css) ---- */
 .ui-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -401,7 +427,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 }
 .tailor-check input[type="checkbox"] {
   flex-shrink: 0; margin-top: 1px; width: 15px; height: 15px;
-  accent-color: var(--orange); cursor: pointer;
+  accent-color: var(--orange-text); cursor: pointer;
 }
 .tailor-check em { font-style: normal; color: var(--muted); }
 .tailor-action-group { display: flex; flex-direction: column; gap: 8px; }
@@ -418,7 +444,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .tailor-btn:active { transform: translateY(1px); box-shadow: var(--neu-inset); }
 .tailor-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .tailor-btn-block { width: 100%; padding: 11px 16px; font-size: 13.5px; }
-.pack-btn-variant { background: linear-gradient(145deg, #2fa982, #1e8e6a); }
+.pack-btn-variant { background: linear-gradient(145deg, #2fa982, #1e8e6a); color: #fff; }
 
 .level-selector { display: flex; flex-direction: column; gap: 9px; }
 .level-label {
@@ -435,7 +461,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   transition: box-shadow 150ms, color 150ms;
 }
 .level-btn:hover { color: var(--text); }
-.level-btn.active { background: var(--bg); box-shadow: var(--neu-raised-sm); color: var(--orange); font-weight: 600; }
+.level-btn.active { background: var(--bg); box-shadow: var(--neu-raised-sm); color: var(--orange-text); font-weight: 600; }
 
 .ats-panel { background: var(--bg); border-radius: 14px; padding: 14px 16px; font-size: 13px; box-shadow: var(--neu-inset); }
 .ats-panel .ats-result { display: flex; flex-direction: column; gap: 8px; }
@@ -477,7 +503,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   display: flex; flex-direction: column; gap: 6px; padding: 10px;
   border-radius: 12px; background: var(--bg); box-shadow: var(--neu-raised-sm);
 }
-.proposal-title { font-size: 13px; font-weight: 700; color: var(--orange); }
+.proposal-title { font-size: 13px; font-weight: 700; color: var(--orange-text); }
 .proposal-summary { font-size: 12px; color: var(--text); }
 .proposal-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .proposal-btn {
@@ -486,7 +512,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 }
 .proposal-btn:hover:not(:disabled) { box-shadow: var(--neu-raised); }
 .proposal-btn:disabled { opacity: 0.5; cursor: default; }
-.proposal-apply { color: var(--orange); }
+.proposal-apply { color: var(--orange-text); }
 .proposal--applied { box-shadow: var(--neu-inset); opacity: 0.7; }
 .proposal--rejected { opacity: 0.5; }
 .chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
@@ -510,7 +536,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   display: flex; align-items: center; justify-content: center;
 }
 .btn-snapshots svg { width: 14px; height: 14px; }
-.btn-snapshots:hover { color: var(--orange); box-shadow: var(--neu-raised); }
+.btn-snapshots:hover { color: var(--orange-text); box-shadow: var(--neu-raised); }
 .btn-snapshots:active { box-shadow: var(--neu-inset); }
 
 /* ---- Onglet Importer (mode expert) ---- */
@@ -525,7 +551,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   transition: color 120ms, box-shadow 120ms;
 }
 .tab:hover { color: var(--text); }
-.tab.active { color: var(--orange); background: var(--bg); box-shadow: var(--neu-raised-sm); }
+.tab.active { color: var(--orange-text); background: var(--bg); box-shadow: var(--neu-raised-sm); }
 
 /* ---- Formulaire ---- */
 .form-editor { overflow-y: auto; padding: 16px; gap: 20px; }
@@ -538,7 +564,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .form-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
 .form-section__title {
   font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;
-  color: var(--orange); margin: 0 0 2px;
+  color: var(--orange-text); margin: 0 0 2px;
 }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 @media (max-width: 720px) { .form-grid { grid-template-columns: 1fr; } }
@@ -576,7 +602,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .form-btn-mini:hover { box-shadow: var(--neu-raised); }
 .form-btn-mini:active { box-shadow: var(--neu-inset); }
 .form-btn-add {
-  align-self: flex-start; background: var(--bg); color: var(--orange);
+  align-self: flex-start; background: var(--bg); color: var(--orange-text);
   border: none; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 600;
   cursor: pointer; box-shadow: var(--neu-raised-sm); transition: box-shadow 120ms; margin-top: 2px;
 }
@@ -590,7 +616,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 /* Aperçu transitoire d'une proposition du chat IA (non appliquée au document). */
 .preview-override-badge {
   font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0;
-  color: var(--orange); padding: 2px 8px; border-radius: 8px;
+  color: var(--orange-text); padding: 2px 8px; border-radius: 8px;
   background: var(--bg); box-shadow: var(--neu-inset);
 }
 
@@ -598,6 +624,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 button.go {
   background: linear-gradient(145deg, var(--orange), var(--orange-hover));
   color: #fff;
+  font-weight: 700;
   border: none;
   border-radius: 12px;
   padding: 11px 24px;
@@ -700,7 +727,7 @@ button.go:disabled {
 .type-badge {
   display: inline-block; padding: 6px 12px; border-radius: 999px;
   font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
-  color: var(--orange); background: var(--bg); box-shadow: var(--neu-raised-sm); border: none;
+  color: var(--orange-text); background: var(--bg); box-shadow: var(--neu-raised-sm); border: none;
 }
 .type-badge.type-cv {
   color: #fff;
@@ -717,7 +744,7 @@ button.go:disabled {
 .neu-btn-sm:hover { box-shadow: var(--neu-raised); transform: translateY(-1px); text-decoration: none; }
 .neu-btn-sm:active { box-shadow: var(--neu-inset); transform: translateY(0); }
 .neu-btn-sm.danger { color: var(--error); }
-.neu-btn-sm.view-pdf { color: var(--orange); }
+.neu-btn-sm.view-pdf { color: var(--orange-text); }
 @media (max-width: 768px) {
   .hist-content { padding: 14px; }
   .history-card { grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -771,14 +798,14 @@ button.go:disabled {
 .job-score-num { font-size: 22px; font-weight: 800; line-height: 1; }
 .job-score-max { font-size: 10px; color: var(--faint); font-weight: 600; margin-top: 2px; }
 .job-score-high .job-score-num { color: #2fa982; }
-.job-score-mid .job-score-num { color: var(--orange); }
+.job-score-mid .job-score-num { color: var(--orange-text); }
 .job-score-low .job-score-num { color: var(--muted); }
 
 .job-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .job-title { font-size: 15px; font-weight: 700; color: var(--text); }
 .job-new-badge {
   display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 999px;
-  background: var(--orange); color: #fff; font-size: 10px; font-weight: 800;
+  background: var(--orange); color: #fff; font-size: 11px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;
 }
 .job-meta { font-size: 13px; color: var(--muted); font-weight: 500; }
@@ -788,8 +815,21 @@ button.go:disabled {
 .job-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
 
 @media (max-width: 768px) {
-  .job-card { grid-template-columns: 64px 1fr; }
-  .job-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  /* Score compact à côté du titre, boutons en grille pleine largeur à
+     hauteurs égales (Adapter/Voir à 50-50, Pas intéressé en dessous). */
+  .job-card { grid-template-columns: 56px 1fr; gap: 12px 14px; padding: 16px; }
+  .job-score { width: 56px; height: 56px; }
+  .job-score-num { font-size: 19px; }
+  .job-actions {
+    grid-column: 1 / -1;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    align-items: stretch;
+  }
+  .job-actions > * {
+    width: 100%; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .job-actions > :last-child { grid-column: 1 / -1; }
 }
 
 /* ---- Aide « Comment ça marche ? » ---- */
@@ -808,7 +848,11 @@ button.go:disabled {
 .help-body { overflow-y: auto; margin: 14px 0; display: flex; flex-direction: column; gap: 18px; flex: 1; min-height: 0; }
 .help-section__title { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--text); }
 .help-section p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55; }
-.help-steps, .help-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+/* Le reset Tailwind supprime les puces : on les rétablit, les étapes sont une vraie séquence. */
+.help-steps { list-style: decimal; }
+.help-list { list-style: disc; }
+.help-steps, .help-list { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.help-steps li, .help-list li { display: list-item; }
 .help-steps li, .help-list li { font-size: 13px; color: var(--muted); line-height: 1.45; }
 .help-section .go { margin-top: 10px; }
 
@@ -823,7 +867,7 @@ button.go:disabled {
 .scoring-info__summary {
   cursor: pointer;
   font-weight: 700;
-  color: var(--orange);
+  color: var(--orange-text);
 }
 .scoring-info__body {
   margin-top: 12px;
@@ -877,4 +921,60 @@ button.go:disabled {
   height: 100%;
   color: var(--muted);
   font-size: 13px;
+}
+
+/* ============================================================
+   Règles mobiles (≤900px) — en fin de fichier exprès : à
+   spécificité égale, la dernière règle gagne, donc elles doivent
+   suivre les définitions de base qu'elles surchargent.
+   ============================================================ */
+@media (max-width: 900px) {
+  /* -- Topbar : ligne 1 = logo + Convertir en PDF, puis rangées
+        d'actions équilibrées. display:contents fait remonter les
+        boutons comme enfants flex directs de la topbar. -- */
+  .topbar { flex-wrap: wrap; row-gap: 8px; }
+  .topbar-actions { display: contents; }
+  .topbar-actions > * { order: 2; flex: 1 1 30%; justify-content: center; min-height: 44px; }
+  .topbar-actions .go { order: 1; flex: 0 1 auto; margin-left: auto; }
+  /* Le toggle thème garde son curseur centré malgré la hauteur tactile. */
+  #btn-theme { height: 44px; }
+  .toggle-icon { height: 44px; }
+  .toggle-knob { top: 8px; }
+
+  /* -- Zones tactiles : 44px minimum (norme mobile). Desktop inchangé. -- */
+  .btn-nav, button.ghost, button.go, .form-btn-add, .actions-help,
+  .tailor-btn, .neu-btn-sm, .toolbar-select, .level-btn {
+    min-height: 44px;
+  }
+  .form-btn-mini { padding: 12px; min-height: 44px; }
+  .form-btn-mini svg { width: 16px; height: 16px; }
+  .tab { padding: 12px 16px; font-size: 12px; min-height: 44px; }
+  .btn-snapshots { width: 44px; height: 44px; }
+  .btn-snapshots svg { width: 16px; height: 16px; }
+  .ui-dialog__close { padding: 10px 14px; }
+  .meta-checkbox, .tailor-check input[type="checkbox"] { width: 20px; height: 20px; }
+  .meta select, .meta input:not([type="checkbox"]) { min-height: 44px; }
+
+  /* -- Toolbar de l'éditeur : icônes seules, libellé en info-bulle. -- */
+  .pane-title { row-gap: 8px; }
+  .actions-mini { flex: 1 1 auto; }
+  .actions-mini .btn-label { display: none; }
+  .actions-mini .toolbar-select { flex: 1 1 auto; }
+  .autosave-label { display: none; }
+
+  /* -- Barre d'actions du bas : grille alignée, aide en dessous. -- */
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
+  .actions > * {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 100%; margin: 0; min-height: 48px; padding: 10px 16px;
+  }
+  .actions .actions-help { grid-column: 1 / -1; }
+
+  /* -- Modales : champs et boutons pleine largeur, voile plus opaque. -- */
+  .ui-overlay { background: rgba(0, 0, 0, 0.6); }
+  .ui-dialog__actions > * { flex: 1 1 auto; justify-content: center; min-height: 44px; }
+  .pack-meta { flex-direction: column; }
+  .pack-result { grid-template-columns: 1fr; }
+  .snap-item { flex-direction: column; align-items: stretch; }
+  .snap-actions { justify-content: flex-end; }
 }
