@@ -119,8 +119,10 @@ export default function EditorPane() {
 
   const onCopyJson = async () => {
     try {
+      const json = useDocStore.getState().json;
+      const { json: stripped } = stripBase64FromJson(json);
       await navigator.clipboard.writeText(
-        JSON.stringify(useDocStore.getState().json, null, 2),
+        JSON.stringify(stripped, null, 2),
       );
       toast("JSON copié dans le presse-papier.", "success");
     } catch {
@@ -203,16 +205,22 @@ export default function EditorPane() {
           ) : null}
         </div>
 
-        <span className="autosave">{saveLabel}</span>
+        <span className="autosave" title={saveLabel}>
+          {saveLabel.startsWith("✓") ? (
+            <>✓<span className="autosave-label"> Brouillon sauvegardé</span></>
+          ) : (
+            saveLabel
+          )}
+        </span>
 
         <div className="actions-mini">
           <button type="button" className="form-btn-mini" title="Coller/Importer un document au format JSON" onClick={onPasteJson}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-            Coller
+            <span className="btn-label">Coller</span>
           </button>
           <button type="button" className="form-btn-mini" title="Copier les données JSON" onClick={onCopyJson}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Copier
+            <span className="btn-label">Copier</span>
           </button>
           {isResumeType ? (
             <button type="button" className="form-btn-mini form-btn-icon-only" title="Exporter au format JSON Resume (Reactive Resume)" onClick={onExportRr}>
