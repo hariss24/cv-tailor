@@ -52,4 +52,23 @@ test.describe("mobile", () => {
     // Le CTA « Adapter à une offre » est visible sans scroller (barre épinglée).
     await expect(page.getByRole("button", { name: "Adapter à une offre" })).toBeInViewport();
   });
+  test("la loupe agrandit l'aperçu (défilement horizontal)", async ({ page }) => {
+    await page.goto("/");
+    const container = page.locator(".pdf-preview");
+    await expect(container.locator("canvas").first()).toBeVisible({ timeout: 15_000 });
+
+    // Ajusté à l'écran : la page ne déborde pas.
+    const fitted = await container.evaluate((el) => el.scrollWidth <= el.clientWidth);
+    expect(fitted).toBe(true);
+
+    await page.getByRole("button", { name: "Agrandir l'aperçu" }).click();
+
+    // Zoomé : le canvas dépasse et défile horizontalement.
+    const zoomed = await container.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(zoomed).toBe(true);
+
+    await page.getByRole("button", { name: "Réduire l'aperçu" }).click();
+    const back = await container.evaluate((el) => el.scrollWidth <= el.clientWidth);
+    expect(back).toBe(true);
+  });
 });

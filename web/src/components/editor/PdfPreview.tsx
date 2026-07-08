@@ -10,9 +10,11 @@ import { useEffect, useRef } from "react";
  */
 export default function PdfPreview({
   blob,
+  zoom,
   onPages,
 }: {
   blob: Blob;
+  zoom?: boolean;
   onPages?: (n: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,5 +58,5 @@ export default function PdfPreview({
     };
   }, [blob, onPages]);
 
-  return <div ref={containerRef} className="pdf-preview" data-testid="pdf-preview" />;
+  return <div ref={containerRef} className={`pdf-preview${zoom ? " pdf-preview--zoom" : ""}`} data-testid="pdf-preview" />;
 }

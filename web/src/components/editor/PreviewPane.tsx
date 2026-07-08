@@ -21,6 +21,7 @@ export default function PreviewPane() {
 
   const [pages, setPages] = useState(1);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [zoom, setZoom] = useState(false);
   const genRef = useRef(0);
 
   const isPreview = previewOverride !== null;
@@ -63,11 +64,24 @@ export default function PreviewPane() {
         {isPreview ? (
           <span className="preview-override-badge">Proposition IA — non appliquée</span>
         ) : null}
+        <button
+          type="button"
+          className="form-btn-mini"
+          onClick={() => setZoom(!zoom)}
+          aria-label={zoom ? "Réduire l'aperçu" : "Agrandir l'aperçu"}
+          title={zoom ? "Ajuster à l'écran" : "Taille réelle"}
+        >
+          {zoom ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          )}
+        </button>
         <span className="page-badge">{pageLabel}</span>
       </div>
       <div className="pane-body">
         {pdfBlob ? (
-          <PdfPreview blob={pdfBlob} onPages={onPdfPages} />
+          <PdfPreview blob={pdfBlob} zoom={zoom} onPages={onPdfPages} />
         ) : (
           <div className="pdf-preview-loading">Génération du PDF…</div>
         )}
