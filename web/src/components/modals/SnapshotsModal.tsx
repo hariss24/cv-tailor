@@ -103,12 +103,12 @@ export default function SnapshotsModal({ open, onClose }: SnapshotsModalProps) {
                 const chars = (s.html?.length ?? 0) + (s.css?.length ?? 0);
                 const meta = `${date} · ${chars.toLocaleString("fr-FR")} car. · ${s.doc_type || "CV"}${s.company ? " · " + s.company : ""}${s.role ? " · " + s.role : ""}`;
                 return (
-                  <li key={s.ts} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "10px", background: "var(--bg)", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                    <div style={{ minWidth: 0 }}>
+                  <li key={s.ts} className="snap-item">
+                    <div className="snap-info">
                       <strong style={{ display: "block", marginBottom: "4px" }}>{s.label}</strong>
                       <span style={{ fontSize: "0.85em", opacity: 0.8 }}>{meta}</span>
                     </div>
-                    <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                    <div className="snap-actions">
                       <button className="form-btn-mini" onClick={() => handleRestore(s)}>
                         Restaurer
                       </button>

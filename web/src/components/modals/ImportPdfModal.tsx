@@ -96,6 +96,14 @@ export default function ImportPdfModal({
           disabled={busy}
           onChange={(e) => onFile(e.target.files?.[0] ?? null)}
         />
+        <button
+          type="button"
+          className="form-btn-add"
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+        >
+          Choisir un PDF…
+        </button>
 
         {status ? <p className="import-status status-busy">{status}</p> : null}
 

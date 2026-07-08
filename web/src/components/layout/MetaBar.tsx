@@ -68,7 +68,7 @@ export default function MetaBar() {
             id="include_date"
             checked={includeDate}
             onChange={(e) => setIncludeDate(e.target.checked)}
-            style={{ accentColor: "var(--orange)", width: "14px", height: "14px", cursor: "pointer" }}
+            className="meta-checkbox"
           />
           + date
         </label>
