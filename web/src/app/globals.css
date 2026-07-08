@@ -943,6 +943,45 @@ button.go:disabled {
   font-size: 13px;
 }
 
+/* Pack candidature — barre modèle + variables (refonte templates) */
+.pack-tpl-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.pack-tpl-bar select { flex: 1; min-width: 0; }
+
+.pack-vars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+@media (max-width: 700px) {
+  .pack-vars { grid-template-columns: 1fr; }
+}
+
+.tpl-editor { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+
+.tpl-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.var-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.var-btn:hover { background: var(--surface-2, var(--bg)); }
+
 /* ============================================================
    Règles mobiles (≤900px) — en fin de fichier exprès : à
    spécificité égale, la dernière règle gagne, donc elles doivent
