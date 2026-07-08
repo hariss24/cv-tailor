@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  SYSTEM_PACK,
+  SYSTEM_ADAPT_LETTER,
+  SYSTEM_EXTRACT_META,
   TAILOR_SYSTEMS,
   SYSTEM_TEXT_TO_LETTER,
   RESUME_TAILOR_RULES,
@@ -128,10 +129,15 @@ describe('prompts — text to letter', () => {
   });
 });
 
-describe('prompts — pack', () => {
-  it('SYSTEM_PACK demande un JSON avec une lettre structuree et un email', () => {
-    expect(SYSTEM_PACK).toContain('JSON PUR');
-    expect(SYSTEM_PACK).toContain('"letter":');
-    expect(SYSTEM_PACK).toContain('"email":');
+describe('prompts — adapt letter / extract meta', () => {
+  it('SYSTEM_ADAPT_LETTER demande un JSON avec le corps de la lettre', () => {
+    expect(SYSTEM_ADAPT_LETTER).toContain('JSON PUR');
+    expect(SYSTEM_ADAPT_LETTER).toContain('"body":');
+  });
+
+  it('SYSTEM_EXTRACT_META demande l\'entreprise et le poste', () => {
+    expect(SYSTEM_EXTRACT_META).toContain('JSON PUR');
+    expect(SYSTEM_EXTRACT_META).toContain('"company":');
+    expect(SYSTEM_EXTRACT_META).toContain('"role":');
   });
 });

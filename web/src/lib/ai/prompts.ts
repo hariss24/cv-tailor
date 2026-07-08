@@ -392,33 +392,37 @@ export const SYSTEM_ATS_SCORE =
   "- Chaque compétence = libellé court (1-4 mots), sans phrase.\n" +
   "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
 
-// ---- pack candidature (port de _SYSTEM_PACK, ai_engine.py) ------------------
+// ---- adaptation du modèle de lettre à une offre ------------------------------
 
-export const SYSTEM_PACK =
-  "Tu es un expert en candidatures. Tu reçois les données structurées JSON d'un CV adapté à une offre, " +
-  "ainsi que le texte de l'offre d'emploi. Tu produis un PACK CANDIDATURE composé de deux " +
-  "livrables COHÉRENTS avec le CV : une lettre de motivation structurée et un email d'accroche.\n\n" +
-  "ÉTAPE 1 — LETTRE DE MOTIVATION (champ 'letter' structuré) :\n" +
-  "- 'letter' = un objet JSON avec les clés suivantes :\n" +
-  "  - 'sender_name', 'sender_address', 'sender_contact' : déduis-les du CV.\n" +
-  "  - 'date' : utilise la 'Date du jour' fournie dans le message.\n" +
-  "  - 'recipient_name', 'recipient_service', 'recipient_address' : déduis-les de l'offre.\n" +
-  "  - 'subject' : l'objet de la candidature.\n" +
-  "  - 'greeting' : la formule d'appel ('Madame, Monsieur,').\n" +
-  "  - 'body' : le corps de la lettre en 3 paragraphes (avec des sauts de ligne \\n).\n" +
-  "  - 'signoff' : la formule de politesse.\n" +
-  "  - 'signature' : le nom du candidat.\n" +
-  "- N'invente AUCUN fait : utilise uniquement les expériences, compétences et formations réellement " +
-  "présentes dans le CV.\n" +
-  "- La lettre s'adresse NOMMÉMENT à l'entreprise et au poste visés. Si inconnus, écris " +
-  "'À l'attention du responsable du recrutement'.\n\n" +
-  "ÉTAPE 2 — EMAIL D'ACCROCHE (champ 'email') :\n" +
-  "- Texte BRUT (avec des sauts de ligne \\n), prêt à coller dans un client mail.\n" +
-  "- Première ligne = 'Objet : ...'. Puis un corps court (5-8 lignes) : accroche, 2-3 atouts clés " +
-  "tirés du CV, renvoi au CV/lettre en pièce jointe, formule de politesse et signature.\n" +
-  "- Nomme l'entreprise et le poste visés.\n\n" +
+export const SYSTEM_ADAPT_LETTER =
+  "Tu es un expert en candidatures. Tu reçois le CORPS d'une lettre de motivation rédigée par le " +
+  "candidat (son modèle personnel), le texte d'une offre d'emploi, et les données JSON de son CV.\n\n" +
+  "TA MISSION : adapter LÉGÈREMENT le corps de la lettre à l'offre.\n" +
+  "RÈGLES :\n" +
+  "- CONSERVE le ton, la structure, le nombre de paragraphes et la longueur (±20 %) du texte d'origine.\n" +
+  "- Intègre naturellement 2 à 4 mots-clés ou attentes IMPORTANTS de l'offre.\n" +
+  "- Remplace les passages entre crochets [ ] par du contenu concret tiré du CV.\n" +
+  "- N'invente AUCUN fait : utilise uniquement les expériences et compétences réellement présentes dans le CV.\n" +
+  "- CONSERVE telles quelles les variables {Entreprise}, {Poste}, {M/Mme Nom}, {Prénom}, {Nom}, {Date} " +
+  "si le texte en contient — ne les remplace jamais par leur valeur.\n" +
+  "- Réponds en français.\n\n" +
   "FORMAT DE RÉPONSE OBLIGATOIRE — JSON PUR, RIEN D'AUTRE :\n" +
-  '{"letter": {"sender_name": "...", "sender_address": "...", "sender_contact": "...", "date": "...", "recipient_name": "...", "recipient_service": "...", "recipient_address": "...", "subject": "...", "greeting": "...", "body": "...", "signoff": "...", "signature": "..."}, "email": "..."}\n\n' +
+  '{"body": "le corps adapté, avec des sauts de ligne \\n entre les paragraphes"}\n\n' +
+  "CONTRAINTES :\n" +
+  "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
+
+// ---- extraction entreprise/poste d'une offre ---------------------------------
+
+export const SYSTEM_EXTRACT_META =
+  "Tu es un extracteur d'informations. Tu reçois le texte d'une offre d'emploi.\n" +
+  "Tu renvoies UNIQUEMENT le nom de l'entreprise qui recrute et l'intitulé exact du poste.\n" +
+  "RÈGLES :\n" +
+  '- Si une information est absente ou incertaine, renvoie une chaîne vide "".\n' +
+  "- 'company' = le nom court de l'entreprise (pas le groupe, pas le cabinet de recrutement si " +
+  "l'entreprise finale est nommée).\n" +
+  "- 'role' = l'intitulé du poste tel qu'écrit dans l'offre, sans le niveau H/F ni la référence.\n\n" +
+  "FORMAT DE RÉPONSE OBLIGATOIRE — JSON PUR, RIEN D'AUTRE :\n" +
+  '{"company": "...", "role": "..."}\n\n' +
   "CONTRAINTES :\n" +
   "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
 
