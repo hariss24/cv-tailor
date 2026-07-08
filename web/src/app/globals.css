@@ -532,6 +532,9 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .mobile-menu__item:active { box-shadow: var(--neu-inset); }
 .mobile-only { display: none !important; }
 
+/* ---- EditorDrawer ---- */
+.editor-drawer-close { display: none !important; }
+
 /* ---- Barre d'outils éditeur (porté de static/css/main.css + index.html) ---- */
 .editor-pane .pane-title { flex-wrap: wrap; gap: 8px; }
 .actions-mini { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
@@ -951,6 +954,21 @@ button.go:disabled {
   .go.go-top { padding: 10px 14px; font-size: 13px; }
   .mobile-menu { width: min(320px, 86vw); }
 
+  /* -- Disposition mobile-first : Aperçu d'abord, Éditeur en tiroir -- */
+  .split { flex-direction: column-reverse; display: flex; }
+  .editor-pane {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100; background: var(--bg); transform: translateY(100%);
+    transition: transform 300ms ease; padding-bottom: 80px;
+  }
+  .editor-pane--open { transform: translateY(0); }
+  .editor-drawer-close {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 101; font-weight: 600; box-shadow: var(--neu-raised);
+    display: inline-flex !important;
+  }
+  .preview-pane { height: auto; min-height: 60vh; overflow: visible; padding-bottom: 80px; }
+
   /* -- Zones tactiles : 44px minimum (norme mobile). Desktop inchangé. -- */
   .btn-nav, button.ghost, button.go, .form-btn-add, .actions-help,
   .tailor-btn, .neu-btn-sm, .toolbar-select, .level-btn {
@@ -972,13 +990,18 @@ button.go:disabled {
   .actions-mini .toolbar-select { flex: 1 1 auto; }
   .autosave-label { display: none; }
 
-  /* -- Barre d'actions du bas : grille alignée, aide en dessous. -- */
-  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: stretch; }
-  .actions > * {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 100%; margin: 0; min-height: 48px; padding: 10px 16px;
+  /* -- Barre d'actions du bas : épinglée -- */
+  .actions {
+    position: sticky; bottom: 0; z-index: 90;
+    padding: 12px; border-top: 1px solid var(--border);
+    justify-content: center; gap: 16px;
+    background: var(--bg);
+    display: flex;
   }
-  .actions .actions-help { grid-column: 1 / -1; }
+  .actions .btn-label { display: none; }
+  .actions .btn-nav, .actions .ghost, .actions .actions-help {
+    padding: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0; min-height: 48px;
+  }
 
   /* -- Modales : champs et boutons pleine largeur, voile plus opaque. -- */
   .ui-overlay { background: rgba(0, 0, 0, 0.6); }

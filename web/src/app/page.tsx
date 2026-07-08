@@ -4,6 +4,7 @@ import TopBar from "@/components/layout/TopBar";
 import MetaBar from "@/components/layout/MetaBar";
 import ActionsBar from "@/components/layout/ActionsBar";
 import DraftManager from "@/components/layout/DraftManager";
+import EditorDrawer from "@/components/layout/EditorDrawer";
 
 export default function Home() {
   return (
@@ -13,9 +14,9 @@ export default function Home() {
       <MetaBar />
 
       <div className="split">
-        <section className="pane editor-pane">
+        <EditorDrawer>
           <EditorPane />
-        </section>
+        </EditorDrawer>
 
         <section className="pane preview-pane">
           <PreviewPane />
