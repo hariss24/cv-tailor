@@ -43,6 +43,20 @@ l'intégrité de bout en bout post-migration ».
 
 ## Journal
 
+### 2026-07-09 : UI mobile Historique + réparation « Voir PDF »
+- **Quoi :** (1) le header d'Historique/Offres wrappe en mobile (classe `topbar--secondary`,
+  Retour et thème n'étaient plus accessibles à 375px) ; (2) boutons secondaires en icône
+  seule sur mobile (Voir PDF/Recharger/Supprimer des cartes Historique, Effacer et l'aide
+  de la barre d'actions — `aria-label` conservés) et switcher de thème retiré des headers
+  secondaires (il vit dans le menu ☰) ; (3) **réparation de « Voir PDF »** : il appelait
+  `/api/convert`, supprimé à la migration React PDF — le PDF est maintenant régénéré côté
+  client depuis le `json` de l'entrée (message explicite pour les entrées legacy sans json).
+- **Fichiers touchés :** `history/page.tsx`, `jobs/page.tsx`, `HistoryList.tsx`,
+  `globals.css`, `tests/e2e/mobile.spec.ts`.
+- **Résultat vérifs :** tsc/lint 0 erreur, Vitest 194/194, e2e mobile 4/4 (+ test header
+  ajouté), les deux chemins de Voir PDF vérifiés en vrai navigateur (blob ouvert / dialogue).
+- **Commits :** `3858166`, `9fbaa61`, `1739e37`.
+
 ### 2026-07-08 : Recette de la refonte Pack — correctif « Candidater » + e2e adaptés
 - **Quoi :** Revue de l'exécution Gemini du plan templates. Correctif : l'offre saisie
   suit maintenant jusqu'au Pack (`PackModal` accepte `initialJobDesc`, transmis par
