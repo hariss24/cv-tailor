@@ -9,7 +9,7 @@ export const metadata = {
 export default function HistoryPage() {
   return (
     <div className="wrap">
-      <header className="topbar">
+      <header className="topbar topbar--secondary">
         <h1 className="hist-h1">Historique</h1>
         <div className="topbar-actions">
           <HistoryActions />

@@ -17,7 +17,7 @@ export default function JobsPage() {
 
   return (
     <div className="wrap">
-      <header className="topbar">
+      <header className="topbar topbar--secondary">
         <h1 className="hist-h1">Offres</h1>
         <div className="topbar-actions">
           <Link href="/" style={{ color: "var(--link)", fontWeight: 600, fontSize: "14px" }}>

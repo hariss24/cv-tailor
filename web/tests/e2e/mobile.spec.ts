@@ -52,6 +52,23 @@ test.describe("mobile", () => {
     // Le CTA « Adapter à une offre » est visible sans scroller (barre épinglée).
     await expect(page.getByRole("button", { name: "Adapter à une offre" })).toBeInViewport();
   });
+  test("le header de l'Historique tient dans l'écran (Retour et thème accessibles)", async ({ page }) => {
+    await page.goto("/history");
+
+    // Toutes les actions du header sont entièrement visibles dans le viewport.
+    for (const name of ["↑ Importer", "↓ Exporter"]) {
+      await expect(page.getByRole("button", { name })).toBeInViewport({ ratio: 1 });
+    }
+    await expect(page.getByRole("link", { name: "‹ Retour" })).toBeInViewport({ ratio: 1 });
+    await expect(page.locator("#btn-theme")).toBeInViewport({ ratio: 1 });
+
+    // Et la page ne défile pas horizontalement.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(false);
+  });
+
   test("la loupe agrandit l'aperçu (défilement horizontal)", async ({ page }) => {
     await page.goto("/");
     const container = page.locator(".pdf-preview");
