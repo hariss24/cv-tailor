@@ -95,7 +95,7 @@ export default function AtsPanel({ jobDesc }: { jobDesc: string }) {
           Score ATS
         </button>
         <button type="button" className="form-btn-mini" onClick={runAi} disabled={busy}>
-          {busy ? "Analyse IA…" : "🤖 Analyser avec l'IA"}
+          {busy ? "Analyse IA…" : "Analyser avec l'IA"}
         </button>
       </div>
 

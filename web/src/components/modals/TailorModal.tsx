@@ -30,7 +30,7 @@ const LEVELS: { id: TailorLevel; label: string; hint: string }[] = [
   { id: "peu", label: "Peu adapté", hint: "Ajustements minimes" },
   { id: "adapte", label: "Adapté", hint: "Équilibré (recommandé)" },
   { id: "hyper", label: "Hyper-adapté", hint: "Optimisation forte" },
-  { id: "sur-mesure", label: "Sur-mesure 🔥", hint: "Adaptation maximale" },
+  { id: "sur-mesure", label: "Sur-mesure", hint: "Adaptation maximale" },
 ];
 
 export default function TailorModal({

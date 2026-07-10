@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Les 7 constats haute+moyenne de l'audit sont soldés ; restent les constats basses 08 à 11 (emojis, z-index du FAB, coche de sauvegarde, casse « CV Tailor »).
+**Prochaine étape suggérée :** L'audit de cohérence UI est intégralement soldé (13 constats). Rien d'urgent en cours.
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-10 : Constats basses de l'audit UI (08, 09, 10, 11)
+- **Quoi :** (08) retrait des emojis dans les boutons — 🔥 de « Sur-mesure » (TailorModal) et 🤖 de « Analyser avec l'IA » (AtsPanel) ; (09) le FAB « ✓ Terminé » du tiroir passe désormais DERRIÈRE les modales (z-index 101 → 99, sous l'overlay à 100) ; (10) l'indicateur de sauvegarde n'est plus une coche nue en mobile mais une icône SVG « disquette » (13 px, même set monochrome) avec tooltip ; (11) « cv-tailor » → « CV Tailor » dans l'Aide.
+- **Pourquoi :** Audit UI, constats de gravité basse. Le n°12 était déjà corrigé (09/07), le n°13 emporté par le constat 02.
+- **Fichiers touchés :** `src/components/modals/TailorModal.tsx`, `src/components/modals/AtsPanel.tsx`, `src/components/modals/HelpModal.tsx`, `src/components/editor/EditorPane.tsx`, `src/app/globals.css`.
+- **Résultat vérifs :** `tsc --noEmit` 0 erreur, ESLint 0 erreur, Vitest 194/194, Build OK, Playwright 35/35. Vérifs visuelles : z-index FAB 99 < overlay 100 mesuré, icône disquette 13×13 px confirmée (après purge du CSS Turbopack périmé — serveur :3000 obsolète relancé).
+- **Commit :** voir ci-dessous.
 
 ### 2026-07-10 : Recette visuelle de l'audit UI — « Voir l'offre » orphelin en mobile
 - **Quoi :** Vérification par captures d'écran des 6 correctifs de l'audit. Un défaut du plan lui-même est apparu : en supprimant la règle `.job-actions > :last-child { grid-column: 1 / -1 }` (constat 02), « Voir l'offre » se retrouvait seul sur une demi-ligne, avec une colonne vide à sa droite. Règle `.job-actions > a.neu-btn-sm { grid-column: 1 / -1 }` ajoutée dans la media query mobile.

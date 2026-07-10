@@ -38,7 +38,7 @@ export default function HelpModal({
           <section className="help-section">
             <h3 className="help-section__title">Bienvenue</h3>
             <p>
-              cv-tailor t&apos;aide à créer ton CV ou ta lettre, à les adapter à une offre grâce à
+              CV Tailor t&apos;aide à créer ton CV ou ta lettre, à les adapter à une offre grâce à
               l&apos;IA, puis à les exporter en PDF.
             </p>
           </section>
