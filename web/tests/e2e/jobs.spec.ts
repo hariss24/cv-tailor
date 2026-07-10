@@ -160,3 +160,26 @@ test("« Candidater » est un bouton de contour, pas une seconde primaire pleine
   const applyColor = await apply.evaluate((el) => getComputedStyle(el).color);
   expect(applyColor).not.toBe("rgb(255, 255, 255)");
 });
+
+test("la rangée d'actions : une primaire, deux secondaires identiques, un lien nu", async ({ page }) => {
+  await mockScanOk(page);
+  await page.goto("/jobs");
+  await page.getByTestId("jobs-scan").click();
+  await expect(page.getByTestId("job-card")).toHaveCount(1);
+
+  // « Candidater » et « Voir l'offre » partagent exactement la même base de bouton.
+  await expect(page.getByTestId("job-apply")).toHaveClass(/neu-btn-sm/);
+  const applyBox = await page.getByTestId("job-apply").boundingBox();
+  const viewBox = await page.locator(".job-actions a.neu-btn-sm").boundingBox();
+  expect(applyBox).not.toBeNull();
+  expect(viewBox).not.toBeNull();
+  expect(Math.abs(applyBox!.height - viewBox!.height)).toBeLessThanOrEqual(1);
+
+  // « Pas intéressé » n'est plus une coquille de bouton : ni ombre, ni fond.
+  const dismiss = page.getByTestId("job-dismiss");
+  await expect(dismiss).toHaveClass(/job-dismiss-link/);
+  const shadow = await dismiss.evaluate((el) => getComputedStyle(el).boxShadow);
+  expect(shadow).toBe("none");
+  const bg = await dismiss.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).toBe("rgba(0, 0, 0, 0)");
+});

@@ -857,6 +857,16 @@ button.go:disabled {
 
 .job-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
 
+/* « Pas intéressé » : action de retrait, volontairement hors de la hiérarchie
+   des boutons — un lien nu, sans coquille. */
+.job-dismiss-link {
+  background: none; border: none; box-shadow: none;
+  padding: 6px 4px; margin-left: 4px;
+  color: var(--muted); font-size: 12px; font-family: var(--font-ui);
+  cursor: pointer; transition: color 120ms;
+}
+.job-dismiss-link:hover { color: var(--error); text-decoration: underline; }
+
 @media (max-width: 768px) {
   /* Score compact à côté du titre, boutons en grille pleine largeur à
      hauteurs égales (Adapter/Voir à 50-50, Pas intéressé en dessous). */
@@ -868,11 +878,16 @@ button.go:disabled {
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
     align-items: stretch;
   }
-  .job-actions > * {
+  /* Les vrais boutons se partagent la largeur ; le lien de retrait en est exclu. */
+  .job-actions > *:not(.job-dismiss-link) {
     width: 100%; min-height: 44px;
     display: inline-flex; align-items: center; justify-content: center;
   }
-  .job-actions > :last-child { grid-column: 1 / -1; }
+  /* Le lien passe seul sur sa ligne, centré, avec une cible tactile de 44 px. */
+  .job-dismiss-link {
+    grid-column: 1 / -1; justify-self: center;
+    min-height: 44px; margin-left: 0;
+  }
 }
 
 /* ---- Aide « Comment ça marche ? » ---- */

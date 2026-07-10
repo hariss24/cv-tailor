@@ -49,7 +49,12 @@ export default function JobCard({
         <button type="button" className="tailor-btn" onClick={() => onAdapt(job)} data-testid="job-adapt">
           Adapter mon CV
         </button>
-        <button type="button" className="tailor-btn pack-btn-variant" onClick={() => onApply(job)} data-testid="job-apply">
+        <button
+          type="button"
+          className="neu-btn-sm pack-btn-variant"
+          onClick={() => onApply(job)}
+          data-testid="job-apply"
+        >
           Candidater
         </button>
         {job.url ? (
@@ -63,7 +68,12 @@ export default function JobCard({
             Voir l&apos;offre
           </a>
         ) : null}
-        <button type="button" className="neu-btn-sm danger" onClick={() => onDismiss(job)} data-testid="job-dismiss">
+        <button
+          type="button"
+          className="job-dismiss-link"
+          onClick={() => onDismiss(job)}
+          data-testid="job-dismiss"
+        >
           Pas intéressé
         </button>
       </div>

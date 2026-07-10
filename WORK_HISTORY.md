@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Continuer l'exécution du plan de cohérence UI 2026-07-10-coherence-ui-audit.md (Task 2 : rangée d'actions des offres).
+**Prochaine étape suggérée :** Continuer l'exécution du plan de cohérence UI 2026-07-10-coherence-ui-audit.md (Task 3 : uniformisation des modales).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-10 : Hiérarchie actions offres (audit UI, constat 02)
+- **Quoi :** La rangée d'actions des offres perd sa double primaire pleine. Seul « Adapter mon CV » reste plein (`.tailor-btn`), « Candidater » et « Voir l'offre » passent en secondaire claire (`.neu-btn-sm`), et « Pas intéressé » devient un lien discret (`.job-dismiss-link`). Modification de la grille mobile.
+- **Pourquoi :** Audit UI, constat 02.
+- **Fichiers touchés :** `src/components/jobs/JobCard.tsx`, `src/app/globals.css`, `tests/e2e/jobs.spec.ts`.
+- **Résultat vérifs :** `tsc --noEmit` 0 erreur, ESLint 0 erreur, Vitest 194/194, Build OK, Playwright 31/31 (tout vert).
+- **Commit :** Sera commité dans la foulée.
 
 ### 2026-07-10 : Vert « candidature » en contour (audit UI, constat 01)
 - **Quoi :** Le vert devient une couleur sémantique « candidature » employée en contour uniquement. La classe `.pack-btn-variant` devient un modificateur de contour (plus de fond plein). Une seule primaire pleine orange par écran. Le vert du score élevé n'est plus en dur.
