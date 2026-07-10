@@ -41,6 +41,13 @@
 
 ## Journal
 
+### 2026-07-10 : Recette visuelle de l'audit UI — « Voir l'offre » orphelin en mobile
+- **Quoi :** Vérification par captures d'écran des 6 correctifs de l'audit. Un défaut du plan lui-même est apparu : en supprimant la règle `.job-actions > :last-child { grid-column: 1 / -1 }` (constat 02), « Voir l'offre » se retrouvait seul sur une demi-ligne, avec une colonne vide à sa droite. Règle `.job-actions > a.neu-btn-sm { grid-column: 1 / -1 }` ajoutée dans la media query mobile.
+- **Pourquoi :** Un groupe de boutons occupe la pleine largeur en mobile ; aucun test de style calculé ne détecte un vide de mise en page.
+- **Fichiers touchés :** `src/app/globals.css`.
+- **Résultat vérifs :** `tsc --noEmit` 0 erreur, Playwright 35/35, capture mobile de `.job-card` relue.
+- **Commit :** voir ci-dessous.
+
 ### 2026-07-10 : Barre de modèles du Pack en mobile (constat 05)
 - **Quoi :** La barre de modèles du Pack candidature permet le retour à la ligne (flex-wrap) sous 700px, pour que le bouton « Supprimer » ne soit plus coupé. L'icône disquette de « Enregistrer » a été supprimée pour l'harmoniser avec « Dupliquer » et « Supprimer ».
 - **Pourquoi :** Audit UI, constat 05.

@@ -886,6 +886,9 @@ button.go:disabled {
     width: 100%; min-height: 44px;
     display: inline-flex; align-items: center; justify-content: center;
   }
+  /* « Voir l'offre » est seul sur sa ligne : il la prend en entier, plutôt que de
+     laisser une demi-colonne vide à sa droite. */
+  .job-actions > a.neu-btn-sm { grid-column: 1 / -1; }
   /* Le lien passe seul sur sa ligne, centré, avec une cible tactile de 44 px. */
   .job-dismiss-link {
     grid-column: 1 / -1; justify-self: center;
