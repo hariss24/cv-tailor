@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Continuer l'exécution du plan de cohérence UI 2026-07-10-coherence-ui-audit.md (Task 5 : gabarit du selecteur "Niveau d'adaptation").
+**Prochaine étape suggérée :** Continuer l'exécution du plan de cohérence UI 2026-07-10-coherence-ui-audit.md (Task 6 : gabarit de la barre de modèles en mobile).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-10 : Segmented control du niveau d'adaptation (constat 06)
+- **Quoi :** Le sélecteur du niveau d'adaptation a maintenant un contenant discret pour les cellules inactives (fond et bordure creuse), ce qui clarifie qu'il s'agit d'un « segmented control » cliquable, et non de texte nu.
+- **Pourquoi :** Audit UI, constat 06.
+- **Fichiers touchés :** `src/app/globals.css`, `tests/e2e/tailor.spec.ts`.
+- **Résultat vérifs :** `tsc --noEmit` 0 erreur, ESLint 0 erreur, Vitest 194/194, Build OK, Playwright 34/34 (tout vert).
+- **Commit :** Sera commité dans la foulée.
 
 ### 2026-07-10 : Les deux imports sur le même gabarit (constats 04 et 07)
 - **Quoi :** Les modales d'import (PDF et texte) partagent désormais le même gabarit avec le bouton de fermeture principal en croix (`.ui-dialog__close` dans `.ui-dialog__head`) et un pied `.ui-dialog__actions` standardisé « Annuler » (secondaire) à gauche et l'action principale à droite. La hiérarchie visuelle est rétablie.
