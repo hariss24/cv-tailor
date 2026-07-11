@@ -7,7 +7,7 @@ import { fetchJobMeta } from "@/lib/ai/jobMeta";
 import { normalizeResume, isEmptyResume } from "@/lib/resume/normalize";
 import JobExtractor from "./JobExtractor";
 import AtsPanel from "./AtsPanel";
-import PackModal from "./PackModal";
+import { useRouter } from "next/navigation";
 import DiffModal from "./DiffModal";
 import { loadMasterResume } from "@/lib/storage/master";
 import type { Resume } from "@/lib/resume/schema";
@@ -40,6 +40,7 @@ export default function TailorModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   // Pré-remplissage depuis l'onglet Offres : la page est remontée à la navigation, donc l'offre
   // en attente est lue à l'initialisation (évite un setState React dans un effet).
   const [jobDesc, setJobDesc] = useState(() =>
@@ -48,21 +49,15 @@ export default function TailorModal({
   const [level, setLevel] = useState<TailorLevel>("adapte");
   const [useMaster, setUseMaster] = useState(true);
   const [busy, setBusy] = useState(false);
-  // « Candidater » depuis l'onglet Offres : le Pack s'ouvre directement par-dessus.
-  const [packOpen, setPackOpen] = useState(
-    () => typeof window !== "undefined" && useDocStore.getState().pendingPackOpen,
-  );
   const [diffOpen, setDiffOpen] = useState(false);
   const tailorBefore = useDocStore((s) => s.tailorBefore);
 
   // Consommer l'offre en attente une fois lue (setter zustand, pas un setState React).
   useEffect(() => {
     if (useDocStore.getState().pendingJobDesc) useDocStore.getState().setPendingJobDesc(null);
-    useDocStore.getState().setPendingPackOpen(false);
   }, []);
 
-  // Échap ferme la modale du dessus d'abord : inactif tant que Pack ou Diff est ouverte (M4).
-  useEscapeClose(open && !busy && !packOpen && !diffOpen, onClose);
+  useEscapeClose(open && !busy && !diffOpen, onClose);
 
   if (!open) return null;
 
@@ -208,7 +203,11 @@ export default function TailorModal({
                 <button
                   type="button"
                   className="tailor-btn tailor-btn-block pack-btn-variant"
-                  onClick={() => setPackOpen(true)}
+                  onClick={() => {
+                    useDocStore.getState().setPendingJobDesc(jobDesc);
+                    onClose();
+                    router.push("/pack");
+                  }}
                   disabled={busy}
                 >
                   Créer le Pack candidature
@@ -220,7 +219,7 @@ export default function TailorModal({
           </div>
         </div>
 
-        <PackModal open={packOpen} onClose={() => setPackOpen(false)} initialJobDesc={jobDesc} />
+
         <DiffModal open={diffOpen} onClose={() => setDiffOpen(false)} />
       </div>
     </div>

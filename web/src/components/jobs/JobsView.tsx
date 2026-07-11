@@ -150,8 +150,7 @@ export default function JobsView({ config }: { config: JobsConfig }) {
     setPendingJobDesc(job.jobText);
     if (job.company) setCompany(job.company);
     if (job.title) setRole(job.title);
-    useDocStore.getState().setPendingPackOpen(true);
-    router.push("/");
+    router.push("/pack");
   }
 
   async function dismiss(job: JobEntry) {

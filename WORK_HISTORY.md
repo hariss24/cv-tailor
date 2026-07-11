@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** L'audit de cohérence UI est intégralement soldé (13 constats). Rien d'urgent en cours.
+**Prochaine étape suggérée :** Poursuivre le plan `2026-07-10-pack-editeur-etiquettes.md` avec la Task 2 (UI éditeur des étiquettes variables).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-10 : Pack candidature devient la page /pack (sortie de la modale-dans-la-modale)
+- **Quoi :** Refonte de l'UI Pack. Suppression de `PackModal` au profit d'une page Next.js dédiée (`/pack`). Les boutons "Candidater" des cartes d'offres et le bouton "Créer le Pack" de la modale d'adaptation redirigent maintenant vers `/pack`. Ajustement CSS pour le conteneur (`.pack-page`) et retrait de l'état `pendingPackOpen` du store.
+- **Pourquoi :** Exécution de la Task 1 du plan `2026-07-10-pack-editeur-etiquettes.md` (ergonomie, libérer la modale surchargée).
+- **Fichiers touchés :** `src/app/pack/page.tsx`, `src/components/pack/PackView.tsx`, `src/components/modals/PackModal.tsx` (supprimé), `src/components/modals/TailorModal.tsx`, `src/components/jobs/JobsView.tsx`, `src/state/docStore.ts`, `src/app/globals.css`, `tests/e2e/pack.spec.ts`.
+- **Résultat vérifs :** `tsc --noEmit` 0 erreur, ESLint 0 erreur, Vitest 194/194, Build OK, Playwright (pack.spec.ts) vert.
+- **Commit :** Sera commité dans la foulée.
 
 ### 2026-07-10 : Constats basses de l'audit UI (08, 09, 10, 11)
 - **Quoi :** (08) retrait des emojis dans les boutons — 🔥 de « Sur-mesure » (TailorModal) et 🤖 de « Analyser avec l'IA » (AtsPanel) ; (09) le FAB « ✓ Terminé » du tiroir passe désormais DERRIÈRE les modales (z-index 101 → 99, sous l'overlay à 100) ; (10) l'indicateur de sauvegarde n'est plus une coche nue en mobile mais une icône SVG « disquette » (13 px, même set monochrome) avec tooltip ; (11) « cv-tailor » → « CV Tailor » dans l'Aide.

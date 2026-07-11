@@ -347,6 +347,10 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .pack-modal { max-width: 620px; max-height: 90vh; overflow-y: auto; }
 /* Une fois le pack généré, la modale s'élargit : lettre et email côte à côte. */
 .pack-modal--result { max-width: 1060px; }
+
+/* Page /pack (remplace la modale) : contenu en colonne, marge interne confortable. */
+.pack-page { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 768px) { .pack-page { padding: 14px; } }
 .pack-meta { display: flex; gap: 8px; margin-top: 8px; }
 .pack-meta .form-input { flex: 1; }
 .pack-result { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin-top: 4px; }

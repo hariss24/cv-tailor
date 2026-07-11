@@ -15,12 +15,9 @@ test("le pack construit lettre + email depuis un modèle, sans IA", async ({ pag
     await route.fulfill({ status: 500, json: { error: "pas de clé" } });
   });
 
-  await page.goto("/");
-  // Le pack se lance depuis la modale « Adapter à une offre ».
-  await page.getByRole("button", { name: "Adapter à une offre" }).click();
-  await page.getByRole("button", { name: "Créer le Pack candidature" }).click();
+  await page.goto("/pack");
 
-  const modal = page.locator(".pack-modal");
+  const modal = page.locator(".pack-page");
 
   // La bibliothèque est seedée au premier lancement : 3 modèles de départ.
   await expect(modal.getByRole("combobox", { name: "Choisir un modèle" }).locator("option")).toHaveCount(3);
@@ -73,11 +70,9 @@ test("« Adapter à l'offre (IA) » remplace le corps du modèle via /api/adapt-
     route.fulfill({ json: { company: "", role: "" } }),
   );
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Adapter à une offre" }).click();
-  await page.getByRole("button", { name: "Créer le Pack candidature" }).click();
+  await page.goto("/pack");
 
-  const modal = page.locator(".pack-modal");
+  const modal = page.locator(".pack-page");
   await modal
     .getByPlaceholder(/Offre d'emploi \(optionnel\)/)
     .fill("Développeur Full Stack React/Node, télétravail.");
@@ -101,9 +96,7 @@ test("en mobile, la barre de modèles ne déborde pas de la modale", async ({ pa
     route.fulfill({ status: 500, json: { error: "pas de clé" } }),
   );
 
-  await page.goto("/");
-  await page.getByRole("button", { name: "Adapter à une offre" }).click();
-  await page.getByRole("button", { name: "Créer le Pack candidature" }).click();
+  await page.goto("/pack");
 
   const bar = page.locator(".pack-tpl-bar");
   await expect(bar).toBeVisible();

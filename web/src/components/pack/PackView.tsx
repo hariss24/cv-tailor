@@ -1,63 +1,53 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
 import { fetchJobMeta } from "@/lib/ai/jobMeta";
 import { generateLetterPdfBlob } from "@/lib/pdfgen/generatePdf";
 import PdfPreview from "../editor/PdfPreview";
-import TemplateEditorPanel from "../pack/TemplateEditorPanel";
+import TemplateEditorPanel from "./TemplateEditorPanel";
 import type { Resume } from "@/lib/resume/schema";
 import type { MailTemplate } from "@/lib/templates/defaults";
 import { buildLetterFromTemplate, renderEmail } from "@/lib/templates/build";
 import type { TemplateVars } from "@/lib/templates/render";
 import { ensureDefaultTemplates, listTemplates, saveTemplate, deleteTemplate, saveDraft } from "@/lib/storage/db";
 import { toast, uiConfirm } from "@/state/uiStore";
-import JobExtractor from "./JobExtractor";
-import { useEscapeClose } from "@/lib/useEscapeClose";
+import JobExtractor from "../modals/JobExtractor";
 
 /**
- * Modale « Pack candidature » : lettre + email construits depuis un modèle à variables
- * (bibliothèque locale, zéro IA par défaut). IA optionnelle : « Adapter à l'offre »
- * ajuste le corps de la lettre au texte de l'offre (photo jamais envoyée).
+ * Page « Pack candidature » (/pack) : lettre + email construits depuis un modèle à
+ * variables (bibliothèque locale, zéro IA par défaut). IA optionnelle : « Adapter à
+ * l'offre » ajuste le corps de la lettre au texte de l'offre (photo jamais envoyée).
  */
-export default function PackModal({
-  open,
-  onClose,
-  initialJobDesc = "",
-}: {
-  open: boolean;
-  onClose: () => void;
-  /** Offre déjà saisie dans TailorModal (flux « Candidater » depuis les Offres). */
-  initialJobDesc?: string;
-}) {
+export default function PackView() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<MailTemplate[]>([]);
   const [tpl, setTpl] = useState<MailTemplate | null>(null);
   const [company, setCompanyLocal] = useState(() => useDocStore.getState().company);
   const [role, setRoleLocal] = useState(() => useDocStore.getState().role);
   const [contact, setContact] = useState("");
-  const [jobDesc, setJobDesc] = useState(initialJobDesc);
+  const [jobDesc, setJobDesc] = useState(() =>
+    typeof window !== "undefined" ? useDocStore.getState().pendingJobDesc ?? "" : "",
+  );
   const [busy, setBusy] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
 
-  // Reprend l'offre saisie dans TailorModal à chaque ouverture, si le champ local est
-  // encore vide (ajustement pendant le rendu — pas de setState dans un effet).
-  const [prevOpen, setPrevOpen] = useState(false);
-  if (open !== prevOpen) {
-    setPrevOpen(open);
-    if (open && !jobDesc && initialJobDesc) setJobDesc(initialJobDesc);
-  }
+  // Consomme l'offre en attente (depuis TailorModal ou « Candidater ») une fois lue.
+  useEffect(() => {
+    if (useDocStore.getState().pendingJobDesc) useDocStore.getState().setPendingJobDesc(null);
+  }, []);
 
   // Chargement de la bibliothèque à l'ouverture (seed au premier lancement).
   useEffect(() => {
-    if (!open) return;
     (async () => {
       await ensureDefaultTemplates();
       const all = await listTemplates();
       setTemplates(all);
       setTpl((cur) => cur ?? all[0] ?? null);
     })();
-  }, [open]);
+  }, []);
 
   const cv = useDocStore((s) => s.json) as Resume;
   const isCv = "name" in (cv as object);
@@ -90,10 +80,6 @@ export default function PackModal({
     }, 600);
     return () => clearTimeout(t);
   }, [letter]);
-
-  useEscapeClose(open && !busy, onClose);
-
-  if (!open) return null;
 
   const patchTpl = (patch: Partial<MailTemplate>) => setTpl((t) => (t ? { ...t, ...patch } : t));
 
@@ -188,7 +174,7 @@ export default function PackModal({
     if (company.trim()) setCompany(company.trim());
     if (role.trim()) setRole(role.trim());
     toast("Lettre chargée dans l'éditeur (type « Lettre »).", "success");
-    onClose();
+    router.push("/");
   };
 
   const copyEmail = async () => {
@@ -202,22 +188,22 @@ export default function PackModal({
   };
 
   return (
-    <div className="ui-overlay" role="presentation" onClick={busy ? undefined : onClose}>
-      <div
-        className="ui-dialog pack-modal pack-modal--result"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Pack candidature"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="ui-dialog__head">
-          <h2 className="ui-dialog__title">Pack candidature</h2>
-          <button type="button" className="ui-dialog__close" aria-label="Fermer" onClick={onClose} disabled={busy}>
-            &times;
+    <div className="wrap">
+      <header className="topbar topbar--secondary">
+        <h1 className="hist-h1">Pack candidature</h1>
+        <div className="topbar-actions">
+          <button
+            type="button"
+            className="btn-nav"
+            onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+            Retour
           </button>
         </div>
+      </header>
 
-        {/* Barre modèle */}
+      <div className="pane pack-page" style={{ overflowY: "auto" }}>
         <div className="pack-tpl-bar">
           <select
             className="form-input"
@@ -235,7 +221,6 @@ export default function PackModal({
           <button type="button" className="form-btn-mini" onClick={onDeleteTpl} disabled={busy || !tpl}>Supprimer</button>
         </div>
 
-        {/* Variables */}
         <div className="pack-vars">
           <input className="form-input" placeholder="Entreprise" value={company}
             onChange={(e) => setCompanyLocal(e.target.value)} disabled={busy} />
@@ -245,7 +230,6 @@ export default function PackModal({
             onChange={(e) => setContact(e.target.value)} disabled={busy} />
         </div>
 
-        {/* Offre (IA optionnelle + préremplissage) */}
         <JobExtractor onExtracted={(text) => { setJobDesc(text); void prefillFromJob(text); }} disabled={busy} />
         <textarea
           className="form-textarea"
@@ -258,7 +242,6 @@ export default function PackModal({
         />
 
         <div className="pack-result">
-          {/* Colonne gauche : édition du modèle */}
           <div className="pack-col">
             {tpl ? <TemplateEditorPanel tpl={tpl} onChange={patchTpl} disabled={busy} /> : null}
             <button type="button" className="go" onClick={adaptWithAi} disabled={busy || !tpl}>
@@ -266,7 +249,6 @@ export default function PackModal({
             </button>
           </div>
 
-          {/* Colonne droite : aperçus */}
           <div className="pack-col">
             <div className="pack-letter-title">Lettre de motivation</div>
             {pdfBlob ? (
@@ -291,8 +273,6 @@ export default function PackModal({
             </button>
           </div>
         </div>
-
-
       </div>
     </div>
   );
