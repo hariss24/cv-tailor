@@ -210,7 +210,7 @@ export default function TailorModal({
                   }}
                   disabled={busy}
                 >
-                  Créer le Pack candidature
+                  Créer une lettre de motivation
                 </button>
               </div>
             </div>

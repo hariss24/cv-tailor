@@ -5,27 +5,23 @@ import { useRouter } from "next/navigation";
 import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
 import { fetchJobMeta } from "@/lib/ai/jobMeta";
-import { generateLetterPdfBlob } from "@/lib/pdfgen/generatePdf";
-import PdfPreview from "../editor/PdfPreview";
-import TemplateEditorPanel from "./TemplateEditorPanel";
 import VariableEditor from "./VariableEditor";
-import { TEMPLATE_VARIABLES } from "@/lib/templates/render";
+import { TEMPLATE_VARIABLES, type TemplateVars } from "@/lib/templates/render";
 import type { Resume } from "@/lib/resume/schema";
 import type { MailTemplate } from "@/lib/templates/defaults";
-import { buildLetterFromTemplate, renderEmail } from "@/lib/templates/build";
-import type { TemplateVars } from "@/lib/templates/render";
-import { ensureDefaultTemplates, listTemplates, saveTemplate, deleteTemplate, saveDraft } from "@/lib/storage/db";
-import { toast, uiConfirm } from "@/state/uiStore";
+import { buildLetterFromTemplate } from "@/lib/templates/build";
+import { ensureDefaultTemplates, listTemplates, saveTemplate, saveDraft } from "@/lib/storage/db";
+import { toast } from "@/state/uiStore";
 import JobExtractor from "../modals/JobExtractor";
 
 /**
- * Page « Pack candidature » (/pack) : lettre + email construits depuis un modèle à
- * variables (bibliothèque locale, zéro IA par défaut). IA optionnelle : « Adapter à
- * l'offre » ajuste le corps de la lettre au texte de l'offre (photo jamais envoyée).
+ * Page « Lettre de motivation » (/pack) : un éditeur à étiquettes plein écran
+ * (objet + corps) qui construit la lettre depuis un modèle unique à variables
+ * locales — zéro email, zéro aperçu séparé. IA optionnelle : « Adapter à l'offre »
+ * réécrit le corps au texte de l'offre (la photo du CV n'est jamais envoyée).
  */
 export default function PackView() {
   const router = useRouter();
-  const [templates, setTemplates] = useState<MailTemplate[]>([]);
   const [tpl, setTpl] = useState<MailTemplate | null>(null);
   const [company, setCompanyLocal] = useState(() => useDocStore.getState().company);
   const [role, setRoleLocal] = useState(() => useDocStore.getState().role);
@@ -34,20 +30,21 @@ export default function PackView() {
     typeof window !== "undefined" ? useDocStore.getState().pendingJobDesc ?? "" : "",
   );
   const [busy, setBusy] = useState(false);
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Déplie l'adaptation IA d'emblée si on arrive avec une offre en attente.
+  const [showAdapt, setShowAdapt] = useState(
+    () => typeof window !== "undefined" && !!useDocStore.getState().pendingJobDesc,
+  );
 
   // Consomme l'offre en attente (depuis TailorModal ou « Candidater ») une fois lue.
   useEffect(() => {
     if (useDocStore.getState().pendingJobDesc) useDocStore.getState().setPendingJobDesc(null);
   }, []);
 
-  // Chargement de la bibliothèque à l'ouverture (seed au premier lancement).
+  // Charge le modèle unique (seed/migration au premier lancement).
   useEffect(() => {
     (async () => {
       await ensureDefaultTemplates();
       const all = await listTemplates();
-      setTemplates(all);
       setTpl((cur) => cur ?? all[0] ?? null);
     })();
   }, []);
@@ -73,23 +70,15 @@ export default function PackView() {
     () => (tpl && isCv ? buildLetterFromTemplate(tpl, vars, cv, today) : null),
     [tpl, vars, cv, isCv, today],
   );
-  const email = useMemo(() => (tpl ? renderEmail(tpl, vars) : null), [tpl, vars]);
-
-  // Aperçu PDF debouncé (600 ms) — régénérer à chaque frappe serait trop lourd.
-  useEffect(() => {
-    if (!letter) return;
-    const t = setTimeout(() => {
-      generateLetterPdfBlob(letter, []).then(setPdfBlob).catch(console.error);
-    }, 600);
-    return () => clearTimeout(t);
-  }, [letter]);
 
   const patchTpl = (patch: Partial<MailTemplate>) => setTpl((t) => (t ? { ...t, ...patch } : t));
 
-  const selectTpl = (id: string) => {
-    const found = templates.find((t) => t.id === id);
-    if (found) setTpl({ ...found });
-  };
+  // Persistance silencieuse des éditions du modèle (débounce 800 ms).
+  useEffect(() => {
+    if (!tpl) return;
+    const t = setTimeout(() => void saveTemplate(tpl), 800);
+    return () => clearTimeout(t);
+  }, [tpl]);
 
   // Préremplissage silencieux depuis l'offre — ne remplit QUE les champs vides.
   const prefillFromJob = async (desc: string) => {
@@ -100,41 +89,11 @@ export default function PackView() {
     if (!role.trim() && meta.role) setRoleLocal(meta.role);
   };
 
-  const onSaveTpl = async () => {
-    if (!tpl) return;
-    await saveTemplate(tpl);
-    setTemplates(await listTemplates());
-    toast("Modèle enregistré.", "success");
-  };
-
-  const onDuplicateTpl = async () => {
-    if (!tpl) return;
-    const copy = { ...tpl, id: crypto.randomUUID(), name: `${tpl.name} (copie)` };
-    await saveTemplate(copy);
-    setTemplates(await listTemplates());
-    setTpl(copy);
-    toast("Modèle dupliqué.", "success");
-  };
-
-  const onDeleteTpl = async () => {
-    if (!tpl) return;
-    if (templates.length <= 1) {
-      toast("Impossible de supprimer le dernier modèle.", "error");
-      return;
-    }
-    if (!(await uiConfirm(`Supprimer le modèle « ${tpl.name} » ?`, "Supprimer"))) return;
-    await deleteTemplate(tpl.id);
-    const all = await listTemplates();
-    setTemplates(all);
-    setTpl(all[0] ? { ...all[0] } : null);
-    toast("Modèle supprimé.", "success");
-  };
-
   const adaptWithAi = async () => {
     if (!tpl) return;
     const desc = jobDesc.trim();
     if (!desc) {
-      toast("Colle d'abord une offre d'emploi pour adapter le modèle.", "error");
+      toast("Colle d'abord une offre d'emploi pour adapter la lettre.", "error");
       return;
     }
     if (!isCv) {
@@ -180,20 +139,10 @@ export default function PackView() {
     router.push("/");
   };
 
-  const copyEmail = async () => {
-    if (!email) return;
-    try {
-      await navigator.clipboard.writeText(`Objet : ${email.subject}\n\n${email.body}`);
-      toast("Email copié dans le presse-papier.", "success");
-    } catch {
-      toast("Copie automatique impossible — sélectionne et copie manuellement.", "error");
-    }
-  };
-
   return (
     <div className="wrap">
       <header className="topbar topbar--secondary">
-        <h1 className="hist-h1">Pack candidature</h1>
+        <h1 className="hist-h1">Lettre de motivation</h1>
         <div className="topbar-actions">
           <button
             type="button"
@@ -207,6 +156,10 @@ export default function PackView() {
       </header>
 
       <div className="pane pack-page" style={{ overflowY: "auto" }}>
+        <p className="pack-hint">
+          Ces champs remplacent automatiquement les variables (les pastilles) dans ta lettre.
+        </p>
+
         <div className="pack-vars">
           <input className="form-input" placeholder="Entreprise" value={company}
             onChange={(e) => setCompanyLocal(e.target.value)} disabled={busy} />
@@ -216,101 +169,64 @@ export default function PackView() {
             onChange={(e) => setContact(e.target.value)} disabled={busy} />
         </div>
 
-        <JobExtractor onExtracted={(text) => { setJobDesc(text); void prefillFromJob(text); }} disabled={busy} />
-        <textarea
-          className="form-textarea"
-          rows={3}
-          placeholder="Offre d'emploi (optionnel) — sert au bouton « Adapter à l'offre » et au préremplissage des champs…"
-          value={jobDesc}
-          onChange={(e) => setJobDesc(e.target.value)}
-          onBlur={() => void prefillFromJob(jobDesc)}
-          disabled={busy}
-        />
-
-        <div className="pack-result">
-          <div className="pack-col">
-            {tpl ? (
-              <>
-                <label className="form-label">Corps de la lettre</label>
-                <VariableEditor
-                  value={tpl.letterBody}
-                  onChange={(v) => patchTpl({ letterBody: v })}
-                  variables={TEMPLATE_VARIABLES}
-                  disabled={busy}
-                  ariaLabel="Corps de la lettre"
-                  minHeightPx={160}
-                />
-                <label className="form-label">Corps de l&apos;email</label>
-                <VariableEditor
-                  value={tpl.emailBody}
-                  onChange={(v) => patchTpl({ emailBody: v })}
-                  variables={TEMPLATE_VARIABLES}
-                  disabled={busy}
-                  ariaLabel="Corps de l'email"
-                  minHeightPx={120}
-                />
-              </>
-            ) : null}
-            <button type="button" className="go" onClick={adaptWithAi} disabled={busy || !tpl}>
-              {busy ? "Adaptation…" : "✨ Adapter à l'offre (IA)"}
-            </button>
-
-            <button
-              type="button"
-              className="form-btn-mini pack-advanced-toggle"
-              aria-expanded={showAdvanced}
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              {showAdvanced ? "▾ Personnaliser (modèle, objets, formules)" : "▸ Personnaliser (modèle, objets, formules)"}
-            </button>
-            {showAdvanced ? (
-              <div className="pack-advanced">
-                {templates.length > 1 ? (
-                  <select
-                    className="form-input"
-                    value={tpl?.id ?? ""}
-                    onChange={(e) => selectTpl(e.target.value)}
-                    disabled={busy}
-                    aria-label="Choisir un modèle"
-                  >
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                ) : null}
-                {tpl ? <TemplateEditorPanel tpl={tpl} onChange={patchTpl} disabled={busy} /> : null}
-                <div className="pack-tpl-bar">
-                  <button type="button" className="form-btn-mini" onClick={onSaveTpl} disabled={busy || !tpl}>Enregistrer</button>
-                  <button type="button" className="form-btn-mini" onClick={onDuplicateTpl} disabled={busy || !tpl}>Dupliquer</button>
-                  <button type="button" className="form-btn-mini" onClick={onDeleteTpl} disabled={busy || !tpl}>Supprimer</button>
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="pack-col">
-            <div className="pack-letter-title">Lettre de motivation</div>
-            {pdfBlob ? (
-              <PdfPreview blob={pdfBlob} />
-            ) : (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {isCv ? "Génération de l'aperçu…" : "Charge d'abord un CV dans l'éditeur."}
-              </div>
-            )}
-            <button type="button" className="go" onClick={loadLetter} disabled={busy || !letter}>
-              {"Insérer dans l'éditeur (Lettre)"}
-            </button>
-
-            <div className="pack-letter-title">{"Email d'accompagnement"}</div>
-            <textarea
-              className="form-textarea pack-email"
-              readOnly
-              value={email ? `Objet : ${email.subject}\n\n${email.body}` : ""}
+        {tpl ? (
+          <>
+            <label className="form-label">Objet</label>
+            <VariableEditor
+              value={tpl.letterSubject}
+              onChange={(v) => patchTpl({ letterSubject: v })}
+              disabled={busy}
+              ariaLabel="Objet de la lettre"
+              showPalette={false}
+              singleLine
+              minHeightPx={0}
             />
-            <button type="button" className="go" onClick={copyEmail} disabled={busy || !email}>
-              {"📋 Copier l'email"}
+
+            <label className="form-label">Corps de la lettre</label>
+            <VariableEditor
+              value={tpl.letterBody}
+              onChange={(v) => patchTpl({ letterBody: v })}
+              variables={TEMPLATE_VARIABLES}
+              disabled={busy}
+              ariaLabel="Corps de la lettre"
+              minHeightPx={340}
+            />
+          </>
+        ) : null}
+
+        <button
+          type="button"
+          className="form-btn-mini pack-advanced-toggle"
+          aria-expanded={showAdapt}
+          onClick={() => setShowAdapt((v) => !v)}
+        >
+          {showAdapt ? "▾ Adapter à une offre (IA)" : "▸ Adapter à une offre (IA)"}
+        </button>
+        {showAdapt ? (
+          <div className="pack-advanced">
+            <JobExtractor onExtracted={(text) => { setJobDesc(text); void prefillFromJob(text); }} disabled={busy} />
+            <textarea
+              className="form-textarea"
+              rows={4}
+              placeholder="Colle l'offre d'emploi ici — l'IA réécrit le corps de la lettre pour coller au poste."
+              value={jobDesc}
+              onChange={(e) => setJobDesc(e.target.value)}
+              onBlur={() => void prefillFromJob(jobDesc)}
+              disabled={busy}
+            />
+            <button type="button" className="go" onClick={adaptWithAi} disabled={busy || !tpl}>
+              {busy ? "Adaptation…" : "✨ Adapter le corps à l'offre"}
             </button>
           </div>
+        ) : null}
+
+        <div className="pack-actions">
+          <button type="button" className="go" onClick={loadLetter} disabled={busy || !letter}>
+            Créer ma lettre (ouvrir dans l&apos;éditeur)
+          </button>
+          {!isCv ? (
+            <p className="pack-hint">Charge d&apos;abord un CV dans l&apos;éditeur pour générer la lettre.</p>
+          ) : null}
         </div>
       </div>
     </div>

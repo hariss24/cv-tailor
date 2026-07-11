@@ -87,7 +87,7 @@ export default function HelpModal({
             <h3 className="help-section__title">Bon à savoir</h3>
             <ul className="help-list">
               <li><strong>Offres</strong> : cherche et note des offres d&apos;emploi, puis adapte ton CV en un clic.</li>
-              <li><strong>Pack candidature</strong> : génère une lettre de motivation + un email d&apos;accompagnement.</li>
+              <li><strong>Lettre de motivation</strong> : génère une lettre à partir d&apos;un modèle à variables (pastilles), adaptable à une offre par l&apos;IA.</li>
               <li><strong>ATS</strong> : mesure la compatibilité de ton CV avec l&apos;offre (mots-clés).</li>
               <li><strong>Snapshots &amp; Historique</strong> : sauvegardes de versions que tu peux restaurer.</li>
             </ul>

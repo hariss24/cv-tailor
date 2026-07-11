@@ -1,26 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { DEFAULT_TEMPLATES } from "./defaults";
-import { buildLetterFromTemplate, renderEmail } from "./build";
+import { buildLetterFromTemplate } from "./build";
 import { DEFAULT_RESUME } from "@/lib/resume/schema";
 
-describe("modèles de départ", () => {
+describe("modèle de départ", () => {
   it("fournit 1 modèle avec un id stable", () => {
-    expect(DEFAULT_TEMPLATES.map((t) => t.id)).toEqual([
-      "default-candidature",
-    ]);
+    expect(DEFAULT_TEMPLATES.map((t) => t.id)).toEqual(["default-candidature"]);
   });
 
-  it("chaque modèle a un repli sur la formule d'appel de la lettre", () => {
-    for (const t of DEFAULT_TEMPLATES) {
-      expect(t.letterGreeting, t.id).toContain("{M/Mme Nom|Madame, Monsieur}");
-    }
-  });
-
-  it("chaque email mentionne l'entreprise et le poste", () => {
-    for (const t of DEFAULT_TEMPLATES) {
-      expect(t.emailBody, t.id).toContain("{Entreprise}");
-      expect(t.emailSubject + t.emailBody, t.id).toContain("{Poste}");
-    }
+  it("le corps mentionne l'entreprise, le poste et un repli sur la formule d'appel", () => {
+    const t = DEFAULT_TEMPLATES[0];
+    expect(t.letterBody).toContain("{Entreprise}");
+    expect(t.letterBody).toContain("{Poste}");
+    expect(t.letterBody).toContain("{M/Mme Nom|Madame, Monsieur}");
   });
 });
 
@@ -35,25 +27,20 @@ describe("buildLetterFromTemplate", () => {
     expect(letter.sender_contact).toBe("h@x.fr · 06");
     expect(letter.date).toBe("Paris, le 8 juillet 2026");
     expect(letter.recipient_name).toBe("ACME");
-    expect(letter.greeting).toBe("Madame, Monsieur,");
     expect(letter.subject).toContain("Chef de projet");
+    // Le corps porte tout : formule d'appel (repli), texte et signature.
+    expect(letter.body).toContain("Bonjour Madame, Monsieur,");
+    expect(letter.body).toContain("ACME");
     expect(letter.body).not.toContain("{Entreprise}");
-    expect(letter.signature).toBe("Hariss Tahet");
+    expect(letter.body).toContain("Hariss Tahet".split(" ")[0]);
+    // greeting/signoff/signature vides : tout est dans le corps.
+    expect(letter.greeting).toBe("");
+    expect(letter.signoff).toBe("");
+    expect(letter.signature).toBe("");
   });
 
   it("replis corrects quand entreprise inconnue", () => {
     const letter = buildLetterFromTemplate(tpl, { ...vars, Entreprise: "" }, cv, "8 juillet 2026");
     expect(letter.recipient_name).toBe("À l'attention du responsable du recrutement");
-  });
-});
-
-describe("renderEmail", () => {
-  it("rend objet + corps avec variables substituées", () => {
-    const { subject, body } = renderEmail(DEFAULT_TEMPLATES[0], {
-      Entreprise: "ACME", Poste: "Dev", "M/Mme Nom": "", "Prénom": "Hariss", Nom: "Tahet", Date: "",
-    });
-    expect(subject).toContain("Dev");
-    expect(body).toContain("ACME");
-    expect(body).toContain("Bonjour,");
   });
 });

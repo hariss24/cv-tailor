@@ -317,9 +317,21 @@ export async function markJobSeen(id: string) {
 // TEMPLATES API (modèles lettre/email)
 // ---------------------------------------------------------------------------
 
-/** Seed les modèles de départ si la table est vide (premier lancement). */
+/**
+ * Seed le modèle de départ. Migration unique `pack-templates-v2` : la refonte
+ * « lettre seule » remplace les anciens modèles (email + multi-modèles) une fois,
+ * puis on préserve les éditions de l'utilisateur (on ne réécrase plus ensuite).
+ */
 export async function ensureDefaultTemplates() {
   try {
+    const KEY = "pack-templates-v2";
+    const migrated = typeof localStorage !== "undefined" && localStorage.getItem(KEY);
+    if (!migrated) {
+      await db.templates.clear();
+      await db.templates.bulkPut(DEFAULT_TEMPLATES.map((t) => ({ ...t, updatedAt: Date.now() })));
+      if (typeof localStorage !== "undefined") localStorage.setItem(KEY, "1");
+      return;
+    }
     if ((await db.templates.count()) === 0) {
       await db.templates.bulkPut(DEFAULT_TEMPLATES.map((t) => ({ ...t, updatedAt: Date.now() })));
     }

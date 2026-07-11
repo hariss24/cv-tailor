@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Refonte Pack terminée (page /pack + éditeur à étiquettes, 5 tasks du plan `2026-07-10-pack-editeur-etiquettes.md` livrées).
+**Prochaine étape suggérée :** Refonte « Lettre de motivation » livrée (éditeur plein écran façon MeilleursJobs/Candiboost, modèle unique, sans email). Reste possible : bibliothèque de tons, persistance multi-lettres, aperçu PDF optionnel.
 
 ---
 
@@ -40,6 +40,14 @@
 ---
 
 ## Journal
+
+### 2026-07-11 : Refonte « Lettre de motivation » façon MeilleursJobs/Candiboost (éditeur plein écran, sans email)
+- **Quoi :** Pivot d'après la page de référence MeilleursJobs fournie par Hariss (`Downloads/Nouvelle campagne - MeilleursJobs.html`, éditeur TipTap/ProseMirror). La page /pack devient un **éditeur plein écran** : objet + corps en éditeur à étiquettes (pastilles inline), palette de variables, un **seul modèle** par défaut, **plus d'email d'accompagnement**, plus de sélecteur ni de champs greeting/signoff séparés (tout est dans le corps). Contenu par défaut = la lettre de la page de référence (« Bonjour {M/Mme Nom}, … Bien cordialement, {Prénom} {Nom} »). Adaptation IA repliée dans un dépliant. Migration IndexedDB unique (`pack-templates-v2`) qui réinitialise les anciens modèles (email + multi) vers le modèle unique.
+- **Pourquoi :** Demande de Hariss : interface devenue « le bordel » (trop de champs, modèles, lettre + mail). Objectif : simplicité + le fonctionnement de Candiboost.
+- **Décisions (AskUserQuestion) :** un seul modèle par défaut ; éditeur plein écran (pas d'aperçu PDF à côté, PDF au « Créer ma lettre »).
+- **Fichiers touchés :** `src/lib/templates/defaults.ts` (modèle simplifié + nouveau contenu), `build.ts` (greeting/signoff/signature vides, `renderEmail` retiré), `defaults.test.ts`, `src/lib/storage/db.ts` (migration), `src/components/pack/VariableEditor.tsx` (`showPalette`, `singleLine`), `PackView.tsx` (réécriture), `TemplateEditorPanel.tsx` (supprimé), `src/app/pack/page.tsx` (titre), `globals.css`, `TailorModal.tsx` + `HelpModal.tsx` (libellés), `tests/e2e/pack.spec.ts`.
+- **Résultat vérifs :** `tsc` 0, `lint` 0 erreur, `vitest` 197/197, `build` OK, `playwright` 36/36. Recette visuelle desktop faite (objet + corps à pastilles, IA repliée, migration effective).
+- **Note :** le plan `2026-07-10-pack-editeur-etiquettes.md` (Tasks 1-5) est en partie superseded par ce pivot (email + multi-modèles retirés).
 
 ### 2026-07-11 : Disposition finale du Pack — dépliant Personnaliser + colonnes pleine largeur
 - **Quoi :** Task 5 du plan `2026-07-10-pack-editeur-etiquettes.md`. Vue par défaut épurée : variables, offre, les deux éditeurs à étiquettes et « Adapter à l'offre » ; tout le reste (sélecteur de modèle — masqué s'il n'y a qu'un modèle —, champs courts, boutons Enregistrer/Dupliquer/Supprimer) passe sous un dépliant « Personnaliser » replié par défaut. Correctif adjacent : la zone « Offre d'emploi » ne s'écrase plus (les enfants du haut de `.pack-page` ne rétrécissent plus).

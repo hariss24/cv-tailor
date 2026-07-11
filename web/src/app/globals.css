@@ -357,6 +357,10 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .pack-page .pack-result { flex: 1; align-items: start; }
 .pack-advanced { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .pack-advanced-toggle { align-self: flex-start; }
+/* Lettre de motivation plein écran : l'éditeur du corps prend la hauteur restante. */
+.pack-hint { font-size: 12px; color: var(--text); opacity: 0.7; margin: 0; }
+.pack-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.pack-actions .go { width: 100%; }
 .pack-meta { display: flex; gap: 8px; margin-top: 8px; }
 .pack-meta .form-input { flex: 1; }
 .pack-result { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin-top: 4px; }

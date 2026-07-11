@@ -13,17 +13,21 @@ import { parseTokens, type TokenSegment } from "@/lib/templates/tokens";
 export default function VariableEditor({
   value,
   onChange,
-  variables,
+  variables = [],
   disabled,
   ariaLabel,
   minHeightPx = 120,
+  showPalette = true,
+  singleLine = false,
 }: {
   value: string;
   onChange: (next: string) => void;
-  variables: readonly string[];
+  variables?: readonly string[];
   disabled?: boolean;
   ariaLabel: string;
   minHeightPx?: number;
+  showPalette?: boolean;
+  singleLine?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // Dernière valeur émise par CE composant : sert à ignorer les re-render dus à
@@ -85,6 +89,10 @@ export default function VariableEditor({
   // (`contentEditable=false`) et le navigateur ne les retire pas de façon fiable au
   // Backspace/Delete, surtout avec un nœud texte vide voisin — on le fait à la main.
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (singleLine && e.key === "Enter") {
+      e.preventDefault();
+      return;
+    }
     if (e.key !== "Backspace" && e.key !== "Delete") return;
     const root = ref.current;
     const sel = window.getSelection();
@@ -148,13 +156,15 @@ export default function VariableEditor({
 
   return (
     <div className="var-editor-group">
-      <div className="var-btns" aria-label={`Insérer une variable dans ${ariaLabel}`}>
-        {variables.map((v) => (
-          <button key={v} type="button" className="var-btn" disabled={disabled} onClick={() => insertVariable(v)}>
-            + {v}
-          </button>
-        ))}
-      </div>
+      {showPalette ? (
+        <div className="var-btns" aria-label={`Insérer une variable dans ${ariaLabel}`}>
+          {variables.map((v) => (
+            <button key={v} type="button" className="var-btn" disabled={disabled} onClick={() => insertVariable(v)}>
+              + {v}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div
         ref={ref}
         className="var-editor"
