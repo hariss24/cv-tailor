@@ -1161,3 +1161,10 @@ button.go:disabled {
   .snap-item { flex-direction: column; align-items: stretch; }
   .snap-actions { justify-content: flex-end; }
 }
+
+/* ---- Custom TopBar Buttons ---- */
+.btn-nav-outline-orange { color: var(--orange-text) !important; box-shadow: inset 0 0 0 1.5px var(--orange-text) !important; background: transparent !important; }
+.btn-nav-outline-orange:hover { background: var(--bg) !important; box-shadow: inset 0 0 0 2px var(--orange-text), var(--neu-raised) !important; }
+
+.btn-nav-outline-blue { color: #0070f3 !important; box-shadow: inset 0 0 0 1.5px #0070f3 !important; background: transparent !important; }
+.btn-nav-outline-blue:hover { background: var(--bg) !important; box-shadow: inset 0 0 0 2px #0070f3, var(--neu-raised) !important; }

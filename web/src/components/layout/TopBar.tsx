@@ -153,7 +153,7 @@ export default function TopBar() {
       <div className="topbar-pill" title="Nom du fichier PDF" suppressHydrationWarning>{filename}</div>
 
       <div className="topbar-actions">
-        <button type="button" className="btn-nav mobile-hidden" onClick={onNewCv}>
+        <button type="button" className="btn-nav btn-nav-outline-orange mobile-hidden" onClick={onNewCv}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Nouveau CV
         </button>
@@ -163,7 +163,7 @@ export default function TopBar() {
           Assistant IA
         </button>
 
-        <Link href="/jobs" className="btn-nav mobile-hidden">
+        <Link href="/jobs" className="btn-nav btn-nav-outline-blue mobile-hidden">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
           Offres
         </Link>
