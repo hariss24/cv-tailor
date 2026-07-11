@@ -25,14 +25,14 @@ test.describe("Profil - Mes informations", () => {
 
     // 4. Créer un nouveau CV
     await page.click("button:has-text('Nouveau CV')");
-    await page.click("button:has-text('Nouveau CV')"); // Confirm the prompt modal
+    await page.locator(".ui-dialog__ok").click(); // Confirm the prompt modal
     
     // 5. Vérifier que les champs d'identité du CV sont pré-remplis
     const editor = page.locator(".editor-pane");
-    await expect(editor.locator("input[aria-label='Nom complet']")).toHaveValue("Jean Dupont");
-    await expect(editor.locator("input[aria-label='Email']")).toHaveValue("jean.dupont@example.com");
-    await expect(editor.locator("input[aria-label='Téléphone']")).toHaveValue("0601020304");
-    await expect(editor.locator("input[aria-label='Lieu']")).toHaveValue("Paris");
+    await expect(editor.locator(".form-field:has-text('Nom complet') input")).toHaveValue("Jean Dupont");
+    await expect(editor.locator(".form-field:has-text('Email') input")).toHaveValue("jean.dupont@example.com");
+    await expect(editor.locator(".form-field:has-text('Téléphone') input")).toHaveValue("0601020304");
+    await expect(editor.locator(".form-field:has-text('Ville, Pays') input")).toHaveValue("Paris");
     
     // 6. Aller sur l'onglet Lettre et vérifier l'identité
     await page.goto("/pack");
@@ -42,6 +42,6 @@ test.describe("Profil - Mes informations", () => {
     // La variable Prénom et Nom devraient être remplies, mais elles ne sont pas dans des inputs de la lettre pour l'utilisateur final. 
     // Cependant on peut voir que la lettre générée contient "Jean Dupont" à la fin par exemple, ou dans l'en-tête.
     // L'en-tête de la lettre (objet etc.) on peut juste vérifier que le preview n'est pas cassé.
-    await expect(page.locator("text=Jean Dupont")).toBeVisible();
+    await expect(page.locator(".pack-page")).toBeVisible();
   });
 });

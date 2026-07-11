@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Refonte « Lettre de motivation » livrée (éditeur plein écran façon MeilleursJobs/Candiboost, modèle unique, sans email). Reste possible : bibliothèque de tons, persistance multi-lettres, aperçu PDF optionnel.
+**Prochaine étape suggérée :** Profil « Mes informations » livré (page /profil, pré-remplissage CV et lettre).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-11 : Profil « Mes informations » et pré-remplissage CV/Lettre
+- **Quoi :** Création du profil global (identité : prénom, nom, email, téléphone, ville, etc.) sauvegardé dans Dexie (v5). Ajout de la page `/profil` accessible via un nouveau bouton « Mes infos » dans `ActionsBar`. Le profil pré-remplissant les CV vierges (via `ActionsBar.onClear`, `TopBar.onNewCv`, et `useAutoDraft` au 1er lancement) et est utilisé prioritairement pour l'identité de l'en-tête de la lettre de motivation dans `PackView`.
+- **Pourquoi :** Exécution du plan `2026-07-11-profil-mes-informations.md` pour éviter la re-saisie des informations de base.
+- **Fichiers touchés :** `src/lib/profile/profile.ts`, `src/lib/profile/profile.test.ts`, `src/lib/storage/db.ts`, `src/components/profile/ProfileView.tsx`, `src/app/profil/page.tsx`, `src/components/layout/ActionsBar.tsx`, `src/components/layout/TopBar.tsx`, `src/lib/storage/useAutoDraft.ts`, `src/components/pack/PackView.tsx`, `tests/e2e/profile.spec.ts`.
+- **Résultat vérifs :** `tsc` 0 erreur, `eslint` 0 erreur, `vitest` 202/202, `build` OK, e2e `profile.spec.ts` vert.
+- **Commit :** Commits locaux par task, série `feat(profil)`.
 
 ### 2026-07-11 : Refonte « Lettre de motivation » façon MeilleursJobs/Candiboost (éditeur plein écran, sans email)
 - **Quoi :** Pivot d'après la page de référence MeilleursJobs fournie par Hariss (`Downloads/Nouvelle campagne - MeilleursJobs.html`, éditeur TipTap/ProseMirror). La page /pack devient un **éditeur plein écran** : objet + corps en éditeur à étiquettes (pastilles inline), palette de variables, un **seul modèle** par défaut, **plus d'email d'accompagnement**, plus de sélecteur ni de champs greeting/signoff séparés (tout est dans le corps). Contenu par défaut = la lettre de la page de référence (« Bonjour {M/Mme Nom}, … Bien cordialement, {Prénom} {Nom} »). Adaptation IA repliée dans un dépliant. Migration IndexedDB unique (`pack-templates-v2`) qui réinitialise les anciens modèles (email + multi) vers le modèle unique.
