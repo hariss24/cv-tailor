@@ -20,7 +20,7 @@ test("le pack construit lettre + email depuis un modèle, sans IA", async ({ pag
   const modal = page.locator(".pack-page");
 
   // La bibliothèque est seedée au premier lancement : 3 modèles de départ.
-  await expect(modal.getByRole("combobox", { name: "Choisir un modèle" }).locator("option")).toHaveCount(3);
+  await expect(modal.getByRole("combobox", { name: "Choisir un modèle" }).locator("option")).toHaveCount(1);
 
   // Remplir les variables → l'email se met à jour instantanément, sans IA.
   await modal.getByPlaceholder("Entreprise", { exact: true }).fill("ACME");

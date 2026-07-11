@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Poursuivre le plan `2026-07-10-pack-editeur-etiquettes.md` avec la Task 2 (UI éditeur des étiquettes variables).
+**Prochaine étape suggérée :** Poursuivre le plan `2026-07-10-pack-editeur-etiquettes.md` avec la Task 3 (`parseTokens`).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-10 : Un seul modèle de Pack par défaut (infra multi-modèles conservée)
+- **Quoi :** Réduction de `DEFAULT_TEMPLATES` à un unique modèle "Candidature" remplaçant les 3 précédents (spontanée, offre, alternance).
+- **Pourquoi :** Exécution de la Task 2 du plan `2026-07-10-pack-editeur-etiquettes.md` pour épurer l'interface de démarrage.
+- **Fichiers touchés :** `src/lib/templates/defaults.ts`, `tests/e2e/pack.spec.ts`.
+- **Résultat vérifs :** `tsc`, `lint`, `vitest` (194), `build`, `playwright` OK.
+- **Commit :** Sera commité dans la foulée.
 
 ### 2026-07-10 : Pack candidature devient la page /pack (sortie de la modale-dans-la-modale)
 - **Quoi :** Refonte de l'UI Pack. Suppression de `PackModal` au profit d'une page Next.js dédiée (`/pack`). Les boutons "Candidater" des cartes d'offres et le bouton "Créer le Pack" de la modale d'adaptation redirigent maintenant vers `/pack`. Ajustement CSS pour le conteneur (`.pack-page`) et retrait de l'état `pendingPackOpen` du store.

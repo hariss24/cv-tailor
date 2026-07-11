@@ -4,9 +4,9 @@ import { buildLetterFromTemplate, renderEmail } from "./build";
 import { DEFAULT_RESUME } from "@/lib/resume/schema";
 
 describe("modèles de départ", () => {
-  it("fournit 3 modèles avec des ids stables", () => {
+  it("fournit 1 modèle avec un id stable", () => {
     expect(DEFAULT_TEMPLATES.map((t) => t.id)).toEqual([
-      "default-spontanee", "default-offre", "default-alternance",
+      "default-candidature",
     ]);
   });
 
