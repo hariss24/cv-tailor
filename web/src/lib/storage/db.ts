@@ -3,6 +3,7 @@ import type { DocData } from "@/state/docStore";
 import type { DocType } from "@/lib/resume/schema";
 import type { TemplateId } from "@/lib/resume/templates";
 import { DEFAULT_TEMPLATES, type MailTemplate } from "@/lib/templates/defaults";
+import type { UserProfile } from "@/lib/profile/profile";
 
 // ---------------------------------------------------------------------------
 // TYPES
@@ -77,6 +78,7 @@ export class AppDatabase extends Dexie {
   history!: Table<HistoryEntry, string>; // Primary key: id
   jobs!: Table<JobEntry, string>;      // Primary key: id
   templates!: Table<MailTemplate, string>; // Primary key: id
+  profile!: Table<UserProfile, string>; // Primary key: id (singleton "me")
 
   constructor() {
     // Nouveau nom pour éviter les collisions si on lance sur le même port que Flask
@@ -111,6 +113,11 @@ export class AppDatabase extends Dexie {
     // v4 : bibliothèque de modèles lettre/email (feature « Pack candidature » sans IA).
     this.version(4).stores({
       templates: "id, updatedAt",
+    });
+
+    // v5 : profil « Mes informations » (singleton id="me"), réutilisé par CV & lettre.
+    this.version(5).stores({
+      profile: "id",
     });
   }
 }
@@ -363,5 +370,26 @@ export async function deleteTemplate(id: string) {
     await db.templates.delete(id);
   } catch (e) {
     console.warn("deleteTemplate error:", e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PROFILE API (profil « Mes informations »)
+// ---------------------------------------------------------------------------
+
+export async function loadProfile(): Promise<UserProfile | null> {
+  try {
+    return (await db.profile.get("me")) ?? null;
+  } catch (e) {
+    console.warn("loadProfile error:", e);
+    return null;
+  }
+}
+
+export async function saveProfile(p: UserProfile): Promise<void> {
+  try {
+    await db.profile.put({ ...p, id: "me", updatedAt: Date.now() });
+  } catch (e) {
+    console.warn("saveProfile error:", e);
   }
 }
