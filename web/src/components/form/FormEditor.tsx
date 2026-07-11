@@ -58,12 +58,12 @@ export default function FormEditor({ onImportPdf }: { onImportPdf?: () => void }
         <section className="form-section">
           <h3 className="form-section__title">Informations personnelles</h3>
           <div className="form-grid">
-            <Field label="Nom complet" value={cv.name} onChange={(v) => update({ name: v })} />
-            <Field label="Titre du poste" value={cv.title} onChange={(v) => update({ title: v })} />
-            <Field label="Ville, Pays" value={cv.location} onChange={(v) => update({ location: v })} />
-            <Field label="Email" value={cv.email} onChange={(v) => update({ email: v })} />
-            <Field label="Téléphone" value={cv.phone} onChange={(v) => update({ phone: v })} />
-            <Field label="LinkedIn" value={cv.linkedin} onChange={(v) => update({ linkedin: v })} />
+            <Field label="Nom complet" value={cv.name} onChange={(v) => update({ name: v })} autoComplete="name" />
+            <Field label="Titre du poste" value={cv.title} onChange={(v) => update({ title: v })} autoComplete="organization-title" />
+            <Field label="Ville, Pays" value={cv.location} onChange={(v) => update({ location: v })} autoComplete="address-level2" />
+            <Field label="Email" value={cv.email} onChange={(v) => update({ email: v })} type="email" autoComplete="email" />
+            <Field label="Téléphone" value={cv.phone} onChange={(v) => update({ phone: v })} type="tel" autoComplete="tel" />
+            <Field label="LinkedIn" value={cv.linkedin} onChange={(v) => update({ linkedin: v })} autoComplete="url" />
           </div>
           <div className="form-field">
             <label className="form-label">Photo</label>
@@ -156,15 +156,25 @@ function Field({
   label,
   value,
   onChange,
+  type,
+  autoComplete,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  type?: string;
+  autoComplete?: string;
 }) {
   return (
     <div className="form-field">
       <label className="form-label">{label}</label>
-      <input className="form-input" value={value} onChange={(e) => onChange(e.target.value)} />
+      <input
+        className="form-input"
+        type={type}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   );
 }
