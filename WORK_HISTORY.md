@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Poursuivre le plan `2026-07-10-pack-editeur-etiquettes.md` avec la Task 3 (`parseTokens`).
+**Prochaine étape suggérée :** Poursuivre le plan `2026-07-10-pack-editeur-etiquettes.md` avec la Task 4 (`VariableEditor`).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-10 : parseTokens — modèle de tokens pour l'éditeur à étiquettes
+- **Quoi :** Création d'une fonction pure `parseTokens` pour découper une chaîne avec variables `{Var}` en segments typés (texte / variable), et de sa suite de tests.
+- **Pourquoi :** Exécution de la Task 3 du plan `2026-07-10-pack-editeur-etiquettes.md` (prérequis pour l'éditeur à étiquettes `VariableEditor`).
+- **Fichiers touchés :** `src/lib/templates/tokens.ts`, `src/lib/templates/tokens.test.ts`.
+- **Résultat vérifs :** `tsc`, `lint`, `vitest` (199/199), `build`, `playwright` OK.
+- **Commit :** Sera commité dans la foulée.
 
 ### 2026-07-10 : Un seul modèle de Pack par défaut (infra multi-modèles conservée)
 - **Quoi :** Réduction de `DEFAULT_TEMPLATES` à un unique modèle "Candidature" remplaçant les 3 précédents (spontanée, offre, alternance).
