@@ -12,6 +12,11 @@ Suivi des fonctionnalités de l'application (version Next.js).
 - [x] Restriction du chat IA au périmètre CV/lettre de motivation uniquement
 - [x] Règle anti-détection : interdiction de citer l'entreprise cible
 - [x] Modèle Gemini intégré via Vercel AI SDK
+- [x] **Tonalité de l'IA** — règle `HUMAN_TONE_RULE` (`web/src/lib/ai/prompts.ts`) injectée dans
+      les trois prompts qui rédigent (adaptation CV, chat éditeur, adaptation de la lettre) :
+      clichés de candidature, vocabulaire d'IA, participe présent en fin de phrase et
+      énumérations par trois bannis. Vérifié contre Gemini : 3 tirages de lettre, 2 à 4 clichés
+      avant la règle, 0 après. Inspiré de `.claude/commands/humanize.md`, transposé en français.
 
 ### Score ATS & UI
 - [x] Panneau ATS avec score, mots-clés présents/absents, sections détectées
@@ -19,9 +24,26 @@ Suivi des fonctionnalités de l'application (version Next.js).
 - [x] Éditeur de profil avec preview PDF en temps réel (React PDF)
 - [x] Historique local des CVs (IndexedDB via Dexie)
 - [x] Toast notifications (uiStore)
+- [x] Annuler / Rétablir (Ctrl+Z / Ctrl+Shift+Z) — historique global du CV
+- [x] Page Aide / FAQ (« Comment ça marche »)
+- [x] TopBar minimaliste façon SaaS (3 zones)
+
+### CV & import
+- [x] Import « zéro perte » : sections libres, infos personnelles libres
+      (permis, portfolio, mobilité…), extraction cloisonnée
+- [x] Ordre des sections et en-tête pilotés par le CV — flèches ↑/↓ pour réordonner les sections
+- [x] Masquer une section sans l'effacer (l'œil dans le formulaire)
+- [x] Les 4 modèles itèrent sur les sections du CV (plus aucune liste en dur)
+
+### Lettre & offres
+- [x] Pack candidature : page dédiée `/pack`, plus de modal qui redemande l'offre
+      (l'offre déjà fournie est réutilisée telle quelle)
+- [x] Éditeur à étiquettes (VariableEditor) pour le corps de la lettre
+- [x] Profil « Mes informations » — pré-remplissage CV et lettre
+- [x] Onglet **Offres** : recherche France Travail, pré-filtre et scoring des annonces
 
 ### Architecture Next.js
-- [x] Déploiement Vercel
+- [x] Déploiement Vercel (production sur `main` depuis le 13/07)
 - [x] Refonte totale de la génération PDF : passage de Playwright/HTML à React PDF (génération pure client)
 - [x] Suppression de l'ancien backend Python/Flask
 
@@ -29,30 +51,23 @@ Suivi des fonctionnalités de l'application (version Next.js).
 
 ## 🔵 Priorité haute — à faire
 
-- [ ] **Déplacement haut/bas des champs formulaire du CV**
-  Mettre en place des flèches haut/bas pour déplacer les champs du formulaire du CV de haut en bas et vice versa comprenant les sections, expériences, formations, compétences et centres d'intérêt etc..
+- [ ] **Déplacement haut/bas DANS les sections du formulaire**
+  Les flèches ↑/↓ existent déjà pour réordonner les **sections** entre elles, mais pas pour
+  déplacer les éléments **à l'intérieur** d'une section : expériences, formations, compétences,
+  centres d'intérêt. C'est ce qu'il reste à faire.
 
-  - [ ] **Vider les champs entreprises et nom de poste quand on clique sur supprimer ou créer un nouveau CV**
-  Quand l'utilisateur clique sur supprimer ou créer un nouveau CV, vider les champs entreprises et nom de poste.
+- [ ] **Vider les champs entreprise et nom de poste quand on supprime ou crée un nouveau CV**
+  Quand l'utilisateur clique sur supprimer ou créer un nouveau CV, vider les champs entreprise
+  et nom de poste.
 
-  - [ ] **Bug lettre de motivation IA**
-  Y'a un bug quand je génere une lettre de motivation via le chat IA à partir d'une description de poste. L'IA met "Hariss HAFEJI" dans la case "formule de politesse" et il met "Prénom Nom" dans la case "signature".
+- [ ] **Bug lettre de motivation IA**
+  Quand une lettre est générée via le chat IA à partir d'une description de poste, l'IA met
+  « Hariss HAFEJI » dans la case « formule de politesse » et « Prénom Nom » dans la case
+  « signature ». Les deux champs sont inversés / mal remplis.
 
-  - [x] **Tonalité de l'IA**
-  Faire en sorte que l'IA génere du texte moins robotique et plus authentique et humain pour les CV et Lettres de motivation. Eviter les tournures de phrases ou mots qui ne sont pas naturels. Voir le skill : "C:\Users\tahet\projects\cv-tailor\.claude\commands\humanize.md" pour s'inspirer
-  → Fait : règle `HUMAN_TONE_RULE` dans `web/src/lib/ai/prompts.ts`, injectée dans les trois
-  prompts qui rédigent (adaptation CV, chat éditeur, adaptation de la lettre). Vérifié en réel
-  contre Gemini : 3 tirages de lettre, 2 à 4 clichés avant la règle, 0 après.
-
-- [x] **Annuler / Rétablir (Ctrl+Z / Ctrl+Shift+Z)**
-  Permettre de revenir en arrière (Ctrl+Z) et de rétablir (Ctrl+Shift+Z) les
-  modifications du CV, pour récupérer après une fausse manipulation ou une
-  adaptation IA ratée.
-
-- [ ] **Supprimer la modal de re-saisie de l'offre pour le Pack candidature**
-  Le clic sur « Créer le pack candidature » ouvre une modal qui redemande la
-  description du poste — la supprimer et réutiliser directement l'offre déjà
-  fournie.
+- [ ] **Validation de bout en bout sur un vrai CV**
+  Le chantier « zéro perte » est terminé côté code, mais reste à éprouver sur un CV réellement
+  importé (rubriques inhabituelles, ordre, sections masquées, rendu dans les 4 modèles).
 
 ---
 
@@ -74,4 +89,4 @@ Suivi des fonctionnalités de l'application (version Next.js).
 
 ---
 
-*Dernière mise à jour : 7 juillet 2026*
+*Dernière mise à jour : 13 juillet 2026*
