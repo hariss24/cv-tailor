@@ -41,6 +41,31 @@
 
 ## Journal
 
+### 2026-07-13 : `main` redevient la branche de référence (GitHub + Vercel)
+
+- **Quoi :** fusion en fast-forward de `feature/refonte-ui-nextjs` dans `main`
+  (145 commits) puis push. Sur Vercel, la branche de production du projet
+  `cv-tailor` passe de `feature/refonte-ui-nextjs` à `main`. Suppression du
+  vieux projet Vercel `html-to-pdf`, resté branché sur le même dépôt GitHub.
+- **Pourquoi :** la prod tournait depuis une branche de feature ; tout le travail
+  y était déjà consolidé (`main`, `feature/ai-tailoring` et `rewrite-nextjs`
+  sont tous contenus dans la branche fusionnée). `html-to-pdf` rebuildait à
+  chaque push sur `main` pour rien (racine du dépôt, code Flask supprimé).
+- **Fichiers touchés :** aucun (opérations git + configuration Vercel).
+- **À savoir :** l'API publique Vercel n'expose pas `productionBranch` en
+  écriture. Le contournement : `vercel git disconnect` puis
+  `vercel git connect <url>` — à la reconnexion, Vercel reprend la branche par
+  défaut du dépôt GitHub (`main`). Sur ce projet, `vercel git connect` doit être
+  lancé depuis `web/` **avec l'URL du dépôt en argument**, sinon la CLI cherche
+  un `.git` dans `web/` et échoue.
+- **Résultat vérifs :** `GET /v9/projects/cv-tailor` renvoie
+  `link.productionBranch = "main"` ; dernier déploiement de production `READY`
+  sur `main @ 3fbb607` ; `https://cv-tailor-drab-rho.vercel.app` répond 200 ;
+  `GET /v9/projects/html-to-pdf` renvoie 404.
+- **Commit :** aucun code modifié ; `main` pointe sur `3fbb607`.
+
+---
+
 ### 2026-07-12 : Import « zéro perte » — les modèles s'adaptent au CV, plus l'inverse
 
 **Symptôme signalé.** Un CV importé avec des rubriques « Hard skills » et « Soft skills »
