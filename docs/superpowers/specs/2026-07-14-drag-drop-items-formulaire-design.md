@@ -78,7 +78,7 @@ ses cibles tactiles de 44 px) — c'est éliminatoire.
 
 ### 4.2 Nouveau fichier : `web/src/components/form/Sortable.tsx`
 
-Toute la mécanique de glissement vit ici et nulle part ailleurs. Deux exports :
+Toute la mécanique de glissement vit ici et nulle part ailleurs. Trois exports :
 
 **`<SortableList count onMove>`** — l'enveloppe d'une liste triable. Elle :
 - installe les capteurs : pointeur (souris + doigt, avec une contrainte de distance pour ne pas
@@ -86,11 +86,14 @@ Toute la mécanique de glissement vit ici et nulle part ailleurs. Deux exports :
 - contraint le déplacement à l'axe vertical (`restrictToVerticalAxis`) ;
 - appelle `onMove(depuis, vers)` à la dépose, et rien d'autre.
 
-**`<DragHandle index>`** — la poignée. Seul endroit du code qui décide à quoi ressemble un point
-de saisie, et seul élément qui capte le geste : le reste de la carte laisse la page défiler
+**`<DragHandle>`** — la poignée. Seul endroit du code qui décide à quoi ressemble un point de
+saisie, et seul élément qui capte le geste : le reste de la carte laisse la page défiler
 normalement au doigt.
 
-Les sections du formulaire ne connaissent que ces deux composants. Elles ignorent tout de dnd-kit.
+**`useSortableItem(index)`** — le lien entre les deux : rend un élément déplaçable et fournit les
+propriétés à poser sur sa poignée.
+
+Les sections du formulaire ne connaissent que ces trois exports. Elles ignorent tout de dnd-kit.
 
 ### 4.3 Identité des éléments
 
