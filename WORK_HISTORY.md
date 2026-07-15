@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Glisser-déposer des éléments à l'intérieur des sections du formulaire terminé (dnd-kit, 12 listes, branche `feat/form-drag-drop` — à fusionner). Restent en priorité haute dans `TODO.md` : vider les champs entreprise/poste à la création/suppression d'un CV, et la validation de bout en bout sur un vrai CV importé.
+**Prochaine étape suggérée :** Formulaire allégé (en-têtes de cartes numérotés + design mobile) livré. Restent en priorité haute dans `TODO.md` : vider les champs entreprise/poste à la création/suppression d'un CV, et la validation de bout en bout sur un vrai CV importé.
 
 ---
 
@@ -40,6 +40,49 @@
 ---
 
 ## Journal
+
+### 2026-07-15 : Accordéons du formulaire (sections + éléments) et en-têtes colorés
+
+- **Besoin.** Suite de l'allègement : rendre le formulaire navigable en le repliant. Sections
+  repliables **et** éléments repliables (Expérience 1, 2… / Formation 1, 2…), ouverts par défaut.
+  Côté couleur, choix assumé de l'utilisateur après feedback : **colorer les en-têtes, garder les
+  labels de champ sobres** (colorer chaque label alourdit au lieu d'aider).
+- **Sections (`FormSection`).** Nouveau wrapper : `<h3>` enveloppe un `<button>` toggle (titre
+  sémantique conservé, HTML valide), chevron qui pivote, corps masqué quand replié. Toutes les
+  sections passent par lui (y compris Informations personnelles, À propos, Ordre des sections).
+  État local `useState(true)` — se réinitialise au rechargement. **Distinct de « masquer »**
+  (l'œil de « Ordre des sections ») qui, lui, retire du PDF ; replier est purement visuel.
+- **Éléments (`ItemCard`).** En-tête à trois zones sans conflit : poignée (déplacer) · bouton
+  toggle occupant le centre (plier/déplier) · ✕ (supprimer). Replié, la carte devient une ligne
+  compacte « EXPÉRIENCE 1 · Chargé de com… » — le sous-titre vivant prend tout son sens, et on
+  peut réordonner des lignes repliées. Bordure de séparation retirée quand replié.
+- **Couleur.** Eyebrow « Expérience 1 » passe en `--orange-text` ; titres de section déjà orange ;
+  labels de champ inchangés (sobres). Chevrons en `--muted`.
+- **Vérifs.** eslint 0 err (1 warning `<img>` préexistant) · vitest 256/256 · e2e form-reorder 2/2.
+  Le sélecteur du test a dû être adapté (`h3 span:text-is` au lieu de `h3:text-is`) car le titre
+  n'est plus un texte direct du `<h3>` — comportement testé inchangé. Rendu contrôlé au screenshot
+  en mobile 390px, thèmes clair **et** sombre, états ouvert/replié. Cible tactile 44px sur les
+  en-têtes d'accordéon en mobile.
+
+### 2026-07-15 : Allègement du formulaire — cartes à en-tête numéroté
+
+- **Besoin.** Sur mobile le formulaire était lourd et sans repère : chaque expérience/formation
+  empilait ses champs sans qu'on sache laquelle on éditait. Demande : repères visuels
+  (« Expérience 1, 2… », « Formation 1, 2… ») et un rendu plus léger, équilibré, esthétique.
+- **Cartes (`ItemCard`).** Ajout d'un en-tête de carte = poignée + eyebrow numéroté
+  (« EXPÉRIENCE 1 ») + sous-titre vivant résumant l'élément (poste · entreprise, tronqué en
+  ellipse) + ✕. Étendu par cohérence à Projets / Bénévolat / Sections libres. Supprime au passage
+  le hack `padding-top: 28px` qui dégageait le ✕ en absolu.
+- **Profondeur néomorphique corrigée.** La carte passe de `--neu-inset` à `--neu-raised-sm` : elle
+  ressort, les champs (en creux) se logent dedans — hiérarchie de profondeur nette au lieu du
+  double creux « boueux » d'avant. Séparateur `--border` discret sous l'en-tête.
+- **Labels allégés.** `.form-label` abandonne les majuscules espacées pour la casse normale
+  (« Poste » au lieu de « POSTE ») — moins de bruit répété à chaque champ.
+- **Vérifs.** eslint 0 err (1 warning `<img>` préexistant) · vitest 256/256 · e2e form-reorder 2/2
+  (la poignée a changé de place mais reste dans `.form-item`, le glisser-déposer passe toujours).
+  Rendu contrôlé au screenshot en émulation mobile (390px) et desktop (1440px).
+- **Non fait (proposé en suite).** Compacter la trilogie Contrat/Lieu/Date sur mobile pour
+  raccourcir la pile ; c'est le seul reste de hauteur, laissé à l'arbitrage visuel de l'utilisateur.
 
 ### 2026-07-15 : Glisser-déposer des éléments à l'intérieur des sections du formulaire
 

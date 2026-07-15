@@ -35,12 +35,13 @@ async function readList(page: Page, key: string) {
 }
 
 /**
- * Cible une section par son titre exact. `:has(h3:text-is(...))` est indispensable :
- * un simple `hasText` attraperait aussi le bloc « Ordre des sections », qui liste les
- * mêmes intitulés.
+ * Cible une section par son titre exact. On vise le `<span>` du titre DANS le `<h3>`
+ * (le titre est désormais un bouton d'accordéon : `<h3><button>…<span>Titre</span></button></h3>`).
+ * Restreindre à `h3 span` est indispensable : le bloc « Ordre des sections » liste les
+ * mêmes intitulés, mais dans des `<span>` hors `<h3>` — ils ne matchent donc pas.
  */
 function section(page: Page, title: string) {
-  return page.locator(`.form-section:has(h3:text-is("${title}"))`);
+  return page.locator(`.form-section:has(h3 span:text-is("${title}"))`);
 }
 
 test("clavier : une expérience remonte d'un cran", async ({ page }) => {

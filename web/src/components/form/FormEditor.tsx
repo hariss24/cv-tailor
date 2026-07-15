@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useDocStore } from "@/state/docStore";
 import { buildSections } from "@/lib/resume/sections";
 import { SortableList, DragHandle, useSortableItem, moveItem } from "./Sortable";
@@ -59,8 +60,7 @@ export default function FormEditor({ onImportPdf }: { onImportPdf?: () => void }
             </button>
           </div>
         ) : null}
-        <section className="form-section">
-          <h3 className="form-section__title">Informations personnelles</h3>
+        <FormSection title="Informations personnelles">
           <div className="form-grid">
             <Field label="Nom complet" value={cv.name} onChange={(v) => update({ name: v })} autoComplete="name" />
             <Field label="Titre du poste" value={cv.title} onChange={(v) => update({ title: v })} autoComplete="organization-title" />
@@ -94,7 +94,7 @@ export default function FormEditor({ onImportPdf }: { onImportPdf?: () => void }
               </div>
             </div>
           </div>
-        </section>
+        </FormSection>
 
         <CustomFieldsSection
           items={cv.customFields ?? []}
@@ -103,15 +103,14 @@ export default function FormEditor({ onImportPdf }: { onImportPdf?: () => void }
 
         <SectionOrderSection cv={cv} onChange={update} />
 
-        <section className="form-section">
-          <h3 className="form-section__title">À propos</h3>
+        <FormSection title="À propos">
           <textarea
             className="form-textarea"
             rows={4}
             value={cv.summary}
             onChange={(e) => update({ summary: e.target.value })}
           />
-        </section>
+        </FormSection>
 
         <ExperienceSection items={cv.experience} onChange={(v) => update({ experience: v })} />
         <EducationSection items={cv.education} onChange={(v) => update({ education: v })} />
@@ -165,6 +164,47 @@ function removeAt<T>(list: T[], i: number): T[] {
   return list.filter((_, j) => j !== i);
 }
 
+// ---- Accordéon ----
+
+/** Chevron d'accordéon : pointe à droite fermé, vers le bas ouvert. */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`form-chevron${open ? " form-chevron--open" : ""}`}
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    >
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  );
+}
+
+/**
+ * Section repliable. Ouverte par défaut ; l'état est local (se réinitialise au
+ * rechargement). C'est un confort d'édition — à ne pas confondre avec « masquer une
+ * section » (l'œil, dans « Ordre des sections »), qui, lui, retire du PDF.
+ * Le `<h3>` enveloppe son bouton : titre sémantique conservé, HTML valide.
+ */
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <section className={`form-section${open ? "" : " form-section--collapsed"}`}>
+      <h3 className="form-section__title">
+        <button
+          type="button"
+          className="form-section__header"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Chevron open={open} />
+          <span>{title}</span>
+        </button>
+      </h3>
+      {open ? <div className="form-section__body">{children}</div> : null}
+    </section>
+  );
+}
+
 // ---- Champs génériques ----
 
 function Field({
@@ -194,23 +234,42 @@ function Field({
   );
 }
 
-/** Carte d'un élément de liste : poignée à gauche, contenu, bouton de suppression. */
+/**
+ * Carte d'un élément de liste. En-tête = poignée + repère (« Expérience 1 » et,
+ * s'il est renseigné, l'intitulé saisi comme sous-titre vivant) + suppression ;
+ * corps en dessous. Le repère numéroté sert de point d'ancrage pour la navigation.
+ */
 function ItemCard({
   index,
+  title,
+  subtitle,
   onRemove,
   children,
 }: {
   index: number;
+  title: string;
+  subtitle?: string;
   onRemove: () => void;
   children: React.ReactNode;
 }) {
   const { ref, style, handleProps } = useSortableItem(index);
+  const [open, setOpen] = useState(true);
   return (
-    <div ref={ref} style={style} className="form-item">
-      <div className="form-item__gutter">
+    <div ref={ref} style={style} className={`form-item${open ? "" : " form-item--collapsed"}`}>
+      <div className="form-item__head">
         <DragHandle {...handleProps} />
-      </div>
-      <div className="form-item__body">
+        <button
+          type="button"
+          className="form-item__toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <Chevron open={open} />
+          <span className="form-item__heading">
+            <span className="form-item__eyebrow">{title}</span>
+            {subtitle ? <span className="form-item__subtitle">{subtitle}</span> : null}
+          </span>
+        </button>
         <button
           type="button"
           className="form-btn-mini form-item__remove"
@@ -219,8 +278,8 @@ function ItemCard({
         >
           ✕
         </button>
-        {children}
       </div>
+      {open ? <div className="form-item__body">{children}</div> : null}
     </div>
   );
 }
@@ -263,8 +322,7 @@ function StringListSection({
   onChange: (items: string[]) => void;
 }) {
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">{title}</h3>
+    <FormSection title={title}>
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
@@ -287,7 +345,7 @@ function StringListSection({
       <button type="button" className="form-btn-add" onClick={() => onChange([...items, ""])}>
         {addLabel}
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -345,8 +403,7 @@ function CustomFieldsSection({
   const patch = (i: number, p: Partial<CustomField>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Informations complémentaires</h3>
+    <FormSection title="Informations complémentaires">
       <p className="form-hint">
         Tout ce qui n&apos;a pas de case : permis, âge, mobilité, portfolio, disponibilité…
       </p>
@@ -383,7 +440,7 @@ function CustomFieldsSection({
       >
         + Ajouter une information
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -441,8 +498,7 @@ function SectionOrderSection({
     });
 
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Ordre des sections</h3>
+    <FormSection title="Ordre des sections">
       <p className="form-hint">
         L&apos;ordre du CV importé est conservé. Réorganisez-le comme vous voulez : le modèle
         suit. L&apos;œil retire une section du CV sans effacer son contenu.
@@ -487,7 +543,7 @@ function SectionOrderSection({
           );
         })}
       </ul>
-    </section>
+    </FormSection>
   );
 }
 
@@ -501,14 +557,19 @@ function ExperienceSection({
   const patch = (i: number, p: Partial<ExperienceItem>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Expériences</h3>
+    <FormSection title="Expériences">
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
       >
         {items.map((e, i) => (
-          <ItemCard key={i} index={i} onRemove={() => onChange(removeAt(items, i))}>
+          <ItemCard
+            key={i}
+            index={i}
+            title={`Expérience ${i + 1}`}
+            subtitle={[e.title, e.company].filter(Boolean).join(" · ")}
+            onRemove={() => onChange(removeAt(items, i))}
+          >
             <div className="form-grid">
               <Field label="Poste" value={e.title} onChange={(v) => patch(i, { title: v })} />
               <Field label="Entreprise" value={e.company} onChange={(v) => patch(i, { company: v })} />
@@ -523,7 +584,7 @@ function ExperienceSection({
       <button type="button" className="form-btn-add" onClick={() => onChange([...items, { ...EMPTY_EXPERIENCE }])}>
         + Ajouter une expérience
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -537,14 +598,19 @@ function EducationSection({
   const patch = (i: number, p: Partial<EducationItem>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Formations</h3>
+    <FormSection title="Formations">
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
       >
         {items.map((e, i) => (
-          <ItemCard key={i} index={i} onRemove={() => onChange(removeAt(items, i))}>
+          <ItemCard
+            key={i}
+            index={i}
+            title={`Formation ${i + 1}`}
+            subtitle={[e.title, e.school].filter(Boolean).join(" · ")}
+            onRemove={() => onChange(removeAt(items, i))}
+          >
             <div className="form-grid">
               <Field label="Diplôme" value={e.title} onChange={(v) => patch(i, { title: v })} />
               <Field label="Établissement" value={e.school} onChange={(v) => patch(i, { school: v })} />
@@ -557,7 +623,7 @@ function EducationSection({
       <button type="button" className="form-btn-add" onClick={() => onChange([...items, { ...EMPTY_EDUCATION }])}>
         + Ajouter une formation
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -571,8 +637,7 @@ function LanguagesSection({
   const patch = (i: number, p: Partial<LanguageItem>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Langues</h3>
+    <FormSection title="Langues">
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
@@ -602,7 +667,7 @@ function LanguagesSection({
       <button type="button" className="form-btn-add" onClick={() => onChange([...items, { ...EMPTY_LANGUAGE }])}>
         + Ajouter une langue
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -616,14 +681,19 @@ function ProjectsSection({
   const patch = (i: number, p: Partial<ProjectItem>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Projets</h3>
+    <FormSection title="Projets">
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
       >
         {items.map((p, i) => (
-          <ItemCard key={i} index={i} onRemove={() => onChange(removeAt(items, i))}>
+          <ItemCard
+            key={i}
+            index={i}
+            title={`Projet ${i + 1}`}
+            subtitle={p.title}
+            onRemove={() => onChange(removeAt(items, i))}
+          >
             <div className="form-grid">
               <Field label="Titre" value={p.title} onChange={(v) => patch(i, { title: v })} />
               <Field label="Date" value={p.date} onChange={(v) => patch(i, { date: v })} />
@@ -643,7 +713,7 @@ function ProjectsSection({
       <button type="button" className="form-btn-add" onClick={() => onChange([...items, { ...EMPTY_PROJECT }])}>
         + Ajouter un projet
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -662,14 +732,19 @@ function CustomSectionsSection({
   const patch = (i: number, p: Partial<CustomSection>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Sections libres</h3>
+    <FormSection title="Sections libres">
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
       >
         {items.map((c, i) => (
-          <ItemCard key={i} index={i} onRemove={() => onChange(removeAt(items, i))}>
+          <ItemCard
+            key={i}
+            index={i}
+            title={`Section ${i + 1}`}
+            subtitle={c.title}
+            onRemove={() => onChange(removeAt(items, i))}
+          >
             <Field
               label="Titre de la section"
               value={c.title}
@@ -703,7 +778,7 @@ function CustomSectionsSection({
       >
         + Ajouter une section
       </button>
-    </section>
+    </FormSection>
   );
 }
 
@@ -717,14 +792,19 @@ function VolunteerSection({
   const patch = (i: number, p: Partial<VolunteerItem>) =>
     onChange(replaceAt(items, i, { ...items[i], ...p }));
   return (
-    <section className="form-section">
-      <h3 className="form-section__title">Bénévolat</h3>
+    <FormSection title="Bénévolat">
       <SortableList
         count={items.length}
         onMove={(from, to) => onChange(moveItem(items, from, to))}
       >
         {items.map((v, i) => (
-          <ItemCard key={i} index={i} onRemove={() => onChange(removeAt(items, i))}>
+          <ItemCard
+            key={i}
+            index={i}
+            title={`Bénévolat ${i + 1}`}
+            subtitle={[v.title, v.organization].filter(Boolean).join(" · ")}
+            onRemove={() => onChange(removeAt(items, i))}
+          >
             <div className="form-grid">
               <Field label="Rôle" value={v.title} onChange={(val) => patch(i, { title: val })} />
               <Field label="Organisation" value={v.organization} onChange={(val) => patch(i, { organization: val })} />
@@ -738,6 +818,6 @@ function VolunteerSection({
       <button type="button" className="form-btn-add" onClick={() => onChange([...items, { ...EMPTY_VOLUNTEER }])}>
         + Ajouter une mission
       </button>
-    </section>
+    </FormSection>
   );
 }
