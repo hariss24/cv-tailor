@@ -327,6 +327,91 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
   background: rgba(0,0,0,0.35); padding: 20px;
 }
+/* ---- Drawer latéral réutilisable ----
+   Panneau plein hauteur ancré à gauche, laissant l'aperçu PDF visible à droite.
+   Structure : .ui-drawer > __head / __body (scrollable) / __foot (CTA épinglé).
+   Largeurs : --md (formulaire simple, ex. lettre) · --lg (contenu riche, ex. CV). */
+.ui-overlay--drawer-left {
+  justify-content: flex-start; padding: 0;
+  /* Voile dégradé : soutenu côté panneau, quasi nul côté aperçu. */
+  background: linear-gradient(90deg, rgba(74,85,104,0.28), rgba(74,85,104,0.05) 55%, rgba(74,85,104,0) 80%);
+  animation: overlayFadeIn 240ms ease-out;
+}
+[data-theme="dark"] .ui-overlay--drawer-left {
+  background: linear-gradient(90deg, rgba(0,0,0,0.55), rgba(0,0,0,0.10) 55%, rgba(0,0,0,0) 80%);
+}
+@keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.ui-drawer {
+  background: var(--bg);
+  box-shadow: var(--neu-raised-lg);
+  height: 100dvh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.ui-drawer--left {
+  border-radius: 0 20px 20px 0;
+  animation: drawerInLeft 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.ui-drawer--md { width: clamp(400px, 34vw, 520px); }
+.ui-drawer--lg { width: clamp(720px, 65vw, 1060px); }
+@keyframes drawerInLeft {
+  from { transform: translateX(-40%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@media (max-width: 900px) {
+  .ui-drawer--md, .ui-drawer--lg { width: 100vw; border-radius: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-overlay--drawer-left, .ui-drawer--left { animation: none; }
+}
+
+.ui-drawer__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 26px 28px 16px;
+}
+.ui-drawer__title { margin: 8px 0 0; font-size: 17px; font-weight: 800; color: var(--text); }
+.ui-drawer__body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 4px 28px;
+}
+.ui-drawer__foot { display: flex; flex-direction: column; gap: 10px; padding: 16px 28px 24px; }
+/* Filet en creux séparant le pied du corps (même langage que .tailor-divider). */
+.ui-drawer__foot::before {
+  content: ""; height: 3px; border-radius: 3px;
+  box-shadow: var(--neu-inset); margin: 0 2px 8px;
+}
+.ui-drawer__hint { margin: 0; font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.45; }
+/* Champ marqué « grandit » : absorbe la hauteur restante du corps.
+   (Le sélecteur #id est nécessaire pour battre `#job-desc-input { resize: vertical }`.) */
+.ui-drawer #job-desc-input,
+.ui-drawer .ui-drawer__grow { flex: 1; min-height: 180px; resize: none; }
+
+/* Étiquette sur-titre en creux (réutilisable au-dessus des titres de panneaux). */
+.ui-eyebrow {
+  display: inline-flex; align-items: center; width: max-content;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;
+  color: var(--orange-text);
+  padding: 4px 10px; border-radius: 999px; box-shadow: var(--neu-inset);
+}
+
+/* Bouton d'icône circulaire néomorphique (fermeture de panneaux/modales). */
+.ui-icon-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--bg); color: var(--muted); font-size: 20px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: var(--neu-raised-sm);
+  transition: box-shadow 150ms, color 150ms, transform 150ms;
+}
+.ui-icon-btn:hover:not(:disabled) { color: var(--text); box-shadow: var(--neu-raised); transform: translateY(-1px); }
+.ui-icon-btn:active:not(:disabled) { box-shadow: var(--neu-inset); transform: translateY(0); }
+.ui-icon-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Rangée URL + bouton de l'extracteur d'offre (partagée CV / lettre). */
+.job-extractor-row { display: flex; gap: 10px; margin-bottom: 15px; }
+.job-extractor-row .form-input { flex: 1; }
+.ui-drawer .job-extractor-row { margin-bottom: 0; }
 .ui-dialog {
   background: var(--bg); border-radius: 16px; box-shadow: var(--neu-raised-lg);
   padding: 22px; max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 14px;
@@ -502,16 +587,15 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   width: 920px; max-width: 95vw; max-height: 88vh; overflow-y: auto; overflow-x: hidden;
 }
 .tailor-body-inner {
-  display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start;
+  display: grid; grid-template-columns: 1fr 280px; grid-template-rows: 1fr; gap: 32px; align-items: stretch; flex: 1; min-height: 0; height: 100%;
 }
 .tailor-col-left { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .tailor-section-title { font-size: 14px; font-weight: 700; color: var(--text); }
 .tailor-col-right { display: flex; flex-direction: column; gap: 14px; }
-#job-desc-input { width: 100%; min-height: 260px; resize: vertical; }
+#job-desc-input { width: 100%; min-height: 260px; resize: none; flex: 1; }
 
-.tailor-settings-box, .tailor-actions-box {
-  background: var(--bg); border-radius: 14px; padding: 16px;
-  box-shadow: var(--neu-inset); display: flex; flex-direction: column; gap: 16px;
+.tailor-settings-box {
+  display: flex; flex-direction: column; gap: 20px;
 }
 .tailor-check {
   display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
@@ -537,28 +621,68 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .tailor-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .tailor-btn-block { width: 100%; padding: 11px 16px; font-size: 13.5px; }
 
-.level-selector { display: flex; flex-direction: column; gap: 9px; }
-.level-label {
-  font-size: 11px; color: var(--muted); text-transform: uppercase;
-  letter-spacing: 0.6px; font-weight: 600;
+/* ---- Toggle Switch Neomorphique ---- */
+.ui-switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  cursor: pointer; padding: 8px 12px; border-radius: 12px;
+  transition: background 150ms;
 }
-.level-segment {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
-  padding: 4px; border-radius: 12px; box-shadow: var(--neu-inset);
+.ui-switch-row:hover { background: rgba(0,0,0,0.02); }
+[data-theme="dark"] .ui-switch-row:hover { background: rgba(255,255,255,0.02); }
+.ui-switch-label { display: flex; flex-direction: column; gap: 2px; }
+.ui-switch-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.ui-switch-hint { font-size: 11.5px; color: var(--muted); }
+.ui-switch {
+  position: relative; display: inline-flex; width: 44px; height: 24px;
+  border-radius: 999px; background: var(--bg); box-shadow: var(--neu-inset);
+  flex-shrink: 0; transition: background 200ms; border: none; padding: 0; outline: none; cursor: pointer;
 }
-/* Segmented control : les 4 cellules ont le même contenant ; seule la sélection
-   est en relief. Sans cela, les cellules inactives passaient pour du texte nu. */
-.level-btn {
-  padding: 7px 4px; font-size: 12px; border-radius: 9px; border: none;
-  background: var(--bg); box-shadow: inset 0 0 0 1px var(--border);
-  color: var(--muted); cursor: pointer; text-align: center; font-family: var(--font-ui);
-  transition: box-shadow 150ms, color 150ms;
+.ui-switch[aria-checked="true"] { background: var(--success); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+.ui-switch-knob {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1); pointer-events: none;
 }
-.level-btn:hover { color: var(--text); box-shadow: var(--neu-raised-sm); }
-.level-btn.active { background: var(--bg); box-shadow: var(--neu-raised-sm); color: var(--orange-text); font-weight: 600; }
+[data-theme="dark"] .ui-switch-knob { background: var(--text); }
+.ui-switch[aria-checked="true"] .ui-switch-knob { transform: translateX(20px); }
 
-.ats-panel { background: var(--bg); border-radius: 14px; padding: 14px 16px; font-size: 13px; box-shadow: var(--neu-inset); }
+/* ---- Liste des Niveaux d'Adaptation (Verticale) ---- */
+.tailor-level-list { display: flex; flex-direction: column; gap: 8px; }
+.tailor-level-item {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+  border-radius: 12px; border: none; cursor: pointer; text-align: left;
+  background: var(--bg); box-shadow: var(--neu-raised-sm);
+  transition: box-shadow 150ms, transform 150ms; font-family: var(--font-ui);
+}
+.tailor-level-item:hover:not(.active) { box-shadow: var(--neu-raised); transform: translateY(-1px); }
+.tailor-level-item:active { box-shadow: var(--neu-inset); transform: translateY(0); }
+.tailor-level-item.active { box-shadow: var(--neu-inset); }
+
+.tailor-level-radio {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: var(--neu-inset); display: grid; place-items: center;
+}
+.tailor-level-item.active .tailor-level-radio::after {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--orange-text);
+}
+.tailor-level-content { display: flex; flex-direction: column; gap: 2px; }
+.tailor-level-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.tailor-level-item.active .tailor-level-title { color: var(--orange-text); }
+.tailor-level-desc { font-size: 11.5px; color: var(--muted); }
+
+.ats-panel { display: flex; flex-direction: column; gap: 16px; font-size: 13px; }
 .ats-panel .ats-result { display: flex; flex-direction: column; gap: 8px; }
+.ats-actions { display: flex; flex-direction: column; gap: 8px; }
+.ats-action-btn {
+  width: 100%; padding: 12px 16px; border-radius: 12px; border: none; cursor: pointer;
+  background: var(--bg); box-shadow: var(--neu-raised-sm); color: var(--text);
+  font-family: var(--font-ui); font-weight: 600; font-size: 13px; text-align: center;
+  transition: box-shadow 150ms, transform 150ms;
+}
+.ats-action-btn:hover:not(:disabled) { box-shadow: var(--neu-raised); transform: translateY(-1px); }
+.ats-action-btn:active:not(:disabled) { box-shadow: var(--neu-inset); transform: translateY(0); }
+.ats-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @media (max-width: 820px) {
   .tailor-body-inner { grid-template-columns: 1fr; }

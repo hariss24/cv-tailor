@@ -41,6 +41,34 @@
 
 ## Journal
 
+### 2026-07-16 : Refonte high-end du layout "Adapter à une offre" (mode CV)
+
+- **Besoin.** L'utilisateur trouvait le layout du mode CV "merdique" : la grille 2x2 des niveaux d'adaptation était lourde, l'utilisation des creux (`--neu-inset`) abusive ("boîte dans une boîte"), et l'ensemble manquait de respiration et d'élégance.
+- **Correctif.**
+  - `globals.css` : Création de `.ui-switch` (toggle premium) pour remplacer la checkbox "CV Maître". Création de la liste verticale `.tailor-level-list` pour les niveaux, remplaçant la grille lourde. Allègement du panneau de droite (`.tailor-settings-box` perd son fond et son inset). L'ATS passe en `var(--neu-raised-sm)` au lieu de `inset`.
+  - `TailorModal.tsx` : Remplacement du balisage des paramètres (droite). La sélection du niveau est désormais une liste verticale aérée avec des descriptions claires, et l'option "CV Maître" utilise le switch. Le drawer a été élargi (`--lg` passe à `1060px` max) et les proportions réajustées (`1fr 280px` avec un grand `gap`) pour laisser un espace massif au champ de l'offre. Ajout de `flex: 1` et `grid-template-rows: 1fr` pour que le champ texte remplisse 100% de la hauteur disponible. Suppression de la boîte en creux autour des boutons ATS et passage de ces derniers en pleine largeur pour s'aligner parfaitement avec les boutons radios.
+- **Fichiers touchés :** `web/src/components/modals/TailorModal.tsx`, `web/src/app/globals.css`.
+- **Résultat vérifs :** `npm run lint` 0 erreur · `npx vitest run` 262/262 verts · `npx tsc --noEmit` OK. Le layout est aéré, premium, et sans régression des fonctionnalités existantes.
+
+### 2026-07-16 : Refonte UI du drawer « Adapter à une offre » (mode Lettre) — système de panneau réutilisable
+
+- **Besoin.** La première approche "Drawer" (modale d'adaptation Lettre) était décevante (markup vidé, bouton CTA orphelin, trop large). Remplacer le patch ponctuel par un système de panneau générique et réutilisable (`.ui-drawer`, `.ui-eyebrow`, `.ui-icon-btn`) laissant l'aperçu PDF visible.
+- **Correctif.**
+  - `globals.css` : Ajout des classes du panneau (`.ui-drawer`, `--left`, `--md`, `--lg`), structure `__head` / `__body` (scrollable) / `__foot` (CTA épinglé, filet en creux). Overlay dégradé directionnel et bouton fermer circulaire néomorphique `.ui-icon-btn`.
+  - `TailorModal.tsx` : Extraction des blocs JSX partagés (`offerSection`, `adaptButton`) et implémentation du nouveau layout `ui-drawer` pour le mode Lettre, sans régresser le mode CV (qui adopte juste le nouveau bouton de fermeture).
+  - `JobExtractor.tsx` : Remplacement des styles inline par la classe partagée `.job-extractor-row`.
+- **Fichiers touchés :** `web/src/components/modals/TailorModal.tsx`, `web/src/components/modals/JobExtractor.tsx`, `web/src/app/globals.css`.
+- **Résultat vérifs :** `npm run lint` 0 erreur · `npx vitest run` 262/262 verts · `npx tsc --noEmit` OK. Mode "Lettre" et mode "CV" préservés.
+
+### 2026-07-16 : Généralisation du drawer pour le mode CV et correction du z-index
+
+- **Besoin.** L'utilisateur souhaitait appliquer la même cohérence visuelle du nouveau tiroir (drawer) pour le mode CV de l'outil "Adapter à une offre". Par ailleurs, un bug de chevauchement (`z-index`) faisait que les inputs de la lettre apparaissaient à travers le fond opaque de la modale en raison des empilements de composants.
+- **Correctif.**
+  - `TailorModal.tsx` : Utilisation de `createPortal(..., document.body)` pour extraire la modale du flux d'empilement (stacking context) de la page web, réglant ainsi définitivement le bug des inputs qui transparaissaient.
+  - `TailorModal.tsx` : Suppression de la division "Letter/CV" concernant le wrapper du modal (`ui-overlay--drawer-left`, `ui-drawer--left`). Le mode CV utilise désormais `.ui-drawer--lg` pour accommoder ses 2 colonnes. Les actions (`.tailor-actions-box`) ont été migrées proprement dans le pied `.ui-drawer__foot`.
+  - `globals.css` : Nettoyage de la classe `.tailor-actions-box` qui était devenue inutile suite à l'utilisation native de `__foot`.
+- **Résultat vérifs :** Les actions sont correctement réparties dans la modale. Tous les tests Vitest (262/262), tsc et le lint sont au vert. Code laissé non commité sur `main` selon le choix de l'utilisateur.
+
 ### 2026-07-16 : icônes détectées par contenu dans le bloc Contact (Marine)
 
 - **Besoin.** Les coordonnées libres (« GitHub », « Permis », « Portfolio »…) sortaient

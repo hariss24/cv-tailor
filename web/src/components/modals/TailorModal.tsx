@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
 import { fetchJobMeta } from "@/lib/ai/jobMeta";
@@ -20,9 +21,10 @@ import { useEscapeClose } from "@/lib/useEscapeClose";
  * Lettre (docType « Lettre ») : adapte le corps de la lettre via `/api/adapt-letter`
  * (UI réduite : pas de niveaux, ni CV Maître, ni panneau ATS).
  *
- * Disposition 2 colonnes (comme l'original Flask) :
- *  - gauche : extraction d'offre + texte de l'offre ;
- *  - droite : niveau d'adaptation · case « CV Maître » · Adapter · Pack candidature · panneau ATS.
+ * Disposition : CV en modale 2 colonnes (comme l'original Flask) —
+ *  gauche : extraction d'offre + texte de l'offre ; droite : niveau d'adaptation ·
+ *  case « CV Maître » · Adapter · Pack candidature · panneau ATS.
+ * Lettre en drawer gauche (.ui-drawer--left --md) : l'aperçu PDF reste visible à droite.
  *
  * Flux métier : la photo (base64) est retirée avant l'appel et restaurée localement ;
  * réponse normalisée + garde anti-vidage (`isEmptyResume`).
@@ -62,7 +64,7 @@ export default function TailorModal({
 
   useEscapeClose(open && !busy && !diffOpen, onClose);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   // Préremplissage de la barre meta (nommage PDF/historique) — champs vides uniquement.
   const prefillMeta = (desc: string) => {
@@ -159,115 +161,159 @@ export default function TailorModal({
     }
   };
 
-  return (
-    <div className="ui-overlay" role="presentation" onClick={busy ? undefined : onClose}>
+  // Blocs partagés CV / lettre, composés différemment par chaque mode.
+  const offerSection = (
+    <>
+      <div className="tailor-section-header">
+        <span className="tailor-section-title">Offre d&apos;emploi</span>
+      </div>
+      <JobExtractor onExtracted={(text) => setJobDesc(text)} disabled={busy} />
+      <textarea
+        id="job-desc-input"
+        className="form-textarea"
+        placeholder="Colle ici le texte de l'offre d'emploi, ou utilise l'extracteur ci-dessus…"
+        value={jobDesc}
+        onChange={(e) => setJobDesc(e.target.value)}
+        disabled={busy}
+      />
+    </>
+  );
+
+  const adaptButton = (
+    <button type="button" className="tailor-btn tailor-btn-block" onClick={run} disabled={busy}>
+      {busy ? "Adaptation…" : isLetter ? "Adapter la lettre" : "Adapter le CV"}
+    </button>
+  );
+
+  const content = (
+    <div
+      className="ui-overlay ui-overlay--drawer-left"
+      role="presentation"
+      onClick={busy ? undefined : onClose}
+    >
       <div
-        className="ui-dialog tailor-modal-content"
+        className={`ui-drawer ui-drawer--left ${isLetter ? "ui-drawer--md" : "ui-drawer--lg"}`}
         role="dialog"
         aria-modal="true"
         aria-label={isLetter ? "Adapter la lettre à une offre" : "Adapter le CV à une offre"}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="ui-dialog__head">
-          <h2 className="ui-dialog__title">Adapter à une offre d&apos;emploi</h2>
-          <button type="button" className="ui-dialog__close" aria-label="Fermer" onClick={onClose} disabled={busy}>
+        <div className="ui-drawer__head">
+          <div>
+            <span className="ui-eyebrow">{isLetter ? "Lettre de motivation" : "CV"}</span>
+            <h2 className="ui-drawer__title">Adapter à une offre d&apos;emploi</h2>
+          </div>
+          <button type="button" className="ui-icon-btn" aria-label="Fermer" onClick={onClose} disabled={busy}>
             &times;
           </button>
         </div>
 
-        <div className="tailor-body-inner">
-          {/* Colonne gauche : l'offre */}
-          <div className="tailor-col-left">
-            <div className="tailor-section-header">
-              <span className="tailor-section-title">Offre d&apos;emploi</span>
-            </div>
-            <JobExtractor onExtracted={(text) => setJobDesc(text)} disabled={busy} />
-            <textarea
-              id="job-desc-input"
-              className="form-textarea"
-              placeholder="Colle ici le texte de l'offre d'emploi, ou utilise l'extracteur ci-dessus…"
-              value={jobDesc}
-              onChange={(e) => setJobDesc(e.target.value)}
-              disabled={busy}
-            />
-          </div>
+        <div className="ui-drawer__body">
+          {isLetter ? (
+            offerSection
+          ) : (
+            <div className="tailor-body-inner">
+              <div className="tailor-col-left">{offerSection}</div>
+              <div className="tailor-col-right">
+                <div className="tailor-settings-box">
+                  <div className="tailor-level-list" role="radiogroup" aria-label="Niveau d'adaptation">
+                    <span className="ui-eyebrow">Niveau d&apos;adaptation</span>
+                    {LEVELS.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={level === l.id}
+                        className={`tailor-level-item${level === l.id ? " active" : ""}`}
+                        onClick={() => setLevel(l.id)}
+                        disabled={busy}
+                      >
+                        <div className="tailor-level-radio" />
+                        <div className="tailor-level-content">
+                          <span className="tailor-level-title">{l.label}</span>
+                          <span className="tailor-level-desc">{l.hint}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
 
-          {/* Colonne droite : paramètres & actions */}
-          <div className="tailor-col-right">
-            {!isLetter && (
-            <div className="tailor-settings-box">
-              <div className="level-selector" role="radiogroup" aria-label="Niveau d'adaptation">
-                <span className="level-label">Niveau d&apos;adaptation</span>
-                <div className="level-segment">
-                  {LEVELS.map((l) => (
+                  <div 
+                    className="ui-switch-row" 
+                    onClick={() => { if (!busy) setUseMaster(!useMaster); }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (!busy) setUseMaster(!useMaster);
+                      }
+                    }}
+                  >
+                    <div className="ui-switch-label">
+                      <span className="ui-switch-title">Utiliser le CV Maître</span>
+                      <span className="ui-switch-hint">Recommandé si disponible</span>
+                    </div>
                     <button
-                      key={l.id}
                       type="button"
-                      role="radio"
-                      aria-checked={level === l.id}
-                      title={l.hint}
-                      className={`level-btn${level === l.id ? " active" : ""}`}
-                      onClick={() => setLevel(l.id)}
+                      role="switch"
+                      aria-checked={useMaster}
+                      className="ui-switch"
                       disabled={busy}
+                      tabIndex={-1}
                     >
-                      {l.label}
+                      <div className="ui-switch-knob" />
                     </button>
-                  ))}
+                  </div>
                 </div>
+                <AtsPanel jobDesc={jobDesc} />
               </div>
-              <label className="tailor-check">
-                <input
-                  type="checkbox"
-                  checked={useMaster}
-                  onChange={(e) => setUseMaster(e.target.checked)}
-                  disabled={busy}
-                />
-                <span>Utiliser le CV Maître comme base <em>(si disponible)</em></span>
-              </label>
             </div>
-            )}
+          )}
+        </div>
 
-            <div className="tailor-actions-box">
+        <div className="ui-drawer__foot">
+          {isLetter ? (
+            <>
+              {adaptButton}
+              <p className="ui-drawer__hint">
+                L&apos;IA adapte le corps de ta lettre à l&apos;offre — ta voix reste la tienne.
+              </p>
+            </>
+          ) : (
+            <>
               <div className="tailor-action-group">
-                <button type="button" className="tailor-btn tailor-btn-block" onClick={run} disabled={busy}>
-                  {busy ? "Adaptation…" : isLetter ? "Adapter la lettre" : "Adapter le CV"}
-                </button>
-                {!isLetter && tailorBefore ? (
+                {adaptButton}
+                {tailorBefore ? (
                   <button type="button" className="form-btn-mini" onClick={() => setDiffOpen(true)} disabled={busy}>
                     Voir les modifications
                   </button>
                 ) : null}
               </div>
 
-              {!isLetter && (
-                <>
-                  <div className="tailor-divider" />
+              <div className="tailor-divider" />
 
-                  <div className="tailor-action-group">
-                    <button
-                      type="button"
-                      className="tailor-btn tailor-btn-block pack-btn-variant"
-                      onClick={() => {
-                        useDocStore.getState().setPendingJobDesc(jobDesc);
-                        onClose();
-                        router.push("/pack");
-                      }}
-                      disabled={busy}
-                    >
-                      Créer une lettre de motivation
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {!isLetter && <AtsPanel jobDesc={jobDesc} />}
-          </div>
+              <div className="tailor-action-group">
+                <button
+                  type="button"
+                  className="tailor-btn tailor-btn-block pack-btn-variant"
+                  onClick={() => {
+                    useDocStore.getState().setPendingJobDesc(jobDesc);
+                    onClose();
+                    router.push("/pack");
+                  }}
+                  disabled={busy}
+                >
+                  Créer une lettre de motivation
+                </button>
+              </div>
+            </>
+          )}
         </div>
-
 
         <DiffModal open={diffOpen} onClose={() => setDiffOpen(false)} />
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

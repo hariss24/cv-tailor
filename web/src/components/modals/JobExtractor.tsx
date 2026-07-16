@@ -55,7 +55,7 @@ export default function JobExtractor({ onExtracted, disabled }: JobExtractorProp
   };
 
   return (
-    <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+    <div className="job-extractor-row">
       <input
         className="form-input"
         type="url"
@@ -63,7 +63,6 @@ export default function JobExtractor({ onExtracted, disabled }: JobExtractorProp
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={disabled || extracting}
-        style={{ flex: 1 }}
       />
       <button
         type="button"

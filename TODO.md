@@ -69,12 +69,17 @@ Suivi des fonctionnalités de l'application (version Next.js).
   Le chantier « zéro perte » est terminé côté code, mais reste à éprouver sur un CV réellement
   importé (rubriques inhabituelles, ordre, sections masquées, rendu dans les 4 modèles).
 
+- [ ] **Analyse ATS automatique par l'IA via le premier filtre**
+  L'analyse ATS doit se faire uniquement par IA, mais en gardant le premier filtre algorithmique utilisé pour le score sans IA. Lorsqu'on clique "analyse ATS", ça doit passer le premier filtre en arrière-plan puis demander directement à l'IA sans étape manuelle.
+
 ---
 
 ## 🟡 Priorité moyenne — bonnes idées
 
 - [x] **Raccourcis clavier**
 - [ ] **Preview page-break** — ⏸️ *différé : complexe à simuler avec précision dans React PDF avant rendu final.*
+- [ ] **Déplacement dans l'aperçu PDF (outil "main")**
+  Permettre de se déplacer dans l'aperçu du PDF avec un glisser-déposer de la souris, comme l'outil "main" sur Photoshop. Utile surtout avec le zoom et sur mobile, pour éviter d'utiliser les barres de défilement.
 
 ---
 

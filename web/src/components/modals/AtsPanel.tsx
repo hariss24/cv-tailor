@@ -160,11 +160,11 @@ export default function AtsPanel({ jobDesc }: { jobDesc: string }) {
 
   return (
     <div className="ats-panel">
-      <div className="ui-dialog__actions" style={{ justifyContent: "flex-start", marginBottom: 10 }}>
-        <button type="button" className="form-btn-mini" onClick={runLocal} disabled={busy}>
+      <div className="ats-actions">
+        <button type="button" className="ats-action-btn" onClick={runLocal} disabled={busy}>
           Score ATS
         </button>
-        <button type="button" className="form-btn-mini" onClick={runAi} disabled={busy}>
+        <button type="button" className="ats-action-btn" onClick={runAi} disabled={busy}>
           {busy ? "Analyse IA…" : "Analyser avec l'IA"}
         </button>
       </div>
