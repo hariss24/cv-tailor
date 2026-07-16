@@ -41,6 +41,41 @@
 
 ## Journal
 
+### 2026-07-16 : 4 correctifs (snapshots, Ctrl+Z lettre, tic IA, tip aide)
+
+- **Besoin.** Quatre retours utilisateur groupés : snapshots qui ne marchent pas, Ctrl+Z
+  inopérant dans l'éditeur de lettre, l'IA qui abuse du participe présent malgré la règle de
+  tonalité existante, et un tips à ajouter dans « Comment ça marche ? ».
+- **Snapshots cassés (`lib/storage/snapshots.ts`, `components/layout/DraftManager.tsx`).**
+  Root cause : `takeSnapshot()` faisait `if (!html) return;` et la déduplication comparait
+  `html`/`css`. Or `docStore.html` est remis à `""` par `setJson` (pipeline JSON/react-pdf,
+  seul chemin actif pour le formulaire depuis la migration) — même pattern que le bug ATS
+  corrigé le 14/07 (`docStore.html` = vestige de l'ancien pipeline HTML). Résultat : aucun
+  snapshot n'était jamais sauvegardé (ni manuel, ni auto, ni avant adaptation/chat), quel que
+  soit le déclencheur. Fix : dédup sur `json` (stringifié) quand `htmlSource` est faux, sur
+  `html`/`css` sinon ; même bascule pour la détection de changement de l'auto-snapshot toutes
+  les 5 min dans `DraftManager`.
+- **Ctrl+Z mort dans les formulaires (`lib/useGlobalUndoRedo.ts`).** Le handler ignorait tout
+  Ctrl+Z fait depuis un `<input>`/`<textarea>` focus, pour ne pas interférer avec Monaco (mode
+  Expert) — mais Monaco utilise justement un `<textarea>` caché, donc le filtre `isInputOrTextarea`
+  désactivait aussi le undo global dans **tous** les champs de formulaire (CV et lettre), qui eux
+  n'ont pas d'undo natif fiable (composants contrôlés pilotés par le store). Fix : cibler
+  spécifiquement Monaco via `activeElement.closest(".monaco-editor")` au lieu du tag générique.
+- **Tic « participe présent » de l'IA (`lib/ai/prompts.ts`, `HUMAN_TONE_RULE`).** La règle
+  n'interdisait que le participe présent *collé en fin de phrase* (« …, permettant d'optimiser… »).
+  L'IA en plaçait aussi en incise (« Professionnel qualifié, répondant aux normes actuelles… »),
+  non couvert par le libellé. Reformulé pour interdire le participe présent-tic quelle que soit
+  sa position dans la phrase.
+- **Tips presse-papier dans l'aide (`app/help/page.tsx`).** Nouvelle entrée FAQ : copier le
+  JSON du CV en mode Expert (bouton « Copier » existant) puis épingler l'entrée dans
+  l'historique du presse-papier Windows (Win+V) pour la retrouver et la recoller plus tard —
+  sauvegarde de secours sans exporter de fichier.
+- **Fichiers touchés :** `web/src/lib/storage/snapshots.ts`, `web/src/components/layout/DraftManager.tsx`,
+  `web/src/lib/useGlobalUndoRedo.ts`, `web/src/lib/ai/prompts.ts`, `web/src/app/help/page.tsx`.
+- **Résultat vérifs :** `npm test` (256 tests, 38 fichiers) vert, `npm run lint` vert (1 warning
+  préexistant sans rapport), `npx tsc --noEmit` sans erreur. Pas de vérification navigateur
+  (Playwright jugé trop coûteux en tokens pour ce lot de correctifs — voir mémoire).
+
 ### 2026-07-15 : Accordéons du formulaire (sections + éléments) et en-têtes colorés
 
 - **Besoin.** Suite de l'allègement : rendre le formulaire navigable en le repliant. Sections

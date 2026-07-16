@@ -15,18 +15,13 @@ export function useGlobalUndoRedo() {
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignorer si on est dans une modale native ou autre
-      // (Optionnel : on peut ignorer les champs texte pour laisser le navigateur faire, 
-      // mais si on a un système d'undo global performant, on peut vouloir l'utiliser partout.
-      // Dans le cas de formulaires standards, c'est généralement mieux de laisser le navigateur
-      // gérer l'undo de texte interne à l'input s'il est focusé).
-      const activeTag = document.activeElement?.tagName.toLowerCase();
-      const isInputOrTextarea = activeTag === "input" || activeTag === "textarea";
-      
-      // Monaco editor (mode expert) gère son propre undo, on ne veut pas interférer.
-      // Il utilise un textarea (isInputOrTextarea = true).
-      // Donc la règle `if (isInputOrTextarea) return;` protège parfaitement Monaco.
-      if (isInputOrTextarea) return;
+      // Monaco (mode expert) gère son propre undo : on ne veut pas interférer avec lui.
+      // Cibler spécifiquement Monaco (et non tout <input>/<textarea>) : un filtre générique
+      // désactivait aussi le Ctrl+Z dans les champs des formulaires (CV, lettre), qui eux
+      // dépendent de ce système global — le undo natif du navigateur n'y fonctionne pas de
+      // façon fiable puisque leur valeur est pilotée par le store (composants contrôlés).
+      const isMonacoEditor = !!document.activeElement?.closest(".monaco-editor");
+      if (isMonacoEditor) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault(); // Bloquer l'undo natif global

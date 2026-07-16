@@ -13,13 +13,15 @@ import { useDocStore } from "@/state/docStore";
  */
 export default function DraftManager() {
   useAutoDraft();
-  const lastAutoSnapshotHtml = useRef<string>(useDocStore.getState().html);
+  const snapshotFingerprint = (s: ReturnType<typeof useDocStore.getState>) =>
+    s.htmlSource ? s.html : JSON.stringify(s.json);
+  const lastAutoSnapshot = useRef<string>(snapshotFingerprint(useDocStore.getState()));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const html = useDocStore.getState().html;
-      if (html === lastAutoSnapshotHtml.current) return;
-      lastAutoSnapshotHtml.current = html;
+      const current = snapshotFingerprint(useDocStore.getState());
+      if (current === lastAutoSnapshot.current) return;
+      lastAutoSnapshot.current = current;
       void takeSnapshot("Auto-save");
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);

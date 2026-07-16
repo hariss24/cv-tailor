@@ -58,9 +58,10 @@ export const HUMAN_TONE_RULE =
   "parfaitement », « atout majeur », « levier », « synergie », « proactif », « incontournable », " +
   "« riche de », « en effet », « par ailleurs », « il est important de noter ».\n" +
   "INTERDIT — tics de structure :\n" +
-  "- le participe présent collé en fin de phrase pour faire profond (« …, permettant d'optimiser " +
-  "les process », « …, contribuant à la satisfaction client ») : coupe-le, ou fais-en une vraie " +
-  "proposition avec un sujet et un verbe ;\n" +
+  "- le participe présent utilisé comme tic pour faire profond, où qu'il se place dans la phrase " +
+  "(en fin de phrase : « …, permettant d'optimiser les process » ; en incise : « Professionnel " +
+  "qualifié, répondant aux normes actuelles, je… ») : coupe-le, ou fais-en une vraie proposition " +
+  "avec un sujet et un verbe ;\n" +
   "- l'énumération par trois automatique (« rigueur, autonomie et esprit d'équipe ») : n'en garde " +
   "que ce qui compte vraiment ;\n" +
   "- le tiret cadratin (—) à l'intérieur d'une phrase : une virgule, un point ou une parenthèse " +

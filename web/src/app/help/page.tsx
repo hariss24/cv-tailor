@@ -159,6 +159,21 @@ export default function HelpPage() {
 
           <details className="faq-accordion">
             <summary className="faq-summary">
+              <span className="faq-question">Astuce : comment garder une sauvegarde rapide de mon CV ?</span>
+              <svg className="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </summary>
+            <div className="faq-content">
+              <p>
+                Sur Windows, le raccourci <strong>Windows + V</strong> ouvre l&apos;historique du presse-papier.
+                Passe en mode <strong>Expert</strong>, clique « Copier » pour copier le JSON de ton CV, puis épingle
+                cette entrée dans l&apos;historique du presse-papier (icône 📌). Tu pourras la retrouver et la recoller
+                plus tard, même après avoir fermé ton navigateur : une sauvegarde de secours simple, sans rien exporter.
+              </p>
+            </div>
+          </details>
+
+          <details className="faq-accordion">
+            <summary className="faq-summary">
               <span className="faq-question">Quels sont les raccourcis clavier utiles ?</span>
               <svg className="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </summary>
