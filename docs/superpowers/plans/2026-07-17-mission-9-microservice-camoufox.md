@@ -20,6 +20,8 @@ hébergement futur : re-validation SSRF et token d'auth optionnel.
 - `scraper-service/requirements.txt`
 - `scraper-service/README.md`
 - `scraper-service/.gitignore`
+- `scraper-service/Dockerfile`
+- `scraper-service/.dockerignore`
 - `Lancer Scraper (Camoufox).bat` (racine du repo)
 
 ## 1. `scraper-service/requirements.txt`
@@ -196,7 +198,43 @@ curl -X POST http://127.0.0.1:8765/scrape -H "Content-Type: application/json" -d
   service est hébergé sur Internet (Railway/Fly), inutile en local.
 ```
 
-## 5. `Lancer Scraper (Camoufox).bat` (racine)
+## 5. `scraper-service/Dockerfile`
+
+Prépare l'hébergement futur (Railway/Fly) — le service reste lancé en local
+via le .bat au quotidien, mais l'image doit être constructible dès maintenant.
+
+```dockerfile
+FROM python:3.12-slim
+
+# Dépendances système du navigateur Firefox/Camoufox (headless)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgtk-3-0 libx11-xcb1 libasound2 libdbus-glib-1-2 libxtst6 \
+    libxrandr2 libpci3 libegl1 libxcomposite1 libxdamage1 libxfixes3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Télécharge le navigateur Camoufox dans l'image
+RUN python -m camoufox fetch
+
+COPY main.py .
+
+EXPOSE 8765
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8765"]
+```
+
+## 6. `scraper-service/.dockerignore`
+
+```
+.venv/
+__pycache__/
+README.md
+```
+
+## 7. `Lancer Scraper (Camoufox).bat` (racine)
 
 ```bat
 @echo off
@@ -226,6 +264,12 @@ Depuis `scraper-service/` avec le venv activé :
    texte substantiel.
 6. Token : relancer avec `set SCRAPER_TOKEN=secret123` ; `POST /scrape` sans
    header → 401 ; avec `-H "Authorization: Bearer secret123"` → OK.
+7. Docker (si Docker Desktop est disponible sur la machine) :
+   `docker build -t cv-tailor-scraper scraper-service/` doit réussir, puis
+   `docker run --rm -p 8765:8765 cv-tailor-scraper` +
+   `curl http://127.0.0.1:8765/health` → `{"status":"ok"}`.
+   Si Docker n'est pas installé, le signaler dans le rapport final sans
+   bloquer la mission (le build sera vérifié au moment du déploiement).
 
 ## Commit
 
@@ -235,5 +279,6 @@ feat(scraper): microservice Camoufox local pour l'extraction d'offres bloquées
 Nouveau service FastAPI (scraper-service/) : POST /scrape pilote un Firefox
 furtif (Camoufox) pour extraire le texte des offres LinkedIn/Indeed que le
 fetch direct ne peut pas atteindre. SSRF revalidé côté Python, token Bearer
-optionnel pour un hébergement futur. Lancement via .bat dédié.
+optionnel et Dockerfile inclus pour l'hébergement futur (SaaS). Lancement
+local via .bat dédié.
 ```

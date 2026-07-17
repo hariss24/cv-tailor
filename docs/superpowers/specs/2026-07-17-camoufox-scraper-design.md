@@ -30,7 +30,7 @@ fetch + cheerio  →  microservice Camoufox  →  Jina AI
 |---|---|
 | Périmètre du service Python | **Scraping seul.** Toute l'IA (nettoyage Gemini via Vercel AI SDK) reste dans Next.js. |
 | Place dans la cascade | **Fallback intermédiaire.** fetch+cheerio d'abord ; Camoufox si bloqué ; Jina en dernier filet. L'app reste 100 % fonctionnelle si le service n'est pas lancé. |
-| Déploiement | **Local uniquement pour l'instant**, mais conçu pour être hébergeable plus tard (Railway/Fly) : URL et token en variables d'environnement, auth Bearer optionnelle, re-validation SSRF côté Python. Migration future = changement de config, pas de code. |
+| Déploiement | **Local pour l'instant, mais prêt à héberger** (orientation SaaS) : URL et token en variables d'environnement, auth Bearer optionnelle, re-validation SSRF côté Python, **Dockerfile inclus dès maintenant**. Migration vers Railway/Fly = déploiement du conteneur + changement de config, zéro code. |
 | Installation Camoufox | Via **pip** (`camoufox[geoip]`) + `camoufox fetch`. Le clone git `C:\Users\tahet\projects\camoufox` fait pendant la session Gemini est inutile et peut être supprimé. |
 | Exécutant | Missions autonomes déléguées à Gemini, vérifiées par Claude. |
 
@@ -100,5 +100,5 @@ fetch + cheerio  →  microservice Camoufox  →  Jina AI
 
 ## Hors périmètre
 
-- Appel de l'IA depuis Python, hébergement distant, Dockerfile, proxies/geoip
+- Appel de l'IA depuis Python, hébergement distant effectif, proxies/geoip
   avancés, file d'attente ou pool de navigateurs, cache des résultats.
