@@ -19,6 +19,7 @@ describe("scraper", () => {
   it("should extract text from direct fetch if valid HTML", async () => {
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
+      status: 200,
       text: async () => `
         <html><head><title>Test Job</title></head>
         <body>
@@ -44,6 +45,7 @@ describe("scraper", () => {
       if (url.toString().startsWith("https://r.jina.ai/")) {
         return {
           ok: true,
+          status: 200,
           text: async () => "# Job Title\n\nWe are looking for a ninja."
         } as any;
       }
@@ -65,11 +67,13 @@ describe("scraper", () => {
       if (url.toString().startsWith("https://r.jina.ai/")) {
         return {
           ok: true,
+          status: 200,
           text: async () => "Jina extracted text"
         } as any;
       }
       return {
         ok: true,
+        status: 200,
         text: async () => `<html><body><div class="job-description">Tiny text</div></body></html>`
       } as any;
     });
@@ -86,5 +90,28 @@ describe("scraper", () => {
     } as any);
 
     await expect(scrapeJobText("https://example.com/ultra-blocked")).rejects.toThrow("accès bloqué par le site");
+  });
+
+  it("refuse une redirection vers une IP privée (SSRF via 302)", async () => {
+    // La validation SSRF rejette les URL privées (simulation du comportement réel).
+    vi.spyOn(ssrf, "validateUrlForScraping").mockImplementation(async (url) => {
+      if (url.includes("127.0.0.1")) throw new Error("URL non autorisée.");
+      return url;
+    });
+    vi.mocked(global.fetch).mockImplementation(async (url) => {
+      if (url.toString().startsWith("https://r.jina.ai/")) {
+        return { ok: false, status: 500 } as any; // fallback Jina en échec
+      }
+      return {
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: "http://127.0.0.1/admin" }),
+      } as any;
+    });
+
+    await expect(scrapeJobText("https://example.com/offre")).rejects.toThrow(/bloqué/);
+    // Le fetch ne doit JAMAIS avoir été appelé sur l'IP privée.
+    const calledUrls = vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]));
+    expect(calledUrls.some((u) => u.includes("127.0.0.1"))).toBe(false);
   });
 });

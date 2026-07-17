@@ -41,6 +41,18 @@
 
 ## Journal
 
+### 2026-07-17 : Mission 7 — Retrait de l'écosystème HTML local (store et purge)
+
+- **Besoin.** Achever la migration vers React PDF (post-audit) en supprimant toutes les références au `html`, `css`, et `htmlSource` dans le store de l'application, les types de la base de données (IndexedDB), les modèles de CV, et les composants d'UI.
+- **Correctif.** 
+  - Nettoyage du `docStore` (Zustand), suppression de `html`/`css`/`htmlSource`. 
+  - Migration DB `v6` dans Dexie pour purger les snapshots et l'historique obsolètes (entrées ayant uniquement du HTML/CSS sans JSON).
+  - Nettoyage de tous les anciens templates HTML/CSS de `templates.ts`, en ne gardant que l'énumération `TEMPLATE_IDS`.
+  - Refonte des composants (EditorPane, HistoryList, SnapshotsModal, TopBar, PackView) et des scripts de stockage (DraftManager, useAutoDraft, snapshots.ts, historyStore.ts) pour cesser d'enregistrer et de lire l'état HTML/CSS.
+- **Fichiers touchés :** `docStore.ts`, `templates.ts`, `db.ts`, `EditorPane.tsx`, `HistoryList.tsx`, `SnapshotsModal.tsx`, `DraftManager.tsx`, `TopBar.tsx`, `PackView.tsx`, `snapshots.ts`, `useAutoDraft.ts`, `useGlobalUndoRedo.ts`, `historyStore.ts`, + les tests unitaires / E2E.
+- **Résultat vérifs :** `tsc --noEmit` OK, `npm run lint` 0 erreur, `npx vitest run` 239/239 verts, `npx playwright test` 38/38 verts. Build Vercel OK.
+- **Commit :** `feat: retrait du support HTML legacy dans les composants et le stockage`
+
 ### 2026-07-17 : Vérification des 3 features + diagnostic du score ATS sur les fixtures
 
 - **Contexte.** Les 3 features du jour ont été implémentées par Gemini 3.1 sur la base de missions autonomes (`docs/superpowers/plans/2026-07-17-mission-*.md`, spec dans `docs/superpowers/specs/`). Claude a vérifié chaque diff : lint 0 erreur, `tsc` OK, 262 tests verts, plus tests manuels navigateur (meta vidée après « Nouveau CV », analyse IA en un clic + fallback local testé en simulant une panne réseau, pan 213 px sur les deux axes avec `is-panning` correctement retiré). Nettoyage cosmétique post-review dans `AtsPanel.tsx` (commentaire d'en-tête, lignes vides).

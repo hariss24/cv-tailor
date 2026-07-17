@@ -5,7 +5,7 @@ import { SobreTemplate } from "./templates/SobreTemplate";
 import { KakunaTemplate } from "./templates/KakunaTemplate";
 import { MarineTemplate } from "./templates/MarineTemplate";
 
-export type PdfTemplateId = "graphique" | "sobre" | "moderne" | "classique" | "minimal" | "kakuna" | "marine";
+export type PdfTemplateId = "graphique" | "sobre" | "kakuna" | "marine";
 
 export function ResumeDocument({
   resume,

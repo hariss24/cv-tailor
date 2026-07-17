@@ -24,8 +24,8 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
-  const letterBody = (body.letter_body ?? "").trim();
-  const jobDesc = (body.job_desc ?? "").trim();
+  const letterBody = (body.letter_body ?? "").trim().slice(0, 30_000);
+  const jobDesc = (body.job_desc ?? "").trim().slice(0, 30_000);
   if (!letterBody || !jobDesc) {
     return NextResponse.json({ error: "Modèle de lettre et offre d'emploi requis." }, { status: 400 });
   }

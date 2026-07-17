@@ -38,7 +38,7 @@ export async function POST(req: Request): Promise<Response> {
   const isLetter = docType === "Lettre";
 
   let context = `Document actuel (${docType}) :\n\nJSON :\n${docJson}`;
-  if (body.job_desc) context += `\n\nOffre d'emploi cible :\n${body.job_desc}`;
+  if (body.job_desc) context += `\n\nOffre d'emploi cible :\n${String(body.job_desc).slice(0, 30_000)}`;
 
   // Contexte injecté en tête comme premier échange user/assistant.
   const augmented: ChatMessage[] = [

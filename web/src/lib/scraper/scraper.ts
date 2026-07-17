@@ -10,29 +10,47 @@ export async function scrapeJobText(url: string): Promise<{ text: string; title:
   let html = "";
   let isBlocked = false;
 
-  try {
-    // 2. Fetch the page directly
-    const res = await fetch(safeUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3",
-      },
-      signal: AbortSignal.timeout(10000), // 10s timeout
-    });
+  const MAX_REDIRECTS = 3;
 
-    if (!res.ok) {
-      if (res.status === 401 || res.status === 403 || res.status >= 500) {
+  try {
+    // 2. Fetch de la page — redirections suivies manuellement : chaque saut est
+    // revalidé contre les IP privées (sinon un 302 contournerait la protection SSRF).
+    let currentUrl = safeUrl;
+    let res: Response | null = null;
+    for (let i = 0; i <= MAX_REDIRECTS; i++) {
+      res = await fetch(currentUrl, {
+        redirect: "manual",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3",
+        },
+        signal: AbortSignal.timeout(10000), // 10s timeout
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc || i === MAX_REDIRECTS) throw new Error("BLOCKED");
+        // URL relative possible dans Location : résoudre par rapport à l'URL courante.
+        currentUrl = await validateUrlForScraping(new URL(loc, currentUrl).toString());
+        continue;
+      }
+      break;
+    }
+
+    if (!res || !res.ok) {
+      const status = res?.status ?? 0;
+      if (status === 401 || status === 403 || status >= 500) {
         isBlocked = true;
       } else {
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error(`HTTP ${status}`);
       }
     } else {
       html = await res.text();
     }
   } catch {
-    // If fetch failed completely (e.g. timeout, connection reset), try fallback
+    // Fetch impossible (timeout, connexion coupée, redirection non autorisée) : fallback.
     isBlocked = true;
   }
 

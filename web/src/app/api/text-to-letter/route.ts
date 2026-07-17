@@ -22,7 +22,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
-  const text = (body.text ?? "").trim();
+  const text = (body.text ?? "").trim().slice(0, 30_000);
   if (!text) {
     return NextResponse.json({ error: "Aucun texte reçu." }, { status: 400 });
   }

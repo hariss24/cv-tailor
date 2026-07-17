@@ -16,7 +16,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: "Corps JSON invalide." }, { status: 400 });
   }
 
-  const jobDesc = (body.job_desc ?? "").trim();
+  const jobDesc = (body.job_desc ?? "").trim().slice(0, 30_000);
   if (!jobDesc) {
     return NextResponse.json({ error: "Offre d'emploi requise." }, { status: 400 });
   }
