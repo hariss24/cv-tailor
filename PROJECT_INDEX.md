@@ -128,7 +128,7 @@ l'import PDF). Modèle Gemini par défaut : `gemini-3.1-flash-lite` (réglable v
 | `pdf-to-resume` | Importe un CV depuis un PDF (rendu en images côté client via `pdf.js`, puis vision IA) |
 | `text-to-resume` | Importe un CV depuis du texte brut collé |
 | `text-to-letter` | Importe une lettre depuis du texte brut collé |
-| `extract-job` | « Extracteur magique d'offre » : scrape et nettoie une URL d'offre (LinkedIn, WTTJ…) via `src/lib/scraper/` |
+| `extract-job` | « Extracteur magique d'offre » : scrape et nettoie une URL d'offre (LinkedIn, WTTJ…) via `src/lib/scraper/`. Cascade : fetch+cheerio → microservice Camoufox (`scraper-service/`, si `SCRAPER_URL` définie) → Jina AI |
 | `status` | Statut de configuration IA (clé serveur présente ou non) |
 
 **Système ATS** (`src/lib/ats/`, panneau `components/modals/AtsPanel.tsx`) :
