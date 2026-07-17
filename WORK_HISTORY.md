@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** Formulaire allégé (en-têtes de cartes numérotés + design mobile) livré. Restent en priorité haute dans `TODO.md` : vider les champs entreprise/poste à la création/suppression d'un CV, et la validation de bout en bout sur un vrai CV importé.
+**Prochaine étape suggérée :** 3 features livrées le 17/07 (meta vidée au Nouveau CV, ATS un clic IA, outil main dans l'aperçu) — implémentation Gemini 3.1, orchestration/vérification Claude. Reste en priorité haute dans `TODO.md` : la validation de bout en bout sur un vrai CV importé. En option : étoffer les stop words anglais du fallback ATS local (`engine.ts`).
 
 ---
 
@@ -40,6 +40,13 @@
 ---
 
 ## Journal
+
+### 2026-07-17 : Vérification des 3 features + diagnostic du score ATS sur les fixtures
+
+- **Contexte.** Les 3 features du jour ont été implémentées par Gemini 3.1 sur la base de missions autonomes (`docs/superpowers/plans/2026-07-17-mission-*.md`, spec dans `docs/superpowers/specs/`). Claude a vérifié chaque diff : lint 0 erreur, `tsc` OK, 262 tests verts, plus tests manuels navigateur (meta vidée après « Nouveau CV », analyse IA en un clic + fallback local testé en simulant une panne réseau, pan 213 px sur les deux axes avec `is-panning` correctement retiré). Nettoyage cosmétique post-review dans `AtsPanel.tsx` (commentaire d'en-tête, lignes vides).
+- **Diagnostic ATS** (question : pourquoi le score est-il faible avec `base_resume.json` + `job_sharkninja.txt` ?). Avec le vrai CV, **l'analyse IA donne 74/100** (« Bon, à optimiser ») : 10 exigences sur 13 couvertes (manquent SEMrush, Salesforce Commerce Cloud, gestion d'agences — factuel). Le score est tiré par **Impact 41** (2 puces chiffrées sur 13) et **Adéquation 50** (titre « Webmaster & Consultant Digital » sans mot commun avec « SEO Manager ») — comportement voulu sur un CV maître non adapté. Le 43 observé en test venait du CV placeholder.
+- **Point d'attention.** Le fallback **local** est mal calibré pour les offres en anglais : stop words EN trop courts → `all`, `more`, `best`, `key`… retenus comme exigences (axe mots-clés 21/100). Correctif optionnel : étoffer `STOP_WORDS` dans `web/src/lib/ats/engine.ts`. Non bloquant (chemin de secours uniquement).
+- **Fichiers touchés :** `web/src/components/modals/AtsPanel.tsx` (nettoyage), `TODO.md` (3 cases cochées).
 
 ### 2026-07-17 : Outil « main » : pan à la souris dans l'aperçu PDF
 
