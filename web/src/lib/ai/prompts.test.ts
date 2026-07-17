@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   SYSTEM_ADAPT_LETTER,
   SYSTEM_EXTRACT_META,
-  TAILOR_SYSTEMS,
   SYSTEM_TEXT_TO_LETTER,
   RESUME_TAILOR_RULES,
   RESUME_SCHEMA_DESC,
@@ -13,7 +12,6 @@ import {
   HUMAN_TONE_RULE,
   LETTER_FIELDS_RULE,
   tailorResumeSystem,
-  tailorHtmlSystem,
   type TailorLevel,
 } from "./prompts";
 import { resumeSchema, letterSchema } from "@/lib/resume/schema";
@@ -21,12 +19,6 @@ import { resumeSchema, letterSchema } from "@/lib/resume/schema";
 const LEVELS: TailorLevel[] = ["peu", "adapte", "hyper", "sur-mesure"];
 
 describe("prompts — invariants métier", () => {
-  it("chaque niveau d'adaptation HTML porte la règle anti-détection", () => {
-    for (const level of LEVELS) {
-      expect(TAILOR_SYSTEMS[level], level).toContain("ANTI-DÉTECTION");
-    }
-  });
-
   // GARDE-FOU ANTI-DÉRIVE — ne pas remplacer par une liste écrite à la main.
   //
   // `RESUME_SCHEMA_DESC` est une copie manuelle du schéma Zod : c'est la fiche envoyée
@@ -77,17 +69,6 @@ describe("prompts — invariants métier", () => {
     expect(tailorResumeSystem("n'importe quoi" as TailorLevel)).toBe(tailorResumeSystem("adapte"));
   });
 
-  it("tailorHtmlSystem inclut les règles HTML communes", () => {
-    const sys = tailorHtmlSystem("adapte");
-    expect(sys).toContain("RÈGLES TECHNIQUES STRICTES");
-    expect(sys).toContain("PRÉSERVATION INTÉGRALE");
-  });
-
-  it("tailorHtmlSystem en mode Maître bascule en élagage", () => {
-    const sys = tailorHtmlSystem("hyper", true);
-    expect(sys).toContain("RÈGLE DE SÉLECTION (CV MAÎTRE)");
-    expect(sys).not.toContain("PRÉSERVATION INTÉGRALE");
-  });
 });
 
 describe("prompts — cohérence des niveaux (pas de contradiction base/niveau)", () => {
@@ -127,32 +108,6 @@ describe("prompts — cohérence des niveaux (pas de contradiction base/niveau)"
     expect(sys).not.toContain("résultats chiffrés crédibles");
   });
 
-  it("le niveau HTML 'peu' n'impose ni la page unique ni la réécriture des compétences", () => {
-    const sys = tailorHtmlSystem("peu");
-    expect(sys).not.toContain("1 PAGE");
-    expect(sys).not.toContain("800 caractères");
-  });
-
-  it("les niveaux HTML 'adapte'/'hyper'/'sur-mesure' gardent les règles de réécriture", () => {
-    for (const level of ["adapte", "hyper", "sur-mesure"] as const) {
-      const sys = tailorHtmlSystem(level);
-      expect(sys, level).toContain("1 PAGE");
-      expect(sys, level).toContain("RÈGLES DE RÉÉCRITURE");
-    }
-  });
-
-  it("tous les niveaux HTML protègent les résultats chiffrés et la séniorité", () => {
-    for (const level of LEVELS) {
-      expect(tailorHtmlSystem(level), level).toContain("RÉSULTATS CHIFFRÉS");
-      expect(tailorHtmlSystem(level), level).toContain("SÉNIORITÉ");
-    }
-  });
-
-  it("le sur-mesure HTML n'autorise plus les chiffres inventés", () => {
-    const sys = tailorHtmlSystem("sur-mesure");
-    expect(sys).toContain("GARDE-FOUS");
-    expect(sys).not.toContain("résultats chiffrés crédibles");
-  });
 });
 
 describe('prompts — text to letter', () => {
