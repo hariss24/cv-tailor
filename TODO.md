@@ -61,16 +61,16 @@ Suivi des fonctionnalités de l'application (version Next.js).
 
 ## 🔵 Priorité haute — à faire
 
-- [ ] **Vider les champs entreprise et nom de poste quand on supprime ou crée un nouveau CV**
+- [x] **Vider les champs entreprise et nom de poste quand on supprime ou crée un nouveau CV**
   Quand l'utilisateur clique sur supprimer ou créer un nouveau CV, vider les champs entreprise
-  et nom de poste.
+  et nom de poste. *(17/07 — `onNewCv` de la TopBar vide `company`/`role`.)*
 
 - [ ] **Validation de bout en bout sur un vrai CV**
   Le chantier « zéro perte » est terminé côté code, mais reste à éprouver sur un CV réellement
   importé (rubriques inhabituelles, ordre, sections masquées, rendu dans les 4 modèles).
 
-- [ ] **Analyse ATS automatique par l'IA via le premier filtre**
-  L'analyse ATS doit se faire uniquement par IA, mais en gardant le premier filtre algorithmique utilisé pour le score sans IA. Lorsqu'on clique "analyse ATS", ça doit passer le premier filtre en arrière-plan puis demander directement à l'IA sans étape manuelle.
+- [x] **Analyse ATS automatique par l'IA via le premier filtre**
+  L'analyse ATS doit se faire uniquement par IA, mais en gardant le premier filtre algorithmique utilisé pour le score sans IA. Lorsqu'on clique "analyse ATS", ça doit passer le premier filtre en arrière-plan puis demander directement à l'IA sans étape manuelle. *(17/07 — un seul bouton « Analyse ATS », IA directe, moteur local en secours si l'IA échoue.)*
 
 ---
 
@@ -78,8 +78,8 @@ Suivi des fonctionnalités de l'application (version Next.js).
 
 - [x] **Raccourcis clavier**
 - [ ] **Preview page-break** — ⏸️ *différé : complexe à simuler avec précision dans React PDF avant rendu final.*
-- [ ] **Déplacement dans l'aperçu PDF (outil "main")**
-  Permettre de se déplacer dans l'aperçu du PDF avec un glisser-déposer de la souris, comme l'outil "main" sur Photoshop. Utile surtout avec le zoom et sur mobile, pour éviter d'utiliser les barres de défilement.
+- [x] **Déplacement dans l'aperçu PDF (outil "main")**
+  Permettre de se déplacer dans l'aperçu du PDF avec un glisser-déposer de la souris, comme l'outil "main" sur Photoshop. Utile surtout avec le zoom et sur mobile, pour éviter d'utiliser les barres de défilement. *(17/07 — pan à la souris via pointer events ; au tactile, défilement natif conservé.)*
 
 ---
 
@@ -94,4 +94,4 @@ Suivi des fonctionnalités de l'application (version Next.js).
 
 ---
 
-*Dernière mise à jour : 15 juillet 2026*
+*Dernière mise à jour : 17 juillet 2026*

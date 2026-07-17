@@ -41,6 +41,27 @@
 
 ## Journal
 
+### 2026-07-17 : Outil « main » : pan à la souris dans l'aperçu PDF
+
+- **Besoin.** Sur desktop, avec un aperçu PDF zoomé, l'utilisateur devait utiliser les barres de défilement, ce qui était pénible. Il fallait un outil « main » (cliquer-glisser) comme dans Photoshop, uniquement pour la souris.
+- **Correctif.** Ajout des événements `onPointerDown`, `onPointerMove`, `onPointerUp`/`Cancel` sur le conteneur du `PdfPreview`. Le déplacement calcule la différence entre la position initiale et courante de la souris pour ajuster le `scrollLeft`/`scrollTop`. Ajout des styles `.pdf-preview { cursor: grab; user-select: none; }` et `.is-panning { cursor: grabbing; }`.
+- **Fichiers touchés :** `web/src/components/editor/PdfPreview.tsx`, `web/src/app/globals.css`.
+- **Résultat vérifs :** `npm run lint` 0 erreur · `npx vitest run` verts · `npx tsc --noEmit` OK.
+
+### 2026-07-17 : Analyse ATS en un clic — IA directe, moteur local en secours
+
+- **Besoin.** L'utilisateur souhaite un seul bouton « Analyse ATS » qui lance directement l'analyse par l'IA. Le score local ne sert que de secours si l'IA échoue.
+- **Correctif.** Dans `AtsPanel.tsx`, suppression du bouton "Score ATS" et de la fonction `runLocal`. Mise à jour du bouton restant. Modification du bloc `catch` de `runAi` pour retomber sur `analyzeResumeAts` (algorithme local) avec un toast d'information en cas d'échec.
+- **Fichiers touchés :** `web/src/components/modals/AtsPanel.tsx`.
+- **Résultat vérifs :** `npm run lint` 0 erreur · `npx vitest run` verts · `npx tsc --noEmit` OK. (tests e2e ignorés selon instruction).
+
+### 2026-07-17 : Vider entreprise/poste au « Nouveau CV »
+
+- **Besoin.** Les champs `company` et `role` de la barre meta gardaient leurs anciennes valeurs lors de la création d'un nouveau CV.
+- **Correctif.** Modification de la fonction `onNewCv` de la `TopBar` pour vider le store (`setCompany("")`, `setRole("")`).
+- **Fichiers touchés :** `web/src/components/layout/TopBar.tsx`.
+- **Résultat vérifs :** `npm run lint` 0 erreur · `npx vitest run` verts · `npx tsc --noEmit` OK. (tests e2e ignorés selon instruction).
+
 ### 2026-07-16 : Refonte high-end du layout "Adapter à une offre" (mode CV)
 
 - **Besoin.** L'utilisateur trouvait le layout du mode CV "merdique" : la grille 2x2 des niveaux d'adaptation était lourde, l'utilisation des creux (`--neu-inset`) abusive ("boîte dans une boîte"), et l'ensemble manquait de respiration et d'élégance.
