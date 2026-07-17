@@ -15,7 +15,7 @@
 
 *(une seule ligne, écrasée à chaque mise à jour — pas un historique)*
 
-**Prochaine étape suggérée :** 3 features livrées le 17/07 (meta vidée au Nouveau CV, ATS un clic IA, outil main dans l'aperçu) — implémentation Gemini 3.1, orchestration/vérification Claude. Reste en priorité haute dans `TODO.md` : la validation de bout en bout sur un vrai CV importé. En option : étoffer les stop words anglais du fallback ATS local (`engine.ts`).
+**Prochaine étape suggérée :** missions post-audit 4–10 livrées et fusionnées le 17/07 (retrait legacy HTML/sur-mesure/ATS boost, purge Dexie v6, CI fusionnée + SSRF, microservice Camoufox + cascade) — implémentation Gemini 3.1, vérification/fusion Claude. Pour utiliser Camoufox en local : créer le venv dans `scraper-service/` (voir son README) puis lancer `Lancer Scraper (Camoufox).bat`. Reste en priorité haute dans `TODO.md` : la validation de bout en bout sur un vrai CV importé.
 
 ---
 
@@ -40,6 +40,16 @@
 ---
 
 ## Journal
+
+### 2026-07-17 : Missions 9 & 10 — Microservice Camoufox et cascade (vérifiées et fusionnées)
+
+- **Quoi.** Création d'un microservice local FastAPI/Camoufox (`scraper-service/`) pour contourner les blocages LinkedIn/Indeed, et intégration dans la cascade de `web/src/lib/scraper/scraper.ts` (fetch direct → Camoufox si `SCRAPER_URL` définie → Jina AI). Implémentation Gemini 3.1 sur la branche `camoufox-scraper`, vérification Claude.
+- **Pourquoi.** Le scraper classique (cheerio) échoue sur les sites fortement protégés contre les bots ; Jina AI est parfois aussi bloqué. Camoufox (Firefox furtif) ajoute un fallback local, Dockerfile inclus pour l'hébergement futur (SaaS).
+- **Fusion.** La branche datait d'avant les missions 4–8 : rebase sur `main` (conflit résolu dans `scraper.test.ts` — les deux blocs de tests SSRF-302 et Camoufox conservés ; `scraper.ts` auto-fusionné : boucle `redirect: "manual"` + bloc Camoufox), puis fast-forward dans `main` et suppression de la branche/worktree.
+- **Fichiers touchés :** `scraper-service/*` (main.py, Dockerfile, README…), `Lancer Scraper (Camoufox).bat`, `web/src/lib/scraper/scraper.ts`, `web/src/lib/scraper/scraper.test.ts`, `web/.env.local` (ajout `SCRAPER_URL`, gitignoré).
+- **Résultat vérifs :** service testé en live (`/health` 200, IP privée → 403, `ftp://` → 400), `tsc --noEmit` OK, lint 0 erreur, `npm test` 243/243 verts après fusion.
+- **À savoir :** le venv Python doit être (re)créé dans `scraper-service/` (voir son README) — celui du worktree a été supprimé avec le worktree. Sans `SCRAPER_URL` (prod Vercel), comportement strictement inchangé.
+- **Commits :** `feat(scraper): microservice Camoufox local pour l'extraction d'offres bloquées` + `feat(scraper): fallback Camoufox dans la cascade d'extraction d'offres`.
 
 ### 2026-07-17 : Mission 8 — CI et durcissement (SSRF et limites IA)
 
