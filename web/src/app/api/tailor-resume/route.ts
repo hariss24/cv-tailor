@@ -8,7 +8,7 @@ import { normalizeResume, mergeTailored, preservePhoto } from "@/lib/resume/norm
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const LEVELS: readonly TailorLevel[] = ["peu", "adapte", "hyper", "sur-mesure"];
+const LEVELS: readonly TailorLevel[] = ["peu", "adapte", "hyper"];
 
 type Body = {
   resume?: unknown;

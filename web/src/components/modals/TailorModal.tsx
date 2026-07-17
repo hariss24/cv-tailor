@@ -17,7 +17,7 @@ import { toast } from "@/state/uiStore";
 import { useEscapeClose } from "@/lib/useEscapeClose";
 
 /**
- * Modale d'adaptation IA à une offre. CV : 4 niveaux, port de `_tailorResumeFields` (app.js).
+ * Modale d'adaptation IA à une offre. CV : 3 niveaux, port de `_tailorResumeFields` (app.js).
  * Lettre (docType « Lettre ») : adapte le corps de la lettre via `/api/adapt-letter`
  * (UI réduite : pas de niveaux, ni CV Maître, ni panneau ATS).
  *
@@ -34,7 +34,6 @@ const LEVELS: { id: TailorLevel; label: string; hint: string }[] = [
   { id: "peu", label: "Peu adapté", hint: "Modifie uniquement le titre et l'accroche. Le reste du CV est conservé tel quel." },
   { id: "adapte", label: "Adapté", hint: "Ajuste l'accroche, réordonne les compétences et reformule les expériences pour coller à l'offre." },
   { id: "hyper", label: "Hyper-adapté", hint: "Réécrit entièrement l'accroche, les compétences et les expériences sans inventer de nouveaux faits." },
-  { id: "sur-mesure", label: "Sur-mesure", hint: "Ajoute les compétences manquantes, adapte votre dernier poste et ajoute des réalisations crédibles." },
 ];
 
 export default function TailorModal({

@@ -75,12 +75,7 @@ describe("POST /api/tailor-resume", () => {
     expect(sentContent).toContain("Poste TS");
   });
 
-  it("choisit la base 'invention' pour le niveau sur-mesure", async () => {
-    mockComplete.mockResolvedValue(JSON.stringify(BASE_RESUME));
-    await POST(makeRequest({ resume: BASE_RESUME, job_desc: "x", level: "sur-mesure" }));
-    const system = mockComplete.mock.calls[0][1];
-    expect(system).toContain("optimisation de CV agressive");
-  });
+
 
   it("rejette une offre manquante", async () => {
     const res = await POST(makeRequest({ resume: BASE_RESUME, job_desc: "" }));

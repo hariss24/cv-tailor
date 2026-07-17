@@ -5,7 +5,6 @@ import {
   SYSTEM_TEXT_TO_LETTER,
   RESUME_TAILOR_RULES,
   RESUME_SCHEMA_DESC,
-  SYSTEM_TAILOR_RESUME_BASE_INVENT,
   SYSTEM_PDF_TO_RESUME,
   SYSTEM_TEXT_TO_RESUME,
   SYSTEM_EDITOR_CHAT,
@@ -16,7 +15,7 @@ import {
 } from "./prompts";
 import { resumeSchema, letterSchema } from "@/lib/resume/schema";
 
-const LEVELS: TailorLevel[] = ["peu", "adapte", "hyper", "sur-mesure"];
+const LEVELS: TailorLevel[] = ["peu", "adapte", "hyper"];
 
 describe("prompts — invariants métier", () => {
   // GARDE-FOU ANTI-DÉRIVE — ne pas remplacer par une liste écrite à la main.
@@ -59,11 +58,7 @@ describe("prompts — invariants métier", () => {
     }
   });
 
-  it("tailorResumeSystem n'utilise la base 'invention' que pour sur-mesure", () => {
-    expect(tailorResumeSystem("sur-mesure")).toContain("optimisation de CV agressive");
-    expect(tailorResumeSystem("adapte")).not.toContain("optimisation de CV agressive");
-    expect(SYSTEM_TAILOR_RESUME_BASE_INVENT).toContain("optimisation de CV agressive");
-  });
+
 
   it("un niveau inconnu retombe sur 'adapte'", () => {
     expect(tailorResumeSystem("n'importe quoi" as TailorLevel)).toBe(tailorResumeSystem("adapte"));
@@ -95,18 +90,13 @@ describe("prompts — cohérence des niveaux (pas de contradiction base/niveau)"
     }
   });
 
-  it("les niveaux JSON hors sur-mesure interdisent d'ajouter des outils absents du CV", () => {
+  it("tous les niveaux JSON interdisent d'ajouter des outils absents du CV", () => {
     for (const level of ["peu", "adapte", "hyper"] as const) {
       expect(tailorResumeSystem(level), level).toContain("outil, un logiciel");
     }
   });
 
-  it("le sur-mesure JSON porte des garde-fous (pas d'outil nommé, ni certification, ni chiffre inventé)", () => {
-    const sys = tailorResumeSystem("sur-mesure");
-    expect(sys).toContain("GARDE-FOUS");
-    expect(sys).toContain("certification");
-    expect(sys).not.toContain("résultats chiffrés crédibles");
-  });
+
 
 });
 

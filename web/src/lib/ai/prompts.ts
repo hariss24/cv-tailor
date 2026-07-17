@@ -81,7 +81,7 @@ export const HUMAN_TONE_RULE =
 
 // ---- adaptation HTML, par niveau (pipeline HTML legacy) ---------------------
 
-export type TailorLevel = "peu" | "adapte" | "hyper" | "sur-mesure";
+export type TailorLevel = "peu" | "adapte" | "hyper";
 
 
 // ---- schéma JSON + adaptation JSON (pipeline /api/tailor-resume) -------------
@@ -186,19 +186,6 @@ export const RESUME_TAILOR_RULES: Record<TailorLevel, string> = {
     "ce qui n'est pas pertinent pour l'offre — sans jamais toucher aux résultats chiffrés.\n" +
     "- INTERDIT : supprimer des langues, inventer des compétences, modifier les dates/" +
     "entreprises du parcours ou les diplômes.\n",
-  "sur-mesure":
-    "NIVEAU SUR-MESURE (invention autorisée) :\n" +
-    "- Ajuste 'title' et réécris entièrement 'summary' pour coller parfaitement au poste.\n" +
-    "- AJOUTE aux 'skills' les compétences demandées par l'offre même si elles sont absentes " +
-    "du CV, et réécris/réorganise-les pour mettre les plus pertinentes en premier.\n" +
-    "- MODIFIE COMPLÈTEMENT l'intitulé (title) de l'expérience la plus récente (le dernier poste occupé) " +
-    "ainsi que ses 'bullets' pour qu'ils correspondent exactement aux attentes de l'offre.\n" +
-    "- Réécris et ENRICHIS les 'bullets' des autres expériences (max 5 par expérience) : tu peux " +
-    "ajouter des réalisations et responsabilités crédibles qui collent à l'offre, même si elles " +
-    "ne figurent pas dans le CV original (mais AUCUN résultat chiffré inventé).\n" +
-    "- Reste crédible et cohérent avec le parcours (secteur, séniorité, dates).\n" +
-    "- NE modifie PAS les 'company', les 'date' du parcours, ni les intitulés de postes (SAUF le plus récent), ni les diplômes/établissements.\n" +
-    "- LIMITE DE LONGUEUR STRICTE (1 PAGE MAX) : Élague et raccourcis le CV Maître pour générer un CV ultra-concis de 2500 caractères maximum au total.\n",
 };
 
 export const SYSTEM_TAILOR_RESUME_BASE =
@@ -234,48 +221,6 @@ export const SYSTEM_TAILOR_RESUME_BASE =
   "sans en retirer ni en réordonner un seul élément.\n" +
   "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n\n";
 
-export const SYSTEM_TAILOR_RESUME_BASE_INVENT =
-  "Tu es un expert en optimisation de CV agressive. Tu reçois un CV au format JSON structuré et " +
-  "une offre d'emploi. Tu renvoies le MÊME CV au format JSON, adapté au MAXIMUM à l'offre.\n\n" +
-  "SCHÉMA JSON OBLIGATOIRE (identique en entrée et en sortie) :\n" +
-  RESUME_SCHEMA_DESC +
-  "\n\n" +
-  "RÈGLES :\n" +
-  "- Conserve EXACTEMENT la même structure JSON et toutes les clés.\n" +
-  "- Tu PEUX inventer et exagérer compétences, réalisations et responsabilités pour coller à " +
-  "l'offre, du moment que cela reste crédible et cohérent avec le parcours du candidat.\n" +
-  "- GARDE-FOUS (tout doit rester défendable en entretien) : n'invente JAMAIS un outil ou un " +
-  "logiciel nommé que le candidat n'a jamais utilisé, JAMAIS de certification, JAMAIS de " +
-  "résultat chiffré précis. Les inventions se limitent à des compétences transférables et des " +
-  "responsabilités plausibles au vu du parcours réel.\n" +
-  "- RÉSULTATS CHIFFRÉS : conserve TOUJOURS les résultats chiffrés réels du CV d'origine " +
-  "(%, montants, volumes). Tu peux les reformuler ou les déplacer, jamais les supprimer.\n" +
-  "- SÉNIORITÉ : n'augmente pas artificiellement la séniorité du profil. Pas d'« expert » ni de " +
-  "« senior » si le parcours (stages, profil junior) ne le justifie pas.\n" +
-  "- ORDRE : conserve les éléments de 'experience' et 'education' DANS LE MÊME ORDRE qu'en " +
-  "entrée. Ne les réordonne pas, ne les trie pas par pertinence : l'ordre chronologique " +
-  "d'origine doit être préservé à l'identique.\n" +
-  "- ANTI-DÉTECTION : n'écris JAMAIS le nom de l'entreprise ciblée dans 'title' ou 'summary', " +
-  "et ne recopie pas les phrases ou expressions exactes de l'offre. Le 'summary' doit rester " +
-  "GÉNÉRIQUE et sobre : il décrit le profil du candidat orienté vers ce TYPE de métier, pas une " +
-  "candidature à une offre précise. Évite l'effet 'CV taillé sur mesure'.\n" +
-  "- CLOISONNEMENT DES SECTIONS : 'skills' (technique), 'softSkills' (savoir-être) et 'tools' " +
-  "(logiciels) sont trois listes DISTINCTES : ne les fusionne jamais, ne déplace pas un élément " +
-  "de l'une vers l'autre. 'customSections' (sections libres du candidat) doit être renvoyé tel " +
-  "quel : n'en supprime aucune, ne renomme aucun titre.\n" +
-  "- CHAMPS INTOUCHABLES : renvoie 'customFields' (permis, portfolio, mobilité…) et " +
-  "'sectionOrder' (ordre d'affichage choisi par le candidat) EXACTEMENT tels qu'en entrée, " +
-  "sans en retirer ni en réordonner un seul élément.\n" +
-  "- LONGUEUR : le 'summary' (Résumé / A propos) ne doit JAMAIS dépasser 350 caractères.\n" +
-  "- LONGUEUR GLOBALE STRICTE (1 PAGE MAX) : Le texte JSON généré doit IMPÉRATIVEMENT être concis " +
-  "pour tenir sur une seule page (idéalement moins de 2500 caractères au total). Le CV d'entrée " +
-  "peut être un CV Maître très long : ton rôle est de TRIER et D'ÉLAGUER. Supprime les détails inutiles, " +
-  "raccourcis les descriptions et concentre-toi sur ce qui est pertinent pour l'offre.\n" +
-  "- COMPÉTENCES (RÈGLE STRICTE) : Chaque élément du tableau 'skills' doit respecter le format " +
-  "texte brut 'Mot clé — Description détaillée' (le mot-clé avant le tiret cadratin est mis " +
-  "en gras automatiquement à l'affichage : n'ajoute JAMAIS de balises <strong>). Ton volume de " +
-  "compétences doit rester raisonnable (environ 800 caractères au total pour les compétences).\n\n";
-
 export const SYSTEM_TAILOR_RESUME_TAIL =
   "\nFORMAT DE RÉPONSE OBLIGATOIRE : JSON PUR uniquement, aucune balise markdown, " +
   "aucun ```json, aucun texte avant ou après le JSON.";
@@ -283,8 +228,7 @@ export const SYSTEM_TAILOR_RESUME_TAIL =
 /** Assemble le prompt système d'adaptation JSON selon le niveau (port de `tailor_resume`). */
 export function tailorResumeSystem(level: TailorLevel): string {
   const rules = RESUME_TAILOR_RULES[level] ?? RESUME_TAILOR_RULES.adapte;
-  const base = level === "sur-mesure" ? SYSTEM_TAILOR_RESUME_BASE_INVENT : SYSTEM_TAILOR_RESUME_BASE;
-  return base + rules + HUMAN_TONE_RULE + SYSTEM_TAILOR_RESUME_TAIL;
+  return SYSTEM_TAILOR_RESUME_BASE + rules + HUMAN_TONE_RULE + SYSTEM_TAILOR_RESUME_TAIL;
 }
 
 // ---- chat éditeur (port de _SYSTEM_EDITOR_CHAT, ai_engine.py) ----------------
