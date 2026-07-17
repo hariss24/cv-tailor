@@ -16,8 +16,6 @@ export default function SnapshotsModal({ open, onClose }: SnapshotsModalProps) {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const setDocType = useDocStore((s) => s.setDocType);
   const setJson = useDocStore((s) => s.setJson);
-  const setHtml = useDocStore((s) => s.setHtml);
-  const setCss = useDocStore((s) => s.setCss);
   const setPreviewOverride = useDocStore((s) => s.setPreviewOverride);
   const setCompany = useDocStore((s) => s.setCompany);
   const setRole = useDocStore((s) => s.setRole);
@@ -40,20 +38,13 @@ export default function SnapshotsModal({ open, onClose }: SnapshotsModalProps) {
 
     await saveDraft({
       id: `draft-${snap.doc_type}`,
-      html: snap.html,
-      css: snap.css,
       json: snap.json,
       templateId: null,
       updatedAt: snap.ts,
     });
 
     setDocType(snap.doc_type);
-    if (snap.json) {
-      setJson(snap.json);
-    } else {
-      setHtml(snap.html);
-      setCss(snap.css);
-    }
+    setJson(snap.json);
     setCompany(snap.company);
     setRole(snap.role);
     setPreviewOverride(null);
@@ -100,8 +91,7 @@ export default function SnapshotsModal({ open, onClose }: SnapshotsModalProps) {
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
               {snapshots.map((s) => {
                 const date = new Date(s.ts).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
-                const chars = (s.html?.length ?? 0) + (s.css?.length ?? 0);
-                const meta = `${date} · ${chars.toLocaleString("fr-FR")} car. · ${s.doc_type || "CV"}${s.company ? " · " + s.company : ""}${s.role ? " · " + s.role : ""}`;
+                const meta = `${date} · ${s.doc_type || "CV"}${s.company ? " · " + s.company : ""}${s.role ? " · " + s.role : ""}`;
                 return (
                   <li key={s.ts} className="snap-item">
                     <div className="snap-info">

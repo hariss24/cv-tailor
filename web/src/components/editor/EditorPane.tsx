@@ -38,7 +38,6 @@ export default function EditorPane() {
   const [importPdfOpen, setImportPdfOpen] = useState(false);
 
   const docType = useDocStore((s) => s.docType);
-  const htmlSource = useDocStore((s) => s.htmlSource);
   const storeJson = useDocStore((s) => s.json);
   const templateId = useDocStore((s) => s.templateId);
   const setJson = useDocStore((s) => s.setJson);
@@ -81,7 +80,7 @@ export default function EditorPane() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const unsub = useDocStore.subscribe((state, prev) => {
-      if (state.html === prev.html && state.css === prev.css && state.json === prev.json) return;
+      if (state.json === prev.json) return;
       setSaveLabel("Enregistrement…");
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => setSaveLabel("✓ Brouillon sauvegardé"), 1100);
@@ -130,20 +129,6 @@ export default function EditorPane() {
     }
   };
 
-  // C1 : le HTML a été édité directement (mode expert / IA) → le formulaire est désynchronisé.
-  // On bloque la saisie et on demande une confirmation explicite avant de re-rendre depuis le JSON.
-  const onResumeFromForm = async () => {
-    if (
-      !(await uiConfirm(
-        "Le document a été modifié en mode expert (HTML) ou par l'IA. Reprendre avec le formulaire régénérera le document depuis les champs et ÉCRASERA ces modifications. Continuer ?",
-        "Formulaire désynchronisé",
-      ))
-    )
-      return;
-    const { json, setJson } = useDocStore.getState();
-    setJson(json);
-    toast("Document régénéré depuis le formulaire.", "success");
-  };
 
   const onExportRr = () => {
     const json = JSON.stringify(
@@ -258,30 +243,7 @@ export default function EditorPane() {
       </div>
 
       {tab === "form" ? (
-        htmlSource ? (
-          <div className="import-pane">
-            <p className="import-hint">
-              ⚠️ Ce document a été modifié en mode expert (HTML) ou par l&apos;IA : le formulaire
-              n&apos;est plus synchronisé avec l&apos;aperçu. Modifier un champ écraserait ces
-              changements.
-            </p>
-            <div className="import-pane-actions">
-              <button type="button" className="form-btn-add" onClick={onResumeFromForm}>
-                Reprendre avec le formulaire (écrase le HTML)
-              </button>
-              <button
-                type="button"
-                className="form-btn-add"
-                onClick={() => {
-                  setExpert(true);
-                  setTab("json");
-                }}
-              >
-                Continuer en mode expert
-              </button>
-            </div>
-          </div>
-        ) : docType === "Lettre" ? (
+        docType === "Lettre" ? (
           <LetterForm />
         ) : (
           <FormEditor onImportPdf={() => setImportPdfOpen(true)} />

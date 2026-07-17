@@ -127,11 +127,8 @@ export default function PackView() {
     const { setDocType, setJson, setCompany, setRole } = useDocStore.getState();
     await saveDraft({
       id: "draft-Lettre",
-      html: "",
-      css: "",
       json: letter,
       templateId: null,
-      htmlSource: false,
       updatedAt: 0,
     });
     setDocType("Lettre");

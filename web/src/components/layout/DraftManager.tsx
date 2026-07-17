@@ -14,7 +14,7 @@ import { useDocStore } from "@/state/docStore";
 export default function DraftManager() {
   useAutoDraft();
   const snapshotFingerprint = (s: ReturnType<typeof useDocStore.getState>) =>
-    s.htmlSource ? s.html : JSON.stringify(s.json);
+    JSON.stringify(s.json);
   const lastAutoSnapshot = useRef<string>(snapshotFingerprint(useDocStore.getState()));
 
   useEffect(() => {

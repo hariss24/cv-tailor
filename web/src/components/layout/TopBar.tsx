@@ -77,7 +77,7 @@ export default function TopBar() {
 
   const onConvert = useCallback(async () => {
     if (isConverting.current) return;
-    const { html, css, company, role, includeDate } = useDocStore.getState();
+    const { company, role, includeDate } = useDocStore.getState();
     const name = personNameFor(docType, json);
 
     const filename = buildFilename(name, docType, company, role, includeDate);
@@ -113,11 +113,7 @@ export default function TopBar() {
         pdf_views: 1,
         editor_reloads: 0,
         last_viewed_at: new Date().toISOString(),
-        html,
-        css,
-        // json périmé quand le HTML est la source (M1) : on ne le sauvegarde pas,
-        // le rechargement depuis l'historique repartira du HTML.
-        json: useDocStore.getState().htmlSource ? null : structuredClone(json),
+        json: structuredClone(json),
         templateId,
       });
     } catch {

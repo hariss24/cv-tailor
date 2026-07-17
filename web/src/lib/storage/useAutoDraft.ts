@@ -18,13 +18,10 @@ export function useAutoDraft() {
         const draft = await loadDraft(`draft-${docType}`);
         if (draft) {
           useDocStore.setState({
-            html: draft.html,
-            css: draft.css,
-            ...(draft.json ? { json: draft.json } : {}),
+            json: draft.json,
             templateId: draft.templateId || "sobre",
             ...(draft.company !== undefined ? { company: draft.company } : {}),
             ...(draft.role !== undefined ? { role: draft.role } : {}),
-            htmlSource: draft.htmlSource ?? !draft.json,
           });
         } else if (docType === "CV" || docType === "Maître") {
           const profile = await loadProfile();
@@ -54,13 +51,10 @@ export function useAutoDraft() {
           if (loadingDocType.current !== state.docType) return; // changed again
           if (draft) {
             useDocStore.setState({
-              html: draft.html,
-              css: draft.css,
-              ...(draft.json ? { json: draft.json } : {}),
+              json: draft.json,
               templateId: draft.templateId || "sobre",
               ...(draft.company !== undefined ? { company: draft.company } : {}),
               ...(draft.role !== undefined ? { role: draft.role } : {}),
-              htmlSource: draft.htmlSource ?? !draft.json,
             });
 
           } else {
@@ -76,13 +70,10 @@ export function useAutoDraft() {
       timeout = setTimeout(() => {
         saveDraft({
           id: `draft-${state.docType}`,
-          html: state.html,
-          css: state.css,
           json: state.json,
           templateId: state.templateId,
           company: state.company,
           role: state.role,
-          htmlSource: state.htmlSource,
           updatedAt: Date.now(),
         }).catch((e) => console.warn("Failed to save draft:", e));
       }, 1000); // 1s debounce

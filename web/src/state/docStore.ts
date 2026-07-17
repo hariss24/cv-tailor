@@ -7,14 +7,13 @@ import {
   type DocType,
 } from "@/lib/resume/schema";
 
-import { TEMPLATES, type TemplateId } from "@/lib/resume/templates";
+import { type TemplateId } from "@/lib/resume/templates";
 
 /**
  * Store du document courant (CV ou Lettre), partagé entre l'éditeur et le formulaire.
  * Remplace les globals `window.htmlModel` / `window.ResumeForm` de l'app vanilla.
  *
- * `json` est la source de vérité structurée ; `html` en est le rendu (re-calculé à chaque
- * `setJson` via `lib/resume`). `setHtml`/`setCss` servent au mode expert (édition directe).
+ * `json` est la source de vérité structurée.
  * La persistance par type de document (CV/Lettre séparés) viendra en Phase 6 (storage).
  */
 
@@ -28,13 +27,6 @@ export type Doc = {
   role: string;
   templateId: TemplateId;
   json: DocData;
-  html: string;
-  css: string;
-  /**
-   * True si le HTML a été écrit directement (mode expert, chat IA, pack, import lettre) :
-   * `json` est alors périmé et le formulaire ne doit plus écraser `html` sans confirmation.
-   */
-  htmlSource: boolean;
   /** Aperçu transitoire (proposition du chat IA) : si non null, l'aperçu l'affiche au lieu du document. */
   previewOverride: DocData | null;
 
@@ -58,8 +50,6 @@ export function defaultJsonFor(docType: DocType): DocData {
 
 export type DocStore = Doc & {
   setJson: (json: DocData) => void;
-  setHtml: (html: string) => void;
-  setCss: (css: string) => void;
   setCompany: (company: string) => void;
   setRole: (role: string) => void;
   setDocType: (docType: DocType) => void;
@@ -80,9 +70,6 @@ export const useDocStore = create<DocStore>((set) => ({
   role: "",
   templateId: INITIAL_TEMPLATE,
   json: structuredClone(DEFAULT_RESUME),
-  html: "",
-  css: TEMPLATES[INITIAL_TEMPLATE].css,
-  htmlSource: false,
   previewOverride: null,
 
   tailorBefore: null,
@@ -91,10 +78,8 @@ export const useDocStore = create<DocStore>((set) => ({
   includeDate: typeof window !== "undefined" ? localStorage.getItem("pdfIncludeDate") === "true" : false,
 
   setJson: (json) => {
-    set({ json, html: "", htmlSource: false });
+    set({ json });
   },
-  setHtml: (html) => set({ html, htmlSource: true }),
-  setCss: (css) => set({ css }),
   setCompany: (company) => set({ company }),
   setRole: (role) => set({ role }),
   setPreviewOverride: (previewOverride) => set({ previewOverride }),
@@ -109,10 +94,10 @@ export const useDocStore = create<DocStore>((set) => ({
 
   setDocType: (docType) => {
     const json = defaultJsonFor(docType);
-    set({ docType, json, html: "", htmlSource: false });
+    set({ docType, json });
   },
 
-  setTemplate: (templateId) => set({ templateId, css: TEMPLATES[templateId].css }),
+  setTemplate: (templateId) => set({ templateId }),
 }));
 
 if (typeof window !== "undefined") {

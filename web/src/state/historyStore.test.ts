@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useHistoryStore, type DocumentSnapshot } from "./historyStore";
 
-function snap(html: string): DocumentSnapshot {
-  return { json: {} as DocumentSnapshot["json"], html, css: "", templateId: "sobre" };
+function snap(name: string): DocumentSnapshot {
+  return { json: { name } as unknown as DocumentSnapshot["json"], templateId: "sobre" };
 }
 
 beforeEach(() => {
@@ -15,7 +15,7 @@ describe("historyStore", () => {
     s.push(snap("A"));
     s.push(snap("B"));
     const st = useHistoryStore.getState();
-    expect(st.past.map((p) => p.html)).toEqual(["A", "B"]);
+    expect(st.past.map((p) => (p.json as any).name)).toEqual(["A", "B"]);
     expect(st.future).toEqual([]);
   });
 
@@ -37,10 +37,10 @@ describe("historyStore", () => {
     const s = useHistoryStore.getState();
     s.push(snap("A"));
     const restored = s.undo(snap("B"));
-    expect(restored?.html).toBe("A");
+    expect((restored?.json as any).name).toBe("A");
     const st = useHistoryStore.getState();
     expect(st.past).toHaveLength(0);
-    expect(st.future.map((f) => f.html)).toEqual(["B"]);
+    expect(st.future.map((f) => (f.json as any).name)).toEqual(["B"]);
   });
 
   it("undo retourne null quand past est vide", () => {
@@ -52,9 +52,9 @@ describe("historyStore", () => {
     s.push(snap("A"));
     s.undo(snap("B")); // future = [B], past = []
     const redone = s.redo(snap("A"));
-    expect(redone?.html).toBe("B");
+    expect((redone?.json as any).name).toBe("B");
     const st = useHistoryStore.getState();
-    expect(st.past.map((p) => p.html)).toEqual(["A"]);
+    expect(st.past.map((p) => (p.json as any).name)).toEqual(["A"]);
     expect(st.future).toHaveLength(0);
   });
 

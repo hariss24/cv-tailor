@@ -4,8 +4,6 @@ import { type TemplateId } from "@/lib/resume/templates";
 
 export type DocumentSnapshot = {
   json: DocData;
-  html: string;
-  css: string;
   templateId: TemplateId;
 };
 
@@ -92,8 +90,6 @@ export function initHistoryTracking() {
     // On ne tracke que les changements qui affectent le document lui-même
     const hasDocChanged = 
       state.json !== prevState.json || 
-      state.html !== prevState.html || 
-      state.css !== prevState.css ||
       state.templateId !== prevState.templateId;
 
     if (!hasDocChanged) return;
@@ -102,8 +98,6 @@ export function initHistoryTracking() {
     if (!sequenceStartState) {
       sequenceStartState = {
         json: prevState.json,
-        html: prevState.html,
-        css: prevState.css,
         templateId: prevState.templateId,
       };
     }

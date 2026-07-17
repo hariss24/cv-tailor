@@ -12,9 +12,7 @@ import type { UserProfile } from "@/lib/profile/profile";
 export interface Snapshot {
   ts: number;
   label: string;
-  html: string;
-  css: string;
-  json: DocData | null;
+  json: DocData;
   doc_type: DocType;
   company: string;
   role: string;
@@ -22,14 +20,11 @@ export interface Snapshot {
 
 export interface Draft {
   id: string; // ex: "draft-CV", "draft-Lettre"
-  html: string;
-  css: string;
-  json: DocData | null;
+  json: DocData;
   templateId: TemplateId | null;
   company?: string;
   role?: string;
-  /** True si le HTML est la source de vérité (json périmé). Absent = déduit de `json == null`. */
-  htmlSource?: boolean;
+
   updatedAt: number;
 }
 
@@ -46,9 +41,7 @@ export interface HistoryEntry {
   editor_reloads: number;
   last_viewed_at?: string;
   
-  html: string;
-  css: string;
-  json: DocData | null;
+  json: DocData;
   templateId: TemplateId | null;
 }
 
@@ -118,6 +111,15 @@ export class AppDatabase extends Dexie {
     // v5 : profil « Mes informations » (singleton id="me"), réutilisé par CV & lettre.
     this.version(5).stores({
       profile: "id",
+    });
+
+    // v6 : retrait de la couche HTML legacy — purge des enregistrements
+    // d'avant-migration (sans `json`, restaurables uniquement via l'ancien
+    // pipeline HTML supprimé le 17/07/2026). Décision propriétaire du 17/07.
+    this.version(6).stores({}).upgrade(async (tx) => {
+      await tx.table("snapshots").filter((s) => s.json == null).delete();
+      await tx.table("history").filter((h) => h.json == null).delete();
+      await tx.table("drafts").filter((d) => d.json == null).delete();
     });
   }
 }

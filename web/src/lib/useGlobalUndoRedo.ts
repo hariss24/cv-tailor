@@ -29,8 +29,6 @@ export function useGlobalUndoRedo() {
         const docState = useDocStore.getState();
         const currentState = {
           json: docState.json,
-          html: docState.html,
-          css: docState.css,
           templateId: docState.templateId,
         };
 
@@ -64,8 +62,6 @@ function applyState(state: DocumentSnapshot) {
   
   useDocStore.setState({
     json: state.json,
-    html: state.html,
-    css: state.css,
     templateId: state.templateId,
   });
 

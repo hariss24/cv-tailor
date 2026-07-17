@@ -21,8 +21,6 @@ export default function HistoryList() {
 
   const setDocType = useDocStore(s => s.setDocType);
   const setJson = useDocStore(s => s.setJson);
-  const setHtml = useDocStore(s => s.setHtml);
-  const setCss = useDocStore(s => s.setCss);
   const setPreviewOverride = useDocStore(s => s.setPreviewOverride);
 
   useEffect(() => { load(); }, []);
@@ -72,16 +70,12 @@ export default function HistoryList() {
     await updateHistoryEntryStat(id, "editor_reloads");
     await saveDraft({
       id: `draft-${entry.doc_type}`,
-      html: entry.html,
-      css: entry.css,
       json: entry.json,
       templateId: entry.templateId,
       updatedAt: Date.now(),
     });
     setDocType(entry.doc_type);
     if (entry.json) setJson(entry.json);
-    else setHtml(entry.html);
-    setCss(entry.css);
     setPreviewOverride(null);
     toast("Document rechargé.", "success");
     router.push("/");

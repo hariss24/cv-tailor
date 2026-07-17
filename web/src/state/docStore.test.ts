@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useDocStore } from "./docStore";
 import { DEFAULT_RESUME } from "@/lib/resume/schema";
-import { TEMPLATES } from "@/lib/resume/templates";
 import * as pdfGen from "@/lib/pdfgen/generatePdf";
 
 // Réinitialise le store avant chaque test (CV / sobre / défaut).
@@ -15,56 +14,24 @@ describe("useDocStore", () => {
     const s = useDocStore.getState();
     expect(s.docType).toBe("CV");
     expect(s.templateId).toBe("sobre");
-    expect(s.html).toBe("");
-    expect(s.css).toBe(TEMPLATES.sobre.css);
   });
 
-  it("setJson met à jour json ET re-rend le html", () => {
+  it("setJson met à jour json", () => {
     useDocStore.getState().setJson({ ...DEFAULT_RESUME, name: "Zoé Test" });
     const s = useDocStore.getState();
     expect((s.json as { name: string }).name).toBe("Zoé Test");
-    expect(s.html).toBe("");
   });
 
-  it("setDocType bascule vers Lettre et rend le markup de lettre", () => {
+  it("setDocType bascule vers Lettre", () => {
     useDocStore.getState().setDocType("Lettre");
     const s = useDocStore.getState();
     expect(s.docType).toBe("Lettre");
-    expect(s.html).toBe("");
   });
 
-  it("setTemplate change le css du document", () => {
+  it("setTemplate change le templateId du document", () => {
     useDocStore.getState().setTemplate("graphique");
     const s = useDocStore.getState();
     expect(s.templateId).toBe("graphique");
-    expect(s.css).toBe(TEMPLATES.graphique.css);
-  });
-
-  it("setHtml et setCss écrasent directement (mode expert)", () => {
-    useDocStore.getState().setHtml("<p>direct</p>");
-    useDocStore.getState().setCss("body{color:red}");
-    const s = useDocStore.getState();
-    expect(s.html).toBe("<p>direct</p>");
-    expect(s.css).toBe("body{color:red}");
-  });
-
-  it("setHtml marque le HTML comme source de vérité ; setJson et setDocType la rendent au JSON (C1)", () => {
-    expect(useDocStore.getState().htmlSource).toBe(false);
-    useDocStore.getState().setHtml("<p>expert</p>");
-    expect(useDocStore.getState().htmlSource).toBe(true);
-    useDocStore.getState().setJson({ ...DEFAULT_RESUME, name: "Retour Formulaire" });
-    expect(useDocStore.getState().htmlSource).toBe(false);
-    useDocStore.getState().setHtml("<p>expert 2</p>");
-    useDocStore.getState().setDocType("Lettre");
-    expect(useDocStore.getState().htmlSource).toBe(false);
-  });
-});
-
-describe("docStore (PDF Only)", () => {
-  it("ne contient plus les anciens templates", () => {
-    expect((TEMPLATES as any)["moderne"]).toBeUndefined();
-    expect((TEMPLATES as any)["classique"]).toBeUndefined();
-    expect((TEMPLATES as any)["minimal"]).toBeUndefined();
   });
 });
 
