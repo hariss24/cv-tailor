@@ -67,6 +67,9 @@ export default function TopBar() {
     if (!(await uiConfirm("Repartir d'un CV vierge ? Le contenu actuel sera remplacé.", "Nouveau CV"))) return;
     const profile = await loadProfile();
     setJson(applyProfileToResume(structuredClone(DEFAULT_RESUME), profile));
+    const { setCompany, setRole } = useDocStore.getState();
+    setCompany("");
+    setRole("");
     toast("Nouveau CV.", "success");
   };
 
