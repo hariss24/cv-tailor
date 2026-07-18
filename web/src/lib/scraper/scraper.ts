@@ -3,9 +3,25 @@ import { validateUrlForScraping } from "./ssrf";
 
 const EXTRACT_MAX_CHARS = 15_000;
 
+// LinkedIn : les URL de l'interface connectée (/jobs/collections/, /jobs/search/…
+// avec ?currentJobId=<id>) sont derrière un mur de connexion. La même offre est
+// publique au format /jobs/view/<id> — on réécrit avant de scraper.
+function normalizeJobUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "linkedin.com" || u.hostname.endsWith(".linkedin.com")) {
+      const id = u.searchParams.get("currentJobId");
+      if (id && /^\d+$/.test(id)) return `https://www.linkedin.com/jobs/view/${id}`;
+    }
+  } catch {
+    // URL invalide : laissée telle quelle, la validation SSRF la rejettera.
+  }
+  return url;
+}
+
 export async function scrapeJobText(url: string): Promise<{ text: string; title: string }> {
   // 1. Validate the URL and protect against SSRF
-  const safeUrl = await validateUrlForScraping(url);
+  const safeUrl = await validateUrlForScraping(normalizeJobUrl(url));
 
   let html = "";
   let isBlocked = false;

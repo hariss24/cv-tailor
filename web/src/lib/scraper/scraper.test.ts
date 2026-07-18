@@ -92,6 +92,23 @@ describe("scraper", () => {
     await expect(scrapeJobText("https://example.com/ultra-blocked")).rejects.toThrow("accès bloqué par le site");
   });
 
+  it("réécrit les URL LinkedIn « collections » en URL publique /jobs/view/", async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => `
+        <html><head><title>Offre</title></head>
+        <body><div class="job-description">
+          Description complète de l'offre. ${"pad".repeat(100)}
+        </div></body></html>
+      `,
+    } as any);
+
+    await scrapeJobText("https://www.linkedin.com/jobs/collections/recommended/?currentJobId=4433125093");
+    const calledUrls = vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]));
+    expect(calledUrls[0]).toBe("https://www.linkedin.com/jobs/view/4433125093");
+  });
+
   it("refuse une redirection vers une IP privée (SSRF via 302)", async () => {
     // La validation SSRF rejette les URL privées (simulation du comportement réel).
     vi.spyOn(ssrf, "validateUrlForScraping").mockImplementation(async (url) => {
