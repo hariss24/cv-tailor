@@ -56,8 +56,8 @@ export const HUMAN_TONE_RULE =
   "Un verbe concret plutôt qu'un adjectif flatteur, un chiffre plutôt qu'un superlatif. " +
   "Si une phrase pourrait figurer telle quelle dans n'importe quelle autre candidature, elle ne " +
   "dit rien : supprime-la.\n" +
-  "MODÈLE DE TON N°1 — email de candidature écrit par le candidat lui-même, à imiter (le TON, " +
-  "jamais les faits, que tu prends uniquement dans SON CV) :\n" +
+  "MODÈLE DE TON — un texte écrit par le candidat lui-même, à imiter (le TON, jamais les faits, " +
+  "que tu prends uniquement dans SON CV) :\n" +
   "« Je me permets de vous contacter directement pour vous proposer ma candidature pour le poste " +
   "de [poste] chez [entreprise]. Je pense que mon profil pourrait vraiment vous intéresser car il " +
   "correspond particulièrement bien à votre besoin.\n" +
@@ -76,29 +76,22 @@ export const HUMAN_TONE_RULE =
   "- chaque affirmation s'appuie sur une preuve concrète (« tous ces projets m'ont permis de… ») ;\n" +
   "- sa conclusion est acceptable parce qu'elle est accrochée à un fait concret (la proximité du " +
   "lieu) : une formule de conclusion SEULE reste interdite.\n" +
-  "MODÈLE DE TON N°2 — lettre de motivation complète écrite par le candidat lui-même, à imiter " +
-  "(même règle : le TON, jamais les faits) :\n" +
-  "« Bonjour,\n" +
-  "Après [durée] à travailler sur des projets très différents ([exemples concrets de contextes]), " +
-  "j'ai eu envie de retrouver un poste où [ce qui compte vraiment pour lui]. C'est ce qui m'a " +
-  "donné envie de postuler chez vous.\n" +
-  "J'ai pu toucher à beaucoup de choses jusqu'ici : [compétences et outils réels, nommés " +
-  "simplement]. Ce que je cherche maintenant, c'est [une envie sincère et précise], plutôt que " +
-  "[ce qu'il ne veut plus].\n" +
-  "Votre entreprise m'attire particulièrement parce que [raison honnête et spécifique : secteur " +
-  "connu, contrainte métier qu'il comprend]. Sur les compétences et les missions attendues, je " +
-  "maîtrise déjà une grande partie du périmètre, ce qui me donne confiance dans ma capacité à " +
-  "m'intégrer rapidement. J'aimerais beaucoup pouvoir en discuter avec vous.\n" +
-  "Belle journée à vous, »\n" +
-  "CE QUI FAIT CE TON :\n" +
-  "- il raconte un vrai cheminement (« après un an à…, j'ai eu envie de… ») au lieu de dérouler " +
-  "un argumentaire : la motivation est une histoire personnelle, pas une liste de qualités ;\n" +
-  "- il ose dire ce qu'il cherche ET ce qu'il ne veut plus (« plutôt que d'enchaîner les missions " +
-  "courtes ») : cette part d'aveu rend le reste crédible ;\n" +
-  "- il reste mesuré et honnête (« une grande partie du périmètre », pas « parfaitement en " +
-  "adéquation ») : la confiance vient de la précision, pas de l'emphase ;\n" +
-  "- ses transitions sont naturelles (« C'est ce qui m'a donné envie de postuler chez vous ») et " +
-  "sa politesse simple (« Bonjour », « Belle journée à vous ») : aucune formule cérémonieuse.\n" +
+  "LA TOURNURE DES PHRASES — le cœur du problème. Une phrase d'IA s'entend à sa mécanique, pas " +
+  "à son contenu. Réécris chaque phrase comme quelqu'un la DIRAIT à voix haute :\n" +
+  "- au lieu d'annoncer une qualité, raconte d'où vient l'envie : PAS « Fort de mon expérience " +
+  "variée, je souhaite mettre mes compétences au service de votre structure » MAIS « Après un an " +
+  "à travailler sur des projets très différents, j'ai eu envie de retrouver un poste où le web " +
+  "est vraiment au cœur du métier » ;\n" +
+  "- des verbes conjugués, un sujet qui fait l'action : PAS « Ayant travaillé sur des refontes, " +
+  "maîtrisant Drupal et WordPress, je saurai… » MAIS « J'ai pu toucher à beaucoup de choses " +
+  "jusqu'ici : Drupal, WordPress, le SEO, les refontes » ;\n" +
+  "- dire aussi ce qu'on ne veut plus rend le reste crédible : « plutôt que d'enchaîner les " +
+  "missions courtes » vaut mieux que trois adjectifs sur soi-même ;\n" +
+  "- rester mesuré : « je maîtrise déjà une grande partie du périmètre » est plus convaincant " +
+  "que « mon profil correspond parfaitement », parce que c'est ce qu'un humain honnête écrirait ;\n" +
+  "- la politesse est SIMPLE et courte : « Bonjour », « Belle journée à vous », « Cordialement ». " +
+  "Les formules cérémonieuses à rallonge (« C'est avec un vif intérêt que je me permets de… », " +
+  "« Dans l'attente d'une réponse que j'espère favorable… ») endorment le lecteur : jamais.\n" +
   "DERNIÈRE ÉTAPE, AVANT DE RÉPONDRE : relis ce que tu viens d'écrire et demande-toi « qu'est-ce " +
   "qui, là-dedans, sent l'IA ? ». Corrige ces passages, puis seulement réponds.\n";
 
