@@ -28,6 +28,11 @@
   --glass-blur:    blur(24px) saturate(1.7);
   --glass-border:  rgba(255,255,255,0.55);
 
+  /* Carte blanc cassé posée sur le givre (sections du formulaire),
+     et blanc pur des champs de saisie qui contrastent dessus. */
+  --card:          rgba(255,255,255,0.82);
+  --field:         #FFFFFF;
+
   /* Piste et bouton des contrôles segmentés. */
   --seg-track:     linear-gradient(180deg, #EAE7E1, #E0DCD5);
   --seg-knob:      linear-gradient(180deg, #FFFFFF, #F5F2EE);
@@ -76,6 +81,9 @@
 
   --glass:         rgba(38,34,30,0.62);
   --glass-border:  rgba(255,255,255,0.10);
+
+  --card:          rgba(255,255,255,0.05);
+  --field:         #1C1916;
 
   --seg-track:     linear-gradient(180deg, #1C1916, #171411);
   --seg-knob:      linear-gradient(180deg, #3B3630, #322D28);
@@ -285,7 +293,7 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
   letter-spacing: 0.5px; font-weight: 600;
 }
 .toolbar-select {
-  background: var(--bg); color: var(--text); border: none; border-radius: 10px;
+  background: var(--field); color: var(--text); border: none; border-radius: 10px;
   padding: 8px 11px; font-size: 13px; font-family: var(--font-ui);
   box-shadow: var(--neu-inset); outline: none; cursor: pointer;
 }
@@ -306,7 +314,7 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
   letter-spacing: 0.5px; font-weight: 600;
 }
 .meta .field select, .meta .field input[type="text"] {
-  background: var(--bg); color: var(--text); border: none; border-radius: 10px;
+  background: var(--field); color: var(--text); border: none; border-radius: 10px;
   padding: 8px 11px; font-size: 13px; font-family: var(--font-ui);
   box-shadow: var(--neu-inset); transition: box-shadow 150ms; outline: none; width: 100%;
 }
@@ -345,7 +353,14 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   overflow: hidden;
   background: var(--bg);
 }
-.pane.editor-pane { box-shadow: var(--neu-raised-lg); flex: 0 0 50%; border-radius: 18px; }
+.pane.editor-pane {
+  box-shadow: var(--neu-raised-lg); flex: 0 0 50%; border-radius: 18px;
+  /* Panneau givré : les cartes blanc cassé des sections contrastent dessus. */
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.editor-pane .pane-title { background: transparent; }
 .pane.preview-pane { box-shadow: var(--neu-raised-lg); flex: 1 1 50%; border-radius: 18px; }
 @media (max-width: 900px) {
   /* Sur desktop la page ne défile jamais (panneaux internes scrollables) ; en
@@ -855,21 +870,43 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 .form-import-pdf {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   margin-bottom: 18px; padding: 12px 16px;
-  background: var(--bg); border-radius: 12px; box-shadow: var(--neu-inset);
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(31,27,22,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+[data-theme="dark"] .form-import-pdf {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .form-import-pdf__hint { font-size: 13px; color: var(--muted); font-weight: 500; }
-.form-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.form-section { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+/* Titre de section posé directement sur le fond givré (design Atelier). */
 .form-section__title {
-  font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;
-  color: var(--orange-text); margin: 0;
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;
+  color: var(--muted); margin: 0; padding-left: 4px;
 }
 /* Le titre est un bouton d'accordéon : reset du bouton, hérite du style du <h3>. */
 .form-section__header {
   display: flex; align-items: center; gap: 8px; width: 100%;
   background: none; border: none; padding: 4px 0; margin: 0; cursor: pointer;
   color: inherit; font: inherit; letter-spacing: inherit; text-align: left;
+  /* Le reset Tailwind force `text-transform: none` sur les <button> : on
+     rétablit la casse du titre de section, sinon l'uppercase du <h3> est annulé. */
+  text-transform: uppercase;
 }
-.form-section__body { display: flex; flex-direction: column; gap: 10px; }
+/* Corps de section = carte blanc cassé qui contraste avec le givre du panneau. */
+.form-section__body {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(31,27,22,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+[data-theme="dark"] .form-section__body {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+/* Sections à éléments (expériences, formations…) : chaque .form-item est déjà
+   sa propre carte — le corps redevient transparent pour éviter la double carte. */
+.form-section__body:has(> .form-item) {
+  background: none; border: none; border-radius: 0; padding: 0; box-shadow: none;
+}
 
 /* Chevron d'accordéon : pointe à droite fermé, tourne vers le bas ouvert. */
 .form-chevron {
@@ -884,7 +921,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   font-size: 11.5px; color: var(--muted); font-weight: 600;
 }
 .form-input, .form-textarea {
-  background: var(--bg); color: var(--text); border: none; border-radius: 10px;
+  background: var(--field); color: var(--text); border: none; border-radius: 10px;
   padding: 8px 11px; font-size: 13px; font-family: var(--font-ui);
   box-shadow: var(--neu-inset); transition: box-shadow 150ms; outline: none; width: 100%;
 }
@@ -897,8 +934,13 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 /* Carte d'un élément de liste : carte en relief (les champs, en creux, se logent
    dedans → hiérarchie de profondeur nette), en-tête = poignée + repère + suppression. */
 .form-item {
-  border-radius: 14px; background: var(--bg);
-  box-shadow: var(--neu-raised-sm); margin-bottom: 10px;
+  border-radius: 14px; background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(31,27,22,0.04), inset 0 1px 0 rgba(255,255,255,0.9);
+  margin-bottom: 10px;
+}
+[data-theme="dark"] .form-item {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .form-item__head {
   display: flex; align-items: center; gap: 8px;
@@ -1051,7 +1093,7 @@ button.go:disabled {
 .hist-h1 { font-size: 22px; margin: 0; font-weight: 800; letter-spacing: -0.4px; color: var(--text); }
 .hist-content { padding: 24px; }
 .hist-search {
-  background: var(--bg); color: var(--text);
+  background: var(--field); color: var(--text);
   border: none; border-radius: 12px;
   padding: 11px 16px; font-size: 13px; width: 100%; margin-bottom: 18px;
   font-family: var(--font-ui);
