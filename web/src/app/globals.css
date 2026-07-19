@@ -270,10 +270,24 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
 [data-theme="dark"] .toggle-knob { transform: translateX(36px); }
 
 /* Variante topbar du CTA : gros bouton avec icône */
-.go.go-top { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; font-size: 14px; }
+.go.go-top { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 18px; font-size: 14px; }
+
+/* ---- Barre du haut : contrôles à hauteur unifiée (38px = tuile logo) ----
+   Sans ça, « Nouveau CV » (.btn-nav ~32px) et « Télécharger » (.go-top ~44px)
+   n'ont pas la même hauteur → asymétrie. On aligne tout sur une même grille. */
+.topbar-right { gap: 9px; }
+.topbar-right .btn-nav { height: 38px; padding: 0 15px; }
+.topbar-right .btn-nav.topbar-icon { width: 38px; padding: 0; justify-content: center; }
+.topbar #btn-settings, .topbar .btn-avatar { width: 38px; height: 38px; padding: 0; }
+.topbar #btn-theme { height: 38px; }
+.topbar .toggle-icon { height: 38px; }
+.topbar .toggle-knob { top: 5px; }
+.topbar-pill { display: inline-flex; align-items: center; height: 38px; }
+.topbar-right .expert-divider { height: 22px; margin: 0 3px; }
 
 @media (max-width: 1180px) {
-  .topbar .btn-nav, .topbar #btn-theme, .topbar #btn-settings { padding: 6px 10px; font-size: 12px; }
+  .topbar .btn-nav, .topbar #btn-theme, .topbar #btn-settings { font-size: 12px; }
+  .topbar-right .btn-nav { padding: 0 12px; }
 }
 
 .meta-checkbox { accent-color: var(--orange); width: 14px; height: 14px; cursor: pointer; }
