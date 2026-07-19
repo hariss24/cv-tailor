@@ -155,15 +155,21 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1 1 0;
+  min-width: 0;
 }
+.topbar-right { justify-content: flex-end; }
+/* Nav réellement centrée par flex (left/right = flex:1 égaux) au lieu d'un
+   position:absolute — sinon le groupe de droite chevauche la nav. */
 .topbar-center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+/* Pages secondaires (Offres/Historique) : même grille 3 colonnes centrée. */
+.topbar--secondary > .hist-h1 { flex: 1 1 0; min-width: 0; }
+.topbar--secondary > .topbar-actions { flex: 1 1 0; justify-content: flex-end; }
 .topbar-nav-link {
   color: var(--muted);
   font-size: 13px;
@@ -186,7 +192,7 @@ a:hover { text-decoration: underline; }
   font-size: 12px; color: var(--muted);
   background: var(--bg); box-shadow: var(--neu-inset);
   border-radius: 10px; padding: 8px 14px;
-  max-width: 340px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  max-width: 200px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 @media (max-width: 1180px) { .topbar-pill { display: none; } }
 
@@ -245,29 +251,12 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
   width: 32px; height: 32px; padding: 0; border-radius: 50%;
 }
 
-/* Toggle thème pill neumorphique */
-#btn-theme {
-  position: relative; display: inline-flex; align-items: center;
-  width: 68px; height: 32px; border-radius: 999px;
-  background: var(--bg); box-shadow: var(--neu-inset);
-  border: none; cursor: pointer; padding: 0; flex-shrink: 0; outline: none;
-}
-.toggle-icon {
-  position: relative; z-index: 2; width: 34px; height: 32px;
-  display: grid; place-items: center; transition: color 250ms; pointer-events: none;
-}
-.toggle-sun  { color: var(--orange-text); }
-.toggle-moon { color: var(--muted); }
-[data-theme="dark"] .toggle-sun  { color: var(--muted); }
-[data-theme="dark"] .toggle-moon { color: var(--orange-text); }
-.toggle-knob {
-  position: absolute; width: 28px; height: 28px; border-radius: 999px;
-  background: var(--bg); box-shadow: var(--neu-raised-sm);
-  left: 2px; top: 2px; z-index: 1; pointer-events: none;
-  transform: translateX(0);
-  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-[data-theme="dark"] .toggle-knob { transform: translateX(36px); }
+/* Toggle thème : bouton icône carré (soleil en clair, lune en sombre) —
+   même gabarit que les autres icônes de la barre, plus de pavé coulissant. */
+.theme-ico { display: inline-flex; }
+.theme-ico--moon { display: none; }
+[data-theme="dark"] .theme-ico--sun { display: none; }
+[data-theme="dark"] .theme-ico--moon { display: inline-flex; }
 
 /* Variante topbar du CTA : gros bouton avec icône */
 .go.go-top { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 18px; font-size: 14px; }
@@ -276,12 +265,14 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
    Sans ça, « Nouveau CV » (.btn-nav ~32px) et « Télécharger » (.go-top ~44px)
    n'ont pas la même hauteur → asymétrie. On aligne tout sur une même grille. */
 .topbar-right { gap: 9px; }
+/* Seule la pastille (nom de fichier) se réduit ; les boutons gardent leur taille. */
+.topbar-right > * { flex-shrink: 0; }
+.topbar-pill { flex-shrink: 1; }
+.topbar-right .btn-nav, .topbar .go.go-top { white-space: nowrap; }
 .topbar-right .btn-nav { height: 38px; padding: 0 15px; }
-.topbar-right .btn-nav.topbar-icon { width: 38px; padding: 0; justify-content: center; }
+.topbar-right .btn-nav.topbar-icon { width: 38px; padding: 0; justify-content: center; color: var(--muted); }
+.topbar-right .btn-nav.topbar-icon:hover { color: var(--text); }
 .topbar #btn-settings, .topbar .btn-avatar { width: 38px; height: 38px; padding: 0; }
-.topbar #btn-theme { height: 38px; }
-.topbar .toggle-icon { height: 38px; }
-.topbar .toggle-knob { top: 5px; }
 .topbar-pill { display: inline-flex; align-items: center; height: 38px; }
 .topbar-right .expert-divider { height: 22px; margin: 0 3px; }
 
