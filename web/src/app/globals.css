@@ -1553,14 +1553,11 @@ button.go:disabled {
   width: min(620px, calc(100vw - 20px));
   transform: translate(-50%, 110vh);
   border-radius: 22px 22px 0 0;
-  background: var(--glass);
-  backdrop-filter: blur(30px) saturate(1.6);
-  -webkit-backdrop-filter: blur(30px) saturate(1.6);
-  border: 1px solid var(--glass-border); border-bottom: none;
+  background: var(--bg);
+  border: 1px solid var(--border); border-bottom: none;
   box-shadow: 0 -8px 40px -8px rgba(31,26,20,0.38);
   display: flex; flex-direction: column; max-height: 86vh;
 }
-[data-theme="dark"] .sheet { background: rgba(32,28,24,0.88); }
 .sheet__grab { cursor: grab; touch-action: none; padding: 9px 20px 6px; flex-shrink: 0; user-select: none; }
 .sheet__grab:active { cursor: grabbing; }
 .sheet__handle { width: 38px; height: 5px; border-radius: 3px; background: var(--faint); opacity: 0.55; margin: 0 auto 10px; }
