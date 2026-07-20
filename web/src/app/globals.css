@@ -1830,8 +1830,17 @@ body:has(.chat-panel.open) .chat-overlay {
 
 /* 2. Sur écran desktop, on masque le formulaire pour laisser la place au PDF */
 @media (min-width: 1024px) {
-  body:has(.chat-panel.open) .editor-drawer {
-    display: none !important;
+  /* Transition pour le panneau éditeur */
+  .editor-pane {
+    transition: flex 300ms ease, opacity 300ms ease, margin 300ms ease, padding 300ms ease;
+  }
+  body:has(.chat-panel.open) .editor-pane {
+    flex: 0 0 0% !important;
+    opacity: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    pointer-events: none;
   }
 
   /* 3. Le PDF glisse à gauche et laisse la place au Chat à droite */
