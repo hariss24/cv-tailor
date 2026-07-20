@@ -330,6 +330,11 @@ export default function SettingsPage() {
           <section className="form-section" style={{ paddingBottom: "40px" }}>
             <h3 className="form-section__title">Gestion des données</h3>
             <div className="form-section__body" style={{ gap: "0" }}>
+              <div style={{ padding: "12px 16px", background: "rgba(232, 93, 4, 0.1)", border: "1px solid var(--orange)", borderRadius: "8px", marginBottom: "16px" }}>
+                <p style={{ margin: 0, fontSize: "14px", color: "var(--text)", lineHeight: "1.5" }}>
+                  <strong style={{ color: "var(--orange)" }}>⚠️ Attention :</strong> Toutes vos données (CV, offres, historique) sont stockées uniquement sur ce navigateur. Si vous videz votre cache, vous perdrez tout. Pensez à exporter régulièrement.
+                </p>
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", paddingBottom: "12px" }}>
                 <div className="form-field">
                   <div className="form-label">Exporter les données</div>

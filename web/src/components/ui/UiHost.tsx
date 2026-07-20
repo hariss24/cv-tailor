@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useUiStore } from "@/state/uiStore";
+import { useUiStore, uiAlert } from "@/state/uiStore";
 import { useGlobalUndoRedo } from "@/lib/useGlobalUndoRedo";
 import { useSettingsStore } from "@/state/settingsStore";
+import { db } from "@/lib/storage/db";
 
 /**
  * Monte les dialogs et toasts applicatifs. À placer une fois dans le layout racine.
@@ -11,6 +12,33 @@ import { useSettingsStore } from "@/state/settingsStore";
  */
 export default function UiHost() {
   useGlobalUndoRedo();
+
+  useEffect(() => {
+    // 1. Demander la persistance du stockage pour éviter l'éviction par le navigateur
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(console.error);
+    }
+
+    // 2. Alerte proactive pour les utilisateurs réguliers (5 CV)
+    const checkProactiveWarning = async () => {
+      try {
+        const hasSeen = localStorage.getItem("backup_warning_seen");
+        if (!hasSeen) {
+          const count = await db.history.count();
+          if (count >= 5) {
+            await uiAlert(
+              "Vous utilisez activement CV Tailor, bravo ! 🎉\n\nN'oubliez pas que toutes vos données (CV, offres, historique) sont stockées UNIQUEMENT sur ce navigateur. Pensez à aller dans les Paramètres pour exporter une sauvegarde de temps en temps.",
+              "Sauvegarde Recommandée"
+            );
+            localStorage.setItem("backup_warning_seen", "true");
+          }
+        }
+      } catch (e) {
+        console.error("Erreur checkProactiveWarning:", e);
+      }
+    };
+    void checkProactiveWarning();
+  }, []);
 
   return (
     <>
