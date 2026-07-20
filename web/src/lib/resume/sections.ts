@@ -36,10 +36,21 @@ export type ResumeSection =
  * Sert aussi de vocabulaire à l'IA pour remplir `sectionOrder` (cf. `prompts.ts`) :
  * la liste n'est donc écrite qu'ici, et ne peut pas dériver.
  */
-export const SECTION_IDS = [
-  "summary", "experience", "education", "skills", "softSkills", "tools",
-  "projects", "certifications", "volunteer", "languages", "interests",
+export const ALL_BASE_SECTIONS = [
+  { id: "summary", title: "À propos" },
+  { id: "experience", title: "Expériences" },
+  { id: "education", title: "Formations" },
+  { id: "skills", title: "Compétences" },
+  { id: "softSkills", title: "Soft skills" },
+  { id: "tools", title: "Outils" },
+  { id: "languages", title: "Langues" },
+  { id: "projects", title: "Projets" },
+  { id: "certifications", title: "Certifications" },
+  { id: "volunteer", title: "Bénévolat" },
+  { id: "interests", title: "Centres d'intérêt" },
 ] as const;
+
+export const SECTION_IDS = ALL_BASE_SECTIONS.map(s => s.id);
 
 const t = (v: unknown): string => (v == null ? "" : String(v)).trim();
 
@@ -203,4 +214,32 @@ export function buildSections(
   const shown = includeHidden ? out : out.filter((sec) => !hidden.has(sec.id));
 
   return applyOrder(shown, resume.sectionOrder ?? []);
+}
+
+export interface FormSectionInfo {
+  id: string;
+  title: string;
+  isCustom?: boolean;
+  index?: number;
+}
+
+export function getAllFormSections(resume: Resume): FormSectionInfo[] {
+  const sections: FormSectionInfo[] = [...ALL_BASE_SECTIONS];
+  
+  (resume.customSections ?? []).forEach((c, i) => {
+    sections.push({ 
+      id: `custom:${i}`, 
+      title: c.title || `Section libre ${i + 1}`,
+      isCustom: true,
+      index: i
+    });
+  });
+
+  const order = resume.sectionOrder ?? [];
+  const rank = new Map(order.map((id, i) => [id, i]));
+  
+  return sections
+    .map((sec, i) => ({ sec, key: rank.get(sec.id) ?? order.length + i }))
+    .sort((a, b) => a.key - b.key)
+    .map(x => x.sec);
 }
