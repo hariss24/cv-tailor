@@ -1,4 +1,4 @@
-# 🎯 CV Tailor
+# CV Tailor
 
 > Adaptez votre CV et votre Lettre de Motivation aux offres d'emploi grâce à l'IA.
 
@@ -8,16 +8,16 @@
 
 **CV Tailor** est une application web qui vous aide à adapter vos candidatures (CV et lettres de motivation) à des offres d'emploi spécifiques en utilisant l'intelligence artificielle (Gemini ou Anthropic). Elle intègre un éditeur en direct, plusieurs templates d'export PDF, et un chasseur d'offres intégré avec analyse sémantique.
 
-## ✨ Fonctionnalités Principales
+## Fonctionnalités Principales
 
-- **🤖 Adaptation par l'IA** : Ajustement du CV (compétences, expériences) et de la lettre de motivation selon la description d'une offre.
-- **📄 Rendu PDF 100% local** : Génération immédiate de PDF dans le navigateur via `@react-pdf/renderer` avec plusieurs templates (Sobre, Graphique, Kakuna, Marine).
-- **🕵️ Chasseur d'offres intégré** : Recherche via l'API France Travail, pré-filtre des offres, notation intelligente avec l'IA et estimation du temps de trajet (Google Maps).
-- **📊 Score ATS (Applicant Tracking System)** : Analyse des mots-clés de l'offre et vérification de l'adéquation du profil.
-- **🔒 Confidentialité (Privacy First)** : Aucune base de données serveur. Toutes vos données sont stockées localement sur votre navigateur (IndexedDB via Dexie).
-- **📥 Import/Export facile** : Importez depuis un texte brut ou un PDF existant. Sauvegardez des snapshots (versions de travail) de votre CV.
+- **Adaptation par l'IA** : Ajustement du CV (compétences, expériences) et de la lettre de motivation selon la description d'une offre.
+- **Rendu PDF 100% local** : Génération immédiate de PDF dans le navigateur via `@react-pdf/renderer` avec plusieurs templates (Sobre, Graphique, Kakuna, Marine).
+- **Chasseur d'offres intégré** : Recherche via l'API France Travail, pré-filtre des offres, notation intelligente avec l'IA et estimation du temps de trajet (Google Maps).
+- **Score ATS (Applicant Tracking System)** : Analyse des mots-clés de l'offre et vérification de l'adéquation du profil.
+- **Confidentialité (Privacy First)** : Aucune base de données serveur. Toutes vos données sont stockées localement sur votre navigateur (IndexedDB via Dexie).
+- **Import/Export facile** : Importez depuis un texte brut ou un PDF existant. Sauvegardez des snapshots (versions de travail) de votre CV.
 
-## 🛠️ Stack Technique
+## Stack Technique
 
 - **Framework** : [Next.js 16](https://nextjs.org/) (App Router, Turbopack)
 - **Frontend** : React 19, TypeScript strict, variables CSS pures (thèmes Light/Dark)
@@ -64,7 +64,7 @@ npm run dev
 ```
 L'application sera accessible sur [http://localhost:3000](http://localhost:3000).
 
-## 🧪 Tests (depuis `/web`)
+## Tests (depuis `/web`)
 
 ```bash
 npm run test          # Tests unitaires (Vitest)
