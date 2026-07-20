@@ -185,7 +185,57 @@ function Chevron({ open }: { open: boolean }) {
  * section » (l'œil, dans « Ordre des sections »), qui, lui, retire du PDF.
  * Le `<h3>` enveloppe son bouton : titre sémantique conservé, HTML valide.
  */
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionControls({
+  title,
+  isHidden,
+  isFirst,
+  isLast,
+  onToggle,
+  onMoveUp,
+  onMoveDown,
+}: {
+  title: string;
+  isHidden: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+  onToggle: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className="form-btn-mini form-btn-icon-only"
+        aria-label={isHidden ? `Réafficher « ${title} »` : `Masquer « ${title} »`}
+        aria-pressed={isHidden}
+        onClick={onToggle}
+      >
+        <EyeIcon off={isHidden} />
+      </button>
+      <button
+        type="button"
+        className="form-btn-mini"
+        aria-label={`Monter « ${title} »`}
+        disabled={isFirst}
+        onClick={onMoveUp}
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        className="form-btn-mini"
+        aria-label={`Descendre « ${title} »`}
+        disabled={isLast}
+        onClick={onMoveDown}
+      >
+        ↓
+      </button>
+    </>
+  );
+}
+
+function FormSection({ title, controls, children }: { title: string; controls?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
     <section className={`form-section${open ? "" : " form-section--collapsed"}`}>
@@ -195,10 +245,12 @@ function FormSection({ title, children }: { title: string; children: React.React
           className="form-section__header"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
+          style={{ flex: 1 }}
         >
           <Chevron open={open} />
           <span>{title}</span>
         </button>
+        {controls && <div className="form-section__controls" style={{ display: "flex", gap: "4px" }}>{controls}</div>}
       </h3>
       {open ? <div className="form-section__body">{children}</div> : null}
     </section>
