@@ -1,21 +1,29 @@
 /**
  * Profil de recherche d'offres — pièce centrale de la paramétrabilité.
- *
- * Tous les réglages modifiables (adresse, postes visés, modes de transport, filtres, seuils,
- * profil candidat pour le scoring) vivent ici, dans un objet unique passé en argument aux
- * fonctions `lib/jobs/`. Aujourd'hui une seule instance, `DEFAULT_PROFILE` (profil de Hariss,
- * repris de `agent-taff/bot.py`). Demain (multi-utilisateur), une instance par compte, sans
- * toucher au cœur de la logique. Cf. spec `docs/superpowers/specs/2026-07-01-offres-nextjs-design.md`.
+ * Tous les réglages modifiables vivent ici, dans un objet unique passé en argument
+ * aux fonctions `lib/jobs/`. Défauts neutres (EMPTY_PROFILE) ; les critères réels
+ * sont saisis via l'UI et persistés dans Dexie. Cf. spec
+ * `docs/superpowers/specs/2026-07-21-refonte-offres-formulaire-ft-design.md`.
  */
 
 export type CommuteMode = "transit" | "driving" | "bicycling" | "walking";
 
+/** Portée géographique d'un filtre de lieu (mappe les paramètres FT commune/departement/region). */
+export type LocationKind = "commune" | "departement" | "region";
+
+export interface LocationFilter {
+  kind: LocationKind;
+  code: string;   // code INSEE (commune 5 chiffres, département, région) ; "" = national
+  label: string;  // libellé affiché, ex. "Paris 12e (75012)" / "Île-de-France"
+  radiusKm: number; // rayon km, appliqué seulement si kind === "commune"
+}
+
 /** Un critère de la grille de notation (barème + affichage). */
 export interface ScoringCriterion {
-  key: string;         // → champ `score_<key>` renvoyé par l'IA
-  label: string;       // libellé affiché
-  max: number;         // points maximum
-  description: string; // ce que le critère mesure
+  key: string;
+  label: string;
+  max: number;
+  description: string;
 }
 
 export interface JobSearchProfile {
@@ -23,16 +31,32 @@ export interface JobSearchProfile {
   homeAddress: string;
   /** Intitulés de postes recherchés (une requête France Travail par mot-clé). */
   keywords: string[];
+  /** Filtre géographique (commune+rayon, département ou région). */
+  location: LocationFilter;
+  /** Débutant accepté → paramètre FT experienceExige="D". */
+  debutantAccepte: boolean;
+  /** Niveau d'expérience FT : "" (indifférent), "1" (-1 an), "2" (1-3 ans), "3" (+3 ans). */
+  experienceLevel: "" | "1" | "2" | "3";
+  /** Qualification FT : "" (indifférent), "0" (non-cadre), "9" (cadre). */
+  qualification: "" | "0" | "9";
+  /** Temps plein FT : "" (indifférent), "true" (plein), "false" (partiel). */
+  tempsPlein: "" | "true" | "false";
   /** Modes de transport à calculer (Google Distance Matrix). */
   commuteModes: CommuteMode[];
   /** Types de contrat France Travail (ex. ["CDI", "CDD"]). */
   contractTypes: string[];
-  /** Code région France Travail (ex. "11" = Île-de-France). */
-  region: string;
+  /** Codes ROME (avancé, optionnel) → paramètre FT codeROME. */
+  romeCodes: string[];
+  /** Mots-clés à inclure : filtre serveur strict sur titre+description. */
+  includeKeywords: string[];
   /** Ancienneté maximale des offres, en jours. */
   maxAgeDays: number;
   /** Mots interdits dans titre/description/type de contrat (filtre stages/alternances). */
   excludedWords: string[];
+  /** Salaire minimum annuel/mensuel/horaire (null = pas de filtre). */
+  salaireMin: number | null;
+  /** Période du salaire : "M" (mensuel), "A" (annuel), "H" (horaire). */
+  periodeSalaire: "M" | "A" | "H";
   /** Score minimum pour retenir une offre. */
   minScore: number;
   /** Troncature de la description envoyée à l'IA. */
@@ -47,64 +71,36 @@ export interface JobSearchProfile {
   aiShortlist: number;
 }
 
-/** Profil par défaut = Hariss (repris à l'identique de `agent-taff/bot.py`). */
-export const DEFAULT_PROFILE: JobSearchProfile = {
-  homeAddress: "4 rue jean bouton 75012 Paris",
-  keywords: [
-    "Chargé SEO",
-    "Référenceur web",
-    "Éditorial web",
-    "Intégrateur WordPress",
-    "Développeur Shopify",
-    "Chargé communication digital",
-    "Webmaster",
-    "Webmaster éditorial",
-    "Chargé contenu web",
-    "Chargé mission digital",
-    "Gestionnaire contenu CMS",
-    "Chargé marketing digital",
-    "Chargé projet digital",
-    "Gestionnaire de contenu digital",
-    "Spécialiste contenu digital",
-    "Rédacteur web SEO",
-    "Chargé de contenu éditorial",
-    "Community Manager SEO",
-    "Gestionnaire de sites web",
-    "Référencement naturel",
-    "Analyste de contenu web",
-    "Chargé SEO Junior",
-    "Chargé de webmarketing",
-    "Content manager",
-    "Content strategist",
-    "Marketing digital",
-    "Marketing digital Junior",
-    "Chef de projet digital",
-    "Chef de projet marketing digital",
-  ],
+/** Barème générique par défaut (aucune donnée personnelle). */
+const GENERIC_CRITERIA: ScoringCriterion[] = [
+  { key: "tech", label: "Technique", max: 40, description: "Adéquation avec les compétences visées." },
+  { key: "seniority", label: "Séniorité", max: 20, description: "Adéquation au niveau d'expérience recherché." },
+  { key: "sector", label: "Secteur", max: 15, description: "Pertinence sectorielle." },
+  { key: "geo", label: "Géo (trajet)", max: 15, description: "Ajuste selon les temps de trajet fournis." },
+  { key: "red_flags", label: "Pièges", max: 10, description: "10 = aucun piège (salaire flou, offre douteuse)." },
+];
+
+/** Profil vide — défauts neutres. Aucune donnée personnelle. */
+export const EMPTY_PROFILE: JobSearchProfile = {
+  homeAddress: "",
+  keywords: [],
+  location: { kind: "commune", code: "", label: "", radiusKm: 10 },
+  debutantAccepte: false,
+  experienceLevel: "",
+  qualification: "",
+  tempsPlein: "",
   commuteModes: ["transit", "bicycling", "walking"],
   contractTypes: ["CDI", "CDD"],
-  region: "11",
+  romeCodes: [],
+  includeKeywords: [],
   maxAgeDays: 30,
   excludedWords: ["alternan", "apprenti", "stagiaire", "professionnalisation", "cfa"],
+  salaireMin: null,
+  periodeSalaire: "M",
   minScore: 70,
   maxDescriptionChars: 3000,
-  candidateSummary:
-    "Nom: Hariss Hafeji (Paris 75012)\n" +
-    "Titre: Webmaster / Chargé de projet Web\n" +
-    "Formation: Master 2 E-commerce (UPEC)\n" +
-    "Expériences: 3 stages/alternances (Webmastering Drupal/WP, SEO/SEA, Analytics, UI/UX, Gestion de projet agile).\n" +
-    "Compétences: HTML/CSS/JS/PHP, CMS (Drupal, WordPress), SEO on-page, SEA (Google Ads), Analytics (GA4, Looker), UI/UX (Figma).",
-  scoringCriteria: [
-    { key: "tech", label: "Technique", max: 40, description: "Match avec sa stack (CMS, intégration, SEO, analytics)." },
-    { key: "seniority", label: "Séniorité", max: 20, description: "Adapté à un profil Junior (Bac+5 avec 1-2 ans d'expérience en stage)." },
-    { key: "sector", label: "Secteur", max: 15, description: "Pertinence dans le secteur web/e-commerce." },
-    { key: "geo", label: "Géo (trajet)", max: 15, description: "Ajuste avec les temps de trajet fournis (pénalise si > 45 min depuis Paris 12e)." },
-    { key: "red_flags", label: "Pièges", max: 10, description: "10 = aucun piège (salaire flou, travail dissimulé, ou alternance masquée)." },
-  ],
-  prefilterKeywords: [
-    "seo", "référencement", "wordpress", "drupal", "cms", "éditorial", "contenu",
-    "rédaction", "sea", "google ads", "analytics", "webmaster", "digital",
-    "e-commerce", "shopify", "community", "marketing", "web",
-  ],
+  candidateSummary: "",
+  scoringCriteria: GENERIC_CRITERIA,
+  prefilterKeywords: [],
   aiShortlist: 20,
 };

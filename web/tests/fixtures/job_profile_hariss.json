@@ -1,0 +1,44 @@
+{
+  "homeAddress": "4 rue jean bouton 75012 Paris",
+  "keywords": [
+    "Chargé SEO", "Référenceur web", "Éditorial web", "Intégrateur WordPress",
+    "Développeur Shopify", "Chargé communication digital", "Webmaster",
+    "Webmaster éditorial", "Chargé contenu web", "Chargé mission digital",
+    "Gestionnaire contenu CMS", "Chargé marketing digital", "Chargé projet digital",
+    "Gestionnaire de contenu digital", "Spécialiste contenu digital", "Rédacteur web SEO",
+    "Chargé de contenu éditorial", "Community Manager SEO", "Gestionnaire de sites web",
+    "Référencement naturel", "Analyste de contenu web", "Chargé SEO Junior",
+    "Chargé de webmarketing", "Content manager", "Content strategist",
+    "Marketing digital", "Marketing digital Junior", "Chef de projet digital",
+    "Chef de projet marketing digital"
+  ],
+  "location": { "kind": "commune", "code": "75112", "label": "Paris 12e (75012)", "radiusKm": 10 },
+  "debutantAccepte": true,
+  "experienceLevel": "",
+  "qualification": "",
+  "tempsPlein": "",
+  "commuteModes": ["transit", "bicycling", "walking"],
+  "contractTypes": ["CDI", "CDD"],
+  "romeCodes": [],
+  "includeKeywords": [],
+  "maxAgeDays": 30,
+  "excludedWords": ["alternan", "apprenti", "stagiaire", "professionnalisation", "cfa"],
+  "salaireMin": null,
+  "periodeSalaire": "M",
+  "minScore": 70,
+  "maxDescriptionChars": 3000,
+  "candidateSummary": "Nom: Hariss Hafeji (Paris 75012)\nTitre: Webmaster / Chargé de projet Web\nFormation: Master 2 E-commerce (UPEC)\nExpériences: 3 stages/alternances (Webmastering Drupal/WP, SEO/SEA, Analytics, UI/UX, Gestion de projet agile).\nCompétences: HTML/CSS/JS/PHP, CMS (Drupal, WordPress), SEO on-page, SEA (Google Ads), Analytics (GA4, Looker), UI/UX (Figma).",
+  "scoringCriteria": [
+    { "key": "tech", "label": "Technique", "max": 40, "description": "Match avec sa stack (CMS, intégration, SEO, analytics)." },
+    { "key": "seniority", "label": "Séniorité", "max": 20, "description": "Adapté à un profil Junior (Bac+5 avec 1-2 ans d'expérience en stage)." },
+    { "key": "sector", "label": "Secteur", "max": 15, "description": "Pertinence dans le secteur web/e-commerce." },
+    { "key": "geo", "label": "Géo (trajet)", "max": 15, "description": "Ajuste avec les temps de trajet fournis (pénalise si > 45 min depuis Paris 12e)." },
+    { "key": "red_flags", "label": "Pièges", "max": 10, "description": "10 = aucun piège (salaire flou, travail dissimulé, ou alternance masquée)." }
+  ],
+  "prefilterKeywords": [
+    "seo", "référencement", "wordpress", "drupal", "cms", "éditorial", "contenu",
+    "rédaction", "sea", "google ads", "analytics", "webmaster", "digital",
+    "e-commerce", "shopify", "community", "marketing", "web"
+  ],
+  "aiShortlist": 20
+}
