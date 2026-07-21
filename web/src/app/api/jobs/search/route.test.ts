@@ -11,7 +11,7 @@ beforeEach(() => {
   process.env.FT_CLIENT_SECRET = "secret";
 });
 
-function req(body: unknown = {}) {
+function req(body: unknown = { profile: { keywords: ["SEO"] } }) {
   return new Request("http://x/api/jobs/search", { method: "POST", body: JSON.stringify(body) });
 }
 
@@ -51,5 +51,14 @@ describe("POST /api/jobs/search", () => {
     vi.stubGlobal("fetch", async () => ({ ok: false, status: 503, json: async () => ({}) }));
     const res = await POST(req());
     expect(res.status).toBe(502);
+  });
+
+  it("ne lance aucune requête FT si keywords est vide", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await POST(req({ profile: { keywords: [] } }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).offers).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

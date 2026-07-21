@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveProfile } from "@/lib/jobs/resolveProfile";
 import { getToken, fetchOffers, isExcluded, mapOffer, type JobOffer } from "@/lib/jobs/francetravail";
+import { matchesIncludeKeywords } from "@/lib/jobs/includeFilter";
 
 // France Travail (fetch + OAuth) : runtime Node.js.
 export const runtime = "nodejs";
@@ -21,9 +22,19 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const profile = resolveProfile(req);
+  let body: unknown = {};
+  try {
+    body = await req.json();
+  } catch {
+    // corps vide/invalide toléré → profil neutre
+  }
+  const profile = resolveProfile(body);
 
   try {
+    if (profile.keywords.length === 0) {
+      return NextResponse.json({ offers: [] });
+    }
+
     const token = await getToken(clientId, clientSecret);
     const seen = new Set<string>();
     const offers: JobOffer[] = [];
@@ -33,13 +44,13 @@ export async function POST(req: Request): Promise<Response> {
       for (const offer of raw) {
         const id = offer.id ?? "";
         if (!id || seen.has(id)) continue;
-        seen.add(id); // marqué vu même si exclu → pas re-testé sur un autre mot-clé
+        seen.add(id);
         if (isExcluded(offer, profile.excludedWords)) continue;
-        offers.push(mapOffer(offer, profile.maxDescriptionChars));
+        const mapped = mapOffer(offer, profile.maxDescriptionChars);
+        if (!matchesIncludeKeywords(mapped, profile.includeKeywords)) continue;
+        offers.push(mapped);
       }
     }
-
-    // La config (seuils, plafond) transite par les props serveur ; ici, seulement les offres.
     return NextResponse.json({ offers });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Échec de la recherche d'offres.";

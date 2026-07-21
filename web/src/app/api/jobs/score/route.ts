@@ -17,7 +17,7 @@ export const maxDuration = 60;
  * - clé Gemini serveur absente → 400.
  */
 export async function POST(req: Request): Promise<Response> {
-  let body: { offer?: JobOffer };
+  let body: { offer?: JobOffer; profile?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -37,7 +37,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const profile = resolveProfile(req);
+  const profile = resolveProfile(body);
 
   try {
     const commute = await getCommuteTimes(offer.commuteDestination ?? "", profile, mapsKey);
