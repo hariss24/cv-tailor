@@ -1,13 +1,17 @@
-import { DEFAULT_PROFILE, type JobSearchProfile } from "./profile";
+import { parseProfile } from "./profileSchema";
+import type { JobSearchProfile } from "./profile";
 
 /**
- * Résout le profil de recherche à utiliser pour une requête.
+ * Résout le profil de recherche pour une requête.
  *
- * **Point d'extension multi-utilisateur** : aujourd'hui, une seule config (`DEFAULT_PROFILE`).
- * Demain, cette fonction lira le profil du compte (session) ou du corps de requête — les modules
- * `lib/jobs/` reçoivent déjà le profil en argument, donc rien d'autre ne changera.
+ * **Point d'extension multi-utilisateur** : aujourd'hui, le profil arrive dans le
+ * corps de la requête (mode local, persisté côté navigateur). Demain (SaaS), cette
+ * fonction lira d'abord la session du compte ; les modules `lib/jobs/` reçoivent
+ * déjà le profil en argument, donc rien d'autre ne changera.
+ *
+ * @param body corps JSON déjà parsé de la requête (`{ profile?, ... }`).
  */
-export function resolveProfile(req?: Request): JobSearchProfile {
-  void req; // réservé pour la résolution par compte (SaaS)
-  return DEFAULT_PROFILE;
+export function resolveProfile(body?: unknown): JobSearchProfile {
+  const profile = (body && typeof body === "object") ? (body as { profile?: unknown }).profile : undefined;
+  return parseProfile(profile);
 }
