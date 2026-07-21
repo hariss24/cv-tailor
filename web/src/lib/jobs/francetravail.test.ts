@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { getToken, fetchOffers, isExcluded, mapOffer, type RawOffer } from "./francetravail";
-import { DEFAULT_PROFILE } from "./profile";
+import { parseProfile } from "./profileSchema";
+import hariss from "../../../tests/fixtures/job_profile_hariss.json";
+const DEFAULT_PROFILE = parseProfile(hariss);
 
 afterEach(() => vi.unstubAllGlobals());
 

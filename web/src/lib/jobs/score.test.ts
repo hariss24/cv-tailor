@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { scoreOffer, criteriaPromptLines } from "./score";
-import { DEFAULT_PROFILE } from "./profile";
+import { parseProfile } from "./profileSchema";
+import hariss from "../../../tests/fixtures/job_profile_hariss.json";
+const DEFAULT_PROFILE = parseProfile(hariss);
 
 // Mock du client Gemini : on contrôle le JSON renvoyé par completeJson.
 const completeJson = vi.fn();
