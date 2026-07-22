@@ -55,7 +55,9 @@ export default function JobsView() {
     saveTimer.current = setTimeout(() => { void saveJobProfile(p); }, 400);
   }
 
-  const canScan = profile.keywords.length >= 1 && profile.location.code !== "";
+  // Un lieu n'est pas requis : sans lieu, la recherche France Travail est nationale
+  // (le backend omet simplement le filtre géo). Cf. audit B6.
+  const canScan = profile.keywords.length >= 1;
 
   async function reload() {
     setJobs(await listJobs("new"));
@@ -110,46 +112,64 @@ export default function JobsView() {
       let retained = 0;
       setProgress({ phase: "Notation des offres…", found: toScore.length, scored, retained });
 
-      for (const offer of toScore) {
-        const r = await fetch("/api/jobs/score", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ offer, profile: p }),
-        });
-        if (r.status === 429) {
-          toast("Limite IA atteinte. Réessaie plus tard.", "error");
-          break;
-        }
-        const d = await r.json().catch(() => ({}));
-        if (r.status === 400 && d.error === "config") {
-          setConfigMsg(d.message);
-          break;
-        }
-        if (!r.ok) continue; // offre ponctuellement en échec : on la saute
+      // Notation en parallèle via un pool borné (cf. audit B8) : bien plus rapide que
+      // le séquentiel. On stoppe net l'alimentation du pool sur quota IA (429) ou
+      // erreur de config ; les requêtes déjà en vol se terminent proprement.
+      const CONCURRENCY = 4;
+      let next = 0;
+      let stopped = false;
 
-        scored++;
-        if (typeof d.score === "number" && d.score >= minScore) {
-          await saveJob({
-            id: offer.id,
-            createdAt: Date.now(),
-            title: offer.title,
-            company: offer.company,
-            location: offer.location,
-            commute: d.commuteText ?? "",
-            score: d.score,
-            url: offer.url,
-            jobText: offer.jobText,
-            publishedAt: offer.publishedAt,
-            status: "new",
-            seen: false,
+      const worker = async () => {
+        while (!stopped) {
+          const i = next++;
+          if (i >= toScore.length) return;
+          const offer = toScore[i];
+          const r = await fetch("/api/jobs/score", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ offer, profile: p }),
           });
-          retained++;
-        } else if (typeof d.score === "number") {
-          // Offre explorée mais sous le seuil : mémorisée pour ne jamais la re-noter.
-          await saveExplored(offer.id, d.score);
+          if (r.status === 429) {
+            if (!stopped) toast("Limite IA atteinte. Réessaie plus tard.", "error");
+            stopped = true;
+            return;
+          }
+          const d = await r.json().catch(() => ({}));
+          if (r.status === 400 && d.error === "config") {
+            stopped = true;
+            setConfigMsg(d.message);
+            return;
+          }
+          if (!r.ok) continue; // offre ponctuellement en échec : on la saute
+
+          scored++;
+          if (typeof d.score === "number" && d.score >= minScore) {
+            await saveJob({
+              id: offer.id,
+              createdAt: Date.now(),
+              title: offer.title,
+              company: offer.company,
+              location: offer.location,
+              commute: d.commuteText ?? "",
+              score: d.score,
+              url: offer.url,
+              jobText: offer.jobText,
+              publishedAt: offer.publishedAt,
+              status: "new",
+              seen: false,
+            });
+            retained++;
+          } else if (typeof d.score === "number") {
+            // Offre explorée mais sous le seuil : mémorisée pour ne jamais la re-noter.
+            await saveExplored(offer.id, d.score);
+          }
+          setProgress({ phase: "Notation des offres…", found: toScore.length, scored, retained });
         }
-        setProgress({ phase: "Notation des offres…", found: toScore.length, scored, retained });
-      }
+      };
+
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, toScore.length) }, () => worker()),
+      );
 
       setProgress((p) => ({ ...p, phase: "Terminé" }));
       await reload();
@@ -238,7 +258,7 @@ export default function JobsView() {
           {scanning ? "Recherche en cours…" : "Chercher des offres"}
         </button>
         {!scanning && !canScan && (
-          <span className="jobs-hint">Renseigne au moins un poste et un lieu pour lancer une recherche.</span>
+          <span className="jobs-hint">Renseigne au moins un poste pour lancer une recherche.</span>
         )}
         {scanning ? <ScanProgress {...progress} /> : null}
       </div>
