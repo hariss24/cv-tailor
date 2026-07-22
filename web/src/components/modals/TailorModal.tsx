@@ -11,6 +11,7 @@ import AtsPanel from "./AtsPanel";
 import { useRouter } from "next/navigation";
 import DiffModal from "./DiffModal";
 import { loadMasterResume } from "@/lib/storage/master";
+import { renderTemplate } from "@/lib/templates/render";
 import type { Resume, Letter } from "@/lib/resume/schema";
 import type { TailorLevel } from "@/lib/ai/prompts";
 import { toast } from "@/state/uiStore";
@@ -242,7 +243,20 @@ export default function TailorModal({
       const city = (master?.location ?? "").split(",")[0].trim();
       const today = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
-      const patch: Partial<Letter> = { body, date: city ? `${city}, le ${today}` : `Le ${today}` };
+      // L'IA peut recopier les variables de modèle ({Entreprise}, {Poste}, {Prénom}…),
+      // comportement prévu pour le Pack : on les substitue ici, sinon elles resteraient
+      // littérales dans l'éditeur. Prénom/Nom viennent de la signature de la lettre courante.
+      const [prenom, ...rest] = (letter.signature || letter.sender_name || "").trim().split(/\s+/);
+      const renderedBody = renderTemplate(body, {
+        Entreprise: comp,
+        Poste: rol,
+        Date: today,
+        "Prénom": prenom ?? "",
+        Nom: rest.join(" "),
+        "M/Mme Nom": "",
+      });
+
+      const patch: Partial<Letter> = { body: renderedBody, date: city ? `${city}, le ${today}` : `Le ${today}` };
       if (comp) patch.recipient_name = comp;
       if (rol) patch.subject = `Candidature au poste de ${rol}`;
       setJson({ ...letter, ...patch });
