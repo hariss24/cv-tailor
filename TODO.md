@@ -61,6 +61,16 @@ Suivi des fonctionnalités de l'application (version Next.js).
 
 ## 🔵 Priorité haute — à faire
 
+- [ ] Faille détectée : Le quota de requete peut etre facilement reset si l'utilisateur vide son cache navigateur. Réfléchir à une solution intelligente et efficace.
+
+- [ ] Trouver une solution pour que l'app enregistres automatiquement les offres d'emploi qu'il a trouvé via le chercheur d'offre ou bien ceux que l'utilisateur à enregistré manuellement. Peut etre dans un nouvel onglet "Mes Candidatures"
+
+- [ ] Enlever l'export reactive-resume
+
+- [ ] améliorer l'adaptation IA, actuellement l'IA invente un nouveau titre de poste au lieu de reprendre celui du poste : Content & UX Manager au lieu de Product Information Manager : ![alt text](image-1.png). J'aime pas du tout l'affichage avant/après des CV aussi, faudra proposer une refonte pour qu'ils prennent toute la largeur de l'écran en desk et en mobile un slider droite/gauche. ![alt text](image-2.png). Et le bouton "Voir les modifications est minuscules et horrible en terme de UI. Faudra agrandir le bouton et mettre une flèche vers la droite à coté.
+
+- [ ] améliorer interface chatbot IA
+
 - [ ] **Trouver une solution pour extraire les offres d'emploi via linkedin et indeed, qui bloquent les bots. ** 
 
 - [ ] **Mettre des ancres pour que le document soit plus lisible et naviguable.** Par exemple dans le formulaire dans la section "ordre des sections" ou changer l'ordre des sections en table de matières, pour que chaque section soit accessible avec un ancre. Puis avoir un bouton pour remonter facilement. A brainstormer.

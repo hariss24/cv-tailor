@@ -41,6 +41,93 @@
 
 ## Journal
 
+### 2026-07-22 : Vérification + refonte du formulaire Offres et autocomplétion
+- **Quoi.** Revue du travail M1–M5. Correction d'un **bug de scan** (le scan
+  utilisait une `config` dérivée d'un profil vide via `page.tsx` → `prefilterKeywords`
+  toujours vide → 0 offre retenue) : `JobsView` dérive désormais tous les
+  seuils/critères du profil chargé, avec repli sur les intitulés si aucune
+  compétence n'est saisie. **Refonte visuelle** de `ProfileForm` au design
+  néomorphique « atelier » (carte, chips, tags, toggle `.ui-switch`, selects,
+  grille, hiérarchie recherche/filtres/avancé) — l'ancienne version était en
+  styles inline non appliqués (bundle CSS périmé côté dev). `LocationInput`
+  bascule sur `geo.api.gouv.fr` (communes **et** régions) au lieu du référentiel
+  FT complet ; auto-save du profil (debounce). **Autocomplétion du poste** sur
+  les ~11 000 appellations officielles ROME (jeu de données embarqué côté
+  serveur, `MetierInput` + route `/api/jobs/metiers`, recherche par tokens).
+- **Pourquoi.** Le formulaire livré ne respectait pas la direction artistique,
+  était incomplet, et le scan ne retenait aucune offre. Demande d'autocomplétion
+  FT-native sur le lieu (déjà en place) et le poste.
+- **Fichiers touchés :** `JobsView.tsx`, `page.tsx`, `ScoringInfo.tsx`,
+  `ProfileForm.tsx`, `LocationInput.tsx`, `MetierInput.tsx`, `globals.css`,
+  `api/jobs/locations/route.ts`(+test), `api/jobs/metiers/route.ts`(+test),
+  `lib/jobs/data/rome-appellations.json`.
+- **Résultat vérifs :** `npx tsc --noEmit`, `npm run lint` (1 warning pré-existant
+  `FormEditor`), `npm test` (268 tests verts). Vérif navigateur : autocomplétion
+  lieu + poste, hiérarchie, thème clair/sombre.
+
+### 2026-07-21 : Mission 5 — Formulaire ProfileForm + intégration
+- **Quoi.** Création du composant `ProfileForm.tsx` (saisie de tous les critères : mots-clés, exclusions, expérience, etc.) et intégration dans `JobsView.tsx` avec gestion de l'affichage / masquage et auto-lancement du scan après sauvegarde locale dans Dexie.
+- **Pourquoi.** M5, dernière étape pour rendre le moteur de recherche d'offres 100% paramétrable par l'utilisateur final.
+- **Fichiers touchés :** `ProfileForm.tsx`, `JobsView.tsx`.
+- **Résultat vérifs :** `tsc --noEmit` et `npm run lint` OK (0 erreur).
+- **Commit :** `feat(jobs): formulaire paramétrable des critères de recherche FT et intégration UI`
+
+### 2026-07-21 : Mission 4 — Autocomplétion du lieu
+- **Quoi.** Création de la route `/api/jobs/locations` (proxy vers l'API référentiel FT) et du composant React `LocationInput` pour la saisie de la commune.
+- **Pourquoi.** M4, fournir à l'utilisateur un moyen ergonomique de sélectionner une zone géographique connue par France Travail, avec gestion du rayon de recherche.
+- **Fichiers touchés :** `locations/route.ts`, `LocationInput.tsx`.
+- **Résultat vérifs :** `tsc --noEmit` et `npm run lint` OK (0 erreur).
+- **Commit :** `feat(jobs): autocomplétion du lieu (proxy API FT + composant React)`
+
+### 2026-07-21 : Mission 3.3 — Persistance Dexie du profil
+- **Quoi.** Ajout de la table `jobProfile` (v7) dans Dexie (`db.ts`) avec les helpers `getJobProfile` et `saveJobProfile`.
+- **Pourquoi.** M3, permettre la persistance locale du profil de recherche saisi par l'utilisateur.
+- **Fichiers touchés :** `db.ts`.
+- **Résultat vérifs :** `tsc --noEmit`, `npm run lint`, `npm test` tous OK. La mission M3 est terminée.
+- **Commit :** `feat(storage): ajout de la table jobProfile dans Dexie (singleton me)`
+
+### 2026-07-21 : Mission 3.2 — Routage search et score sur le profil du corps
+- **Quoi.** Les routes API `/api/jobs/search` et `/api/jobs/score` extraient le profil depuis le corps de requête JSON (`body.profile`), au lieu de s'appuyer sur l'import serveur `DEFAULT_PROFILE`. Le filtre `includeKeywords` est également appliqué sur les résultats.
+- **Pourquoi.** M3, l'utilisateur pourra envoyer ses propres critères depuis le navigateur.
+- **Fichiers touchés :** `search/route.ts`, `score/route.ts`, `search/route.test.ts`.
+- **Résultat vérifs :** `npx vitest run src/app/api/jobs/search/route.test.ts` OK (4 tests verts).
+- **Commit :** `feat(jobs): routes search/score utilisent le profil du corps + filtre includeKeywords`
+
+### 2026-07-21 : Mission 2.2 — Filtre serveur includeKeywords
+- **Quoi.** Création du filtre `matchesIncludeKeywords` pour exiger la présence stricte de certains mots-clés dans l'offre (titre+description).
+- **Pourquoi.** M2, affiner la recherche et écarter les faux positifs renvoyés par FT.
+- **Fichiers touchés :** `includeFilter.ts`, `includeFilter.test.ts`.
+- **Résultat vérifs :** `npx vitest run src/lib/jobs/includeFilter.test.ts` OK (3 tests verts).
+- **Commit :** `feat(jobs): filtre serveur includeKeywords (précision titre+description)`
+
+### 2026-07-21 : Mission 2.1 — Extension de fetchOffers
+- **Quoi.** `fetchOffers` utilise les nouveaux champs FT du `JobSearchProfile` (géo via location.kind, expérience, qualification, ROME, salaire).
+- **Pourquoi.** M2, permettre une recherche ciblée sur l'API FT sans dépendre d'un profil codé en dur.
+- **Fichiers touchés :** `francetravail.ts`, `francetravail.test.ts`.
+- **Résultat vérifs :** `npx vitest run src/lib/jobs/francetravail.test.ts` OK (16 tests verts).
+- **Commit :** `feat(jobs): fetchOffers construit les paramètres FT (géo, expérience, qualification, salaire, ROME)`
+
+### 2026-07-21 : Mission 1.3 — Migration des tests vers la fixture
+- **Quoi.** Remplacement de `DEFAULT_PROFILE` par la fixture Hariss dans `francetravail.test.ts` et `score.test.ts`.
+- **Pourquoi.** M1, finalisation de la suppression des données en dur.
+- **Fichiers touchés :** `francetravail.test.ts`, `score.test.ts`.
+- **Résultat vérifs :** Les tests modifiés tournent, l'erreur restante (attendu M3) est dans `resolveProfile.ts`.
+- **Commit :** `test(jobs): migrer DEFAULT_PROFILE vers la fixture Hariss`
+
+### 2026-07-21 : Mission 1.2 — Schéma Zod de validation du profil
+- **Quoi.** Création du schéma Zod `profileSchema` avec validation tolérante (fallback sur les défauts d'`EMPTY_PROFILE`).
+- **Pourquoi.** M1 de la refonte des offres, garantir que l'app ne crashe pas si le profil local (ou la requête API) est partiel ou invalide.
+- **Fichiers touchés :** `web/src/lib/jobs/profileSchema.ts`, `web/src/lib/jobs/profileSchema.test.ts`.
+- **Résultat vérifs :** `npx vitest run src/lib/jobs/profileSchema.test.ts` OK (4 tests verts).
+- **Commit :** `feat(jobs): schéma Zod parseProfile (validation tolérante + défauts)`
+
+### 2026-07-21 : Mission 1.1 — Profil enrichi et fixture Hariss
+- **Quoi.** Enrichissement du type `JobSearchProfile`, ajout de `EMPTY_PROFILE` neutre, et création de la fixture Hariss.
+- **Pourquoi.** M1 de la refonte des offres (formulaire de recherche paramétrable), pour sortir les données personnelles du code.
+- **Fichiers touchés :** `web/src/lib/jobs/profile.ts`, `web/tests/fixtures/job_profile_hariss.json`.
+- **Résultat vérifs :** `tsc --noEmit` affiche uniquement les erreurs attendues (imports `DEFAULT_PROFILE` manquants).
+- **Commit :** `feat(jobs): profil enrichi (champs FT) + EMPTY_PROFILE neutre + fixture Hariss`
+
 ### 2026-07-20 : Sécurisation des données locales et avertissements
 - **Quoi.** Ajout de la persistance du stockage (`navigator.storage.persist()`) pour protéger la base IndexedDB contre l'éviction. Ajout d'une modale d'alerte proactive s'affichant une seule fois après 5 CV générés, et d'un encart d'avertissement persistant dans la section Paramètres > Gestion des données.
 - **Pourquoi.** Demande de l'utilisateur pour mitiger le risque de perte accidentelle de la mémoire locale et encourager l'exportation manuelle des données.
