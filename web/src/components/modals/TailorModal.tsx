@@ -208,7 +208,7 @@ export default function TailorModal({
 
   // Adaptation du corps de la lettre courante à l'offre (même flux que la page Pack).
   const runLetter = async (desc: string) => {
-    const { json, setJson, company, role } = useDocStore.getState();
+    const { json, setJson, company, role, setCompany, setRole } = useDocStore.getState();
     const letter = json as Letter;
     if (!letter.body.trim()) {
       toast("Le corps de la lettre est vide — rédige-le d'abord.", "error");
@@ -226,9 +226,32 @@ export default function TailorModal({
         role: role.trim(),
       });
       if (!body.trim()) throw new Error("Le corps adapté reçu est vide — lettre conservée.");
-      setJson({ ...letter, body });
+
+      // En plus du corps, on renseigne les champs objectifs de l'en-tête (destinataire,
+      // objet, date) à partir de l'offre — comme le fait le Pack (buildLetterFromTemplate).
+      // company/role viennent de la barre meta ; si vides, on les extrait de l'offre.
+      let comp = company.trim();
+      let rol = role.trim();
+      if (!comp || !rol) {
+        const meta = await fetchJobMeta(desc);
+        if (meta) {
+          comp = comp || meta.company.trim();
+          rol = rol || meta.role.trim();
+        }
+      }
+      const city = (master?.location ?? "").split(",")[0].trim();
+      const today = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+      const patch: Partial<Letter> = { body, date: city ? `${city}, le ${today}` : `Le ${today}` };
+      if (comp) patch.recipient_name = comp;
+      if (rol) patch.subject = `Candidature au poste de ${rol}`;
+      setJson({ ...letter, ...patch });
+
+      // Renseigne aussi la barre meta (nommage PDF/historique) avec ce qu'on a résolu.
+      if (comp && !company.trim()) setCompany(comp);
+      if (rol && !role.trim()) setRole(rol);
+
       toast("Lettre adaptée à l'offre.", "success");
-      prefillMeta(desc);
     } catch (err) {
       toast(err instanceof Error ? err.message : "Échec de l'adaptation.", "error");
     } finally {
