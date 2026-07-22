@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listJobs, saveJob, saveExplored, markJobSeen, jobExists, setJobStatus, type JobEntry } from "@/lib/storage/db";
 import { useDocStore } from "@/state/docStore";
@@ -19,19 +19,15 @@ import { ProfileForm } from "./ProfileForm";
  * `POST /api/jobs/search` → filtre les offres déjà vues (Dexie) → note chaque offre via
  * `POST /api/jobs/score` (jusqu'au plafond) → enregistre celles au-dessus du seuil. Progression
  * en direct ; arrêt propre sur quota IA (429). Les offres retenues sont stockées localement.
+ *
+ * Le profil de recherche est chargé depuis Dexie, édité en direct (auto-save) et envoyé
+ * dans le corps de chaque requête ; tous les seuils/critères en dérivent.
  */
 
 export type ScanState = { phase: string; found: number; scored: number; retained: number };
 const ZERO: ScanState = { phase: "", found: 0, scored: 0, retained: 0 };
 
-export type JobsConfig = {
-  minScore: number;
-  aiShortlist: number;
-  prefilterKeywords: string[];
-  criteria: { label: string; max: number; description: string }[];
-};
-
-export default function JobsView({ config }: { config: JobsConfig }) {
+export default function JobsView() {
   const [jobs, setJobs] = useState<JobEntry[]>([]);
   const [profile, setProfile] = useState<JobSearchProfile>(EMPTY_PROFILE);
   const [showForm, setShowForm] = useState(false);
@@ -42,14 +38,24 @@ export default function JobsView({ config }: { config: JobsConfig }) {
   const setCompany = useDocStore((s) => s.setCompany);
   const setRole = useDocStore((s) => s.setRole);
   const router = useRouter();
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     listJobs("new").then(setJobs);
     getJobProfile().then((p) => {
       if (p) setProfile(p);
-      else setShowForm(true); // Forcer la saisie initiale
+      else setShowForm(true); // Profil vide → ouvrir la saisie initiale.
     });
   }, []);
+
+  /** Édition du profil avec sauvegarde automatique (debounce 400 ms). */
+  function updateProfile(p: JobSearchProfile) {
+    setProfile(p);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => { void saveJobProfile(p); }, 400);
+  }
+
+  const canScan = profile.keywords.length >= 1 && profile.location.code !== "";
 
   async function reload() {
     setJobs(await listJobs("new"));
@@ -73,7 +79,7 @@ export default function JobsView({ config }: { config: JobsConfig }) {
       }
 
       const offers: JobOffer[] = data.offers ?? [];
-      const minScore = config.minScore;
+      const minScore = p.minScore;
 
       // Écarter les offres déjà en base (dédoublonnage local).
       const fresh: JobOffer[] = [];
@@ -83,12 +89,14 @@ export default function JobsView({ config }: { config: JobsConfig }) {
 
       // Pré-filtre « Équilibré » : classer par pertinence mots-clés, écarter les offres
       // à recoupement nul, ne noter que les meilleures (plafond aiShortlist). Zéro appel IA.
+      // À défaut de compétences renseignées, on retombe sur les intitulés de poste.
+      const prefilter = p.prefilterKeywords.length > 0 ? p.prefilterKeywords : p.keywords;
       const toScore = fresh
-        .map((o) => ({ o, r: relevance(o, config.prefilterKeywords) }))
+        .map((o) => ({ o, r: relevance(o, prefilter) }))
         .filter((x) => x.r > 0)
         .sort((a, b) => b.r - a.r)
         .map((x) => x.o)
-        .slice(0, config.aiShortlist);
+        .slice(0, p.aiShortlist);
 
       let scored = 0;
       let retained = 0;
@@ -144,13 +152,6 @@ export default function JobsView({ config }: { config: JobsConfig }) {
     }
   }
 
-  const handleSaveProfile = async (p: JobSearchProfile) => {
-    setProfile(p);
-    setShowForm(false);
-    await saveJobProfile(p);
-    scan(p);
-  };
-
   async function adapt(job: JobEntry) {
     await markJobSeen(job.id);
     setPendingJobDesc(job.jobText);
@@ -200,37 +201,43 @@ export default function JobsView({ config }: { config: JobsConfig }) {
 
   return (
     <div className="jobs-view">
-      <ScoringInfo criteria={config.criteria} minScore={config.minScore} />
-
-      <div style={{ marginBottom: 16 }}>
-        <button className="ui-button" onClick={() => setShowForm(!showForm)} style={{ marginBottom: showForm ? 16 : 0, background: "transparent", color: "var(--text)", border: "1px solid var(--border)" }}>
-          {showForm ? "Masquer les critères" : "Modifier mes critères de recherche"}
+      <div className="jobs-form-bar">
+        <button
+          type="button"
+          className="ghost jobs-form-toggle"
+          onClick={() => setShowForm((s) => !s)}
+          aria-expanded={showForm}
+        >
+          {showForm ? "Masquer les critères" : "Mes critères de recherche"}
         </button>
-        {showForm && (
-          <ProfileForm
-            initial={profile}
-            onSave={handleSaveProfile}
-            onCancel={() => setShowForm(false)}
-          />
-        )}
       </div>
+
+      {showForm && <ProfileForm profile={profile} onChange={updateProfile} />}
+
+      <ScoringInfo
+        criteria={profile.scoringCriteria.map(({ label, max, description }) => ({ label, max, description }))}
+        minScore={profile.minScore}
+      />
 
       <div className="jobs-toolbar">
         <button
           type="button"
           className="tailor-btn"
           onClick={() => scan()}
-          disabled={scanning || showForm}
+          disabled={scanning || !canScan}
           data-testid="jobs-scan"
         >
           {scanning ? "Recherche en cours…" : "Chercher des offres"}
         </button>
+        {!scanning && !canScan && (
+          <span className="jobs-hint">Renseigne au moins un poste et un lieu pour lancer une recherche.</span>
+        )}
         {scanning ? <ScanProgress {...progress} /> : null}
       </div>
 
       {jobs.length === 0 ? (
         <div className="jobs-empty">
-          {scanning ? "Recherche en cours…" : "Aucune offre pour l'instant. Lance une recherche."}
+          {scanning ? "Recherche en cours…" : "Aucune offre pour l'instant. Renseigne tes critères puis lance une recherche."}
         </div>
       ) : (
         <div className="jobs-list" data-testid="jobs-list">

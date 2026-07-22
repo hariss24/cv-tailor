@@ -1,87 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { JobSearchProfile } from "@/lib/jobs/profile";
+import { useRef, useState } from "react";
+import type { LocationFilter, LocationKind } from "@/lib/jobs/profile";
 
+type Suggestion = { kind: LocationKind; code: string; label: string };
+
+/** Champ lieu avec autocomplétion commune/région (geo.api.gouv.fr) + rayon pour les communes. */
 export function LocationInput({
   value,
   onChange,
 }: {
-  value: JobSearchProfile["location"];
-  onChange: (loc: JobSearchProfile["location"]) => void;
+  value: LocationFilter;
+  onChange: (loc: LocationFilter) => void;
 }) {
   const [query, setQuery] = useState(value.label || "");
-  const [suggestions, setSuggestions] = useState<Array<{ kind: "commune", code: string, label: string }>>([]);
-  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      // Si la requête est trop courte, on vide les suggestions.
-      // Mais on évite aussi de chercher si query correspond exactement au label choisi.
-      if (query.length < 3 || query === value.label) {
-        setSuggestions([]);
-        return;
-      }
-      
-      setLoading(true);
+  function onType(next: string) {
+    setQuery(next);
+    if (!next) onChange({ kind: "commune", code: "", label: "", radiusKm: value.radiusKm });
+    if (timer.current) clearTimeout(timer.current);
+    if (next.trim().length < 2 || next === value.label) {
+      setSuggestions([]);
+      return;
+    }
+    timer.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/jobs/locations?q=${encodeURIComponent(query)}`);
-        if (res.ok) setSuggestions(await res.json());
-      } catch (_err) {
+        const res = await fetch(`/api/jobs/locations?q=${encodeURIComponent(next)}`);
+        const data = await res.json();
+        setSuggestions(data.results ?? []);
+        setOpen(true);
+      } catch {
         setSuggestions([]);
-      } finally {
-        setLoading(false);
       }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, value.label]);
+    }, 250);
+  }
+
+  function pick(s: Suggestion) {
+    onChange({ kind: s.kind, code: s.code, label: s.label, radiusKm: value.radiusKm || 10 });
+    setQuery(s.label);
+    setSuggestions([]);
+    setOpen(false);
+  }
 
   return (
-    <div className="location-input" style={{ position: "relative" }}>
-      <input
-        type="text"
-        placeholder="Saisissez une commune..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          if (!e.target.value) {
-             onChange({ kind: "commune", code: "", label: "", radiusKm: value.radiusKm });
-          }
-        }}
-        style={{ width: "100%", padding: "8px" }}
-      />
-      {loading && <span style={{ position: "absolute", right: 12, top: 10, fontSize: 12, color: "var(--text-muted, #666)" }}>...</span>}
-      
-      {suggestions.length > 0 && (
-        <ul className="ui-suggestions" style={{ position: "absolute", background: "var(--bg, #fff)", border: "1px solid var(--border, #ccc)", width: "100%", zIndex: 10, listStyle: "none", margin: 0, padding: 0, maxHeight: 200, overflowY: "auto", borderRadius: 4, boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
-          {suggestions.map((s) => (
-            <li
-              key={s.code}
-              onClick={() => {
-                onChange({ ...value, kind: s.kind, code: s.code, label: s.label });
-                setQuery(s.label);
-                setSuggestions([]);
-              }}
-              style={{ padding: "8px 12px", cursor: "pointer", borderBottom: "1px solid var(--border-light, #eee)" }}
-            >
-              {s.label}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="loc-field">
+      <div className="loc-input-wrap">
+        <input
+          type="text"
+          className="ui-input"
+          placeholder="Ville, commune ou région…"
+          value={query}
+          onChange={(e) => onType(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          aria-label="Lieu de recherche"
+          autoComplete="off"
+        />
+        {open && suggestions.length > 0 && (
+          <ul className="loc-suggestions" role="listbox">
+            {suggestions.map((s) => (
+              <li key={`${s.kind}-${s.code}`}>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s)}>
+                  <span>{s.label}</span>
+                  <span className="loc-kind">{s.kind === "commune" ? "Commune" : "Région"}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-      {value.code && (
-        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={{ fontSize: 14 }}>Rayon de recherche (km) :</label>
+      {value.kind === "commune" && value.code && (
+        <label className="loc-radius" title="Rayon autour de la commune">
+          <span>Rayon</span>
           <input
             type="number"
+            className="ui-input"
             min={0}
             max={100}
             value={value.radiusKm}
             onChange={(e) => onChange({ ...value, radiusKm: parseInt(e.target.value) || 0 })}
-            style={{ width: 80, padding: "4px 8px" }}
           />
-        </div>
+          <span className="loc-radius-unit">km</span>
+        </label>
       )}
     </div>
   );

@@ -327,6 +327,15 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
   box-shadow: var(--neu-inset), 0 0 0 3.5px rgba(232,93,4,0.16);
 }
 
+.ui-input {
+  background: var(--field); color: var(--text); border: none; border-radius: 10px;
+  padding: 8px 11px; font-size: 13px; font-family: var(--font-ui);
+  box-shadow: var(--neu-inset); transition: box-shadow 150ms; outline: none; width: 100%;
+}
+.ui-input:focus {
+  box-shadow: var(--neu-inset), 0 0 0 3.5px rgba(232,93,4,0.16);
+}
+
 /* ---- Barre d'actions (bas de page) — porté de static/css/main.css ---- */
 .actions {
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
@@ -1259,6 +1268,120 @@ button.go:disabled {
 /* ---------- Onglet Offres ---------- */
 .jobs-view { display: flex; flex-direction: column; gap: 18px; }
 .jobs-toolbar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.jobs-hint { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+
+/* ===== Formulaire de critères de recherche (néomorphique « atelier ») ===== */
+.jobs-form-bar { display: flex; }
+.jobs-form-toggle { font-size: 13px; }
+
+.jobs-form {
+  display: flex; flex-direction: column; gap: 18px;
+  background: var(--bg); border-radius: 18px; padding: 22px 24px;
+  box-shadow: var(--neu-raised);
+}
+.jf-head { display: flex; flex-direction: column; gap: 3px; }
+.jf-title { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.jf-hint { margin: 0; font-size: 12px; color: var(--muted); }
+
+.jf-primary {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px;
+}
+.jf-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.jf-field--wide { grid-column: 1 / -1; }
+.jf-label {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.jf-note { font-size: 11px; color: var(--muted); }
+
+/* Groupe « filtres rapides » séparé du bloc de recherche par un filet discret. */
+.jf-filters {
+  display: flex; flex-direction: column; gap: 16px;
+  padding-top: 18px; box-shadow: inset 0 1px 0 var(--border);
+}
+.jf-filters-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 20px; align-items: end;
+}
+
+.jf-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px;
+}
+
+/* Select aligné sur .ui-input (inset néomorphique + focus orange). */
+.jf-select {
+  appearance: none; font-family: var(--font-ui); font-size: 13px; color: var(--text);
+  background: var(--bg); border: none; border-radius: 10px; padding: 9px 12px;
+  box-shadow: var(--neu-inset); transition: box-shadow 150ms; outline: none; width: 100%; cursor: pointer;
+}
+.jf-select:focus { box-shadow: var(--neu-inset), 0 0 0 3.5px rgba(232,93,4,0.16); }
+
+/* Chips de sélection (types de contrat). */
+.jf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.jf-chip {
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; color: var(--text);
+  background: var(--bg); border: none; border-radius: 999px; padding: 7px 15px; cursor: pointer;
+  box-shadow: var(--neu-raised-sm); transition: box-shadow 130ms, transform 130ms, color 130ms;
+}
+.jf-chip:hover:not(.is-on) { box-shadow: var(--neu-raised); transform: translateY(-1px); }
+.jf-chip:active { transform: translateY(0); box-shadow: var(--neu-inset); }
+.jf-chip.is-on { color: #fff; background: var(--orange); box-shadow: inset 0 1px 3px rgba(0,0,0,0.18); }
+
+/* Toggle « Débutant accepté » : réutilise .ui-switch, neutralise le style bouton. */
+.jf-switch { width: 100%; border: none; background: var(--bg); box-shadow: var(--neu-inset); text-align: left; }
+.jf-switch:hover { background: var(--bg); }
+
+/* Tags (mots-clés, mots exclus, compétences, ROME). */
+.jf-tags-field { display: flex; flex-direction: column; gap: 8px; }
+.jf-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+.jf-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text); background: var(--bg);
+  box-shadow: var(--neu-raised-sm); border-radius: 999px; padding: 4px 6px 4px 12px;
+}
+.jf-tag button {
+  display: grid; place-items: center; width: 18px; height: 18px; border: none; cursor: pointer;
+  border-radius: 50%; background: var(--bg); box-shadow: var(--neu-inset); color: var(--muted);
+  font-size: 13px; line-height: 1; padding: 0;
+}
+.jf-tag button:hover { color: var(--text); }
+
+/* Section avancée. */
+.jf-adv-toggle {
+  align-self: flex-start; font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
+  color: var(--muted); background: none; border: none; cursor: pointer; padding: 2px 0;
+  transition: color 130ms;
+}
+.jf-adv-toggle:hover { color: var(--text); }
+.jf-advanced {
+  display: flex; flex-direction: column; gap: 16px;
+  padding-top: 18px; box-shadow: inset 0 1px 0 var(--border);
+}
+.jf-textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding: 10px 12px; }
+
+/* Champ lieu + autocomplétion. */
+.loc-field { display: flex; flex-direction: column; gap: 10px; }
+.loc-input-wrap { position: relative; }
+.loc-suggestions {
+  position: absolute; z-index: 30; left: 0; right: 0; margin: 6px 0 0; padding: 4px; list-style: none;
+  background: var(--bg); border-radius: 12px; box-shadow: var(--neu-raised-lg);
+  max-height: 240px; overflow-y: auto;
+}
+.loc-suggestions button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 8px 10px; border: none; background: none; border-radius: 8px; cursor: pointer;
+  color: var(--text); font-family: var(--font-ui); font-size: 13px; text-align: left;
+}
+.loc-suggestions button:hover { box-shadow: var(--neu-inset); }
+.loc-kind { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.loc-radius { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.loc-radius input { width: 74px; }
+.loc-radius-unit { color: var(--muted); }
+
+@media (max-width: 640px) {
+  .jf-primary { grid-template-columns: 1fr; }
+  .jf-filters-row { grid-template-columns: 1fr; }
+}
 
 .scan-progress { display: flex; flex-direction: column; gap: 6px; min-width: 240px; flex: 1; }
 .scan-progress-bar {
@@ -2049,3 +2172,4 @@ button.go:disabled {
     flex: 1 1 100%;
   }
 }
+

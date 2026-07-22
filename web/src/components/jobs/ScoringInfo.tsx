@@ -1,11 +1,11 @@
-import type { JobsConfig } from "./JobsView";
+type Criterion = { label: string; max: number; description: string };
 
 /** Encart dépliable expliquant comment les offres sont notées (grille issue du profil). */
 export default function ScoringInfo({
   criteria,
   minScore,
 }: {
-  criteria: JobsConfig["criteria"];
+  criteria: Criterion[];
   minScore: number;
 }) {
   return (
