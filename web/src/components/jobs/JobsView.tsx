@@ -229,6 +229,11 @@ export default function JobsView() {
 
   return (
     <div className="jobs-view">
+      <ScoringInfo
+        criteria={profile.scoringCriteria.map(({ label, max, description }) => ({ label, max, description }))}
+        minScore={profile.minScore}
+      />
+
       <div className="jobs-form-bar">
         <button
           type="button"
@@ -241,11 +246,6 @@ export default function JobsView() {
       </div>
 
       {showForm && <ProfileForm profile={profile} onChange={updateProfile} />}
-
-      <ScoringInfo
-        criteria={profile.scoringCriteria.map(({ label, max, description }) => ({ label, max, description }))}
-        minScore={profile.minScore}
-      />
 
       <div className="jobs-toolbar">
         <button
