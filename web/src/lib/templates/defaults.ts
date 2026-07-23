@@ -18,20 +18,15 @@ export const DEFAULT_TEMPLATES: MailTemplate[] = [
     name: "Candidature",
     letterSubject: "Candidature spontanée – {Poste} – {Prénom} {Nom}",
     letterBody:
-      "{M/Mme Nom|Madame, Monsieur},\n\n" +
-      "Diplômé d'un Master 2 en e-commerce et habitué à mener des projets web de bout en bout, " +
-      "je me décrirais comme un vrai couteau suisse du web. Curieux de nature, j'aime comprendre " +
-      "les dessous techniques d'un site autant que les leviers stratégiques qui le font grandir.\n\n" +
-      "Aujourd'hui, c'est chez {Entreprise|vous} que je souhaite mettre cette polyvalence et cette " +
-      "culture web au service de projets concrets, en tant que {Poste|membre de votre équipe}. " +
-      "Ce qui m'anime, c'est d'accompagner une organisation dans sa croissance digitale, en mêlant " +
-      "technique et stratégie pour donner du sens à chaque action. J'aime les environnements où la " +
-      "curiosité est une force, où on apprend sans cesse et où chaque projet est une nouvelle " +
-      "aventure à construire.\n\n" +
-      "Je serais ravi d'échanger avec vous pour me présenter plus concrètement et vous expliquer " +
-      "comment je pourrais contribuer à vos projets.\n\n" +
-      "En vous remerciant pour votre temps et votre attention, je vous prie d'agréer mes salutations " +
-      "les plus sincères.\n\n" +
+      "Bonjour {M/Mme Nom|Madame, Monsieur},\n\n" +
+      "Je me permets de vous adresser ma candidature spontanée pour rejoindre " +
+      "{Entreprise|votre entreprise} en tant que {Poste|collaborateur investi}.\n\n" +
+      "Ce qui me motive, c'est de m'investir durablement dans un projet et d'y apporter autant mon " +
+      "savoir-faire que ma façon de travailler : l'écoute, l'envie d'apprendre et le goût du " +
+      "collectif. Je suis convaincu que mon engagement peut contribuer concrètement à votre " +
+      "croissance.\n\n" +
+      "Je reste à votre entière disposition pour en échanger.\n\n" +
+      "Bien cordialement,\n\n" +
       "{Prénom} {Nom}",
     updatedAt: 0,
   },

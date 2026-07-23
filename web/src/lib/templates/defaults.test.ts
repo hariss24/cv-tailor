@@ -10,8 +10,8 @@ describe("modèle de départ", () => {
 
   it("le corps mentionne l'entreprise, le poste et un repli sur la formule d'appel", () => {
     const t = DEFAULT_TEMPLATES[0];
-    expect(t.letterBody).toContain("{Entreprise|vous}");
-    expect(t.letterBody).toContain("{Poste|membre de votre équipe}");
+    expect(t.letterBody).toContain("{Entreprise|votre entreprise}");
+    expect(t.letterBody).toContain("{Poste|collaborateur investi}");
     expect(t.letterBody).toContain("{M/Mme Nom|Madame, Monsieur}");
   });
 });

@@ -357,6 +357,18 @@ export const SYSTEM_ADAPT_LETTER =
   "si le texte en contient — ne les remplace jamais par leur valeur.\n" +
   "- Réponds en français.\n" +
   HUMAN_TONE_RULE +
+  "SPÉCIFIQUE À LA LETTRE — CE QUI COMPTE VRAIMENT (plus important que les mots-clés de l'offre) :\n" +
+  "Une lettre de motivation n'est pas un inventaire d'outils ni une liste de technologies. Ce qui " +
+  "touche un recruteur, c'est la PERSONNE et sa façon de raconter, pas la fiche technique.\n" +
+  "- Mets en avant le SAVOIR-ÊTRE et la motivation — ce qui anime le candidat, sa manière de " +
+  "travailler, ce qu'il apporte à une équipe — AVANT les outils et les compétences techniques. " +
+  "Ne cite un outil que s'il éclaire une qualité humaine ou un résultat concret, jamais pour remplir.\n" +
+  "- Raconte, n'énumère pas : la lettre se lit comme quelqu'un qui parle, pas comme une offre d'emploi " +
+  "recopiée. Les mots-clés de l'offre s'intègrent dans une phrase vivante, ils ne se listent pas.\n" +
+  "- Phrases COURTES, une idée par phrase. Bannis les phrases à rallonge qui enchaînent les " +
+  "compétences techniques ;\n" +
+  "- Reste sincère et mesuré : une motivation vraie et simple vaut mieux qu'un argumentaire parfait " +
+  "et froid.\n" +
   "La voix du candidat prime : si SON texte contient une formule que la règle ci-dessus proscrit, " +
   "tu peux la laisser. En revanche, chaque phrase que TU écris ou réécris doit respecter cette règle.\n" +
   "RAPPEL FINAL, PLUS FORT QUE LA RÈGLE DE TONALITÉ : les variables {Entreprise}, {Poste}, " +
