@@ -62,7 +62,7 @@ export type DocStore = Doc & {
   setIncludeDate: (v: boolean) => void;
 };
 
-const INITIAL_TEMPLATE: TemplateId = "sobre";
+const INITIAL_TEMPLATE: TemplateId = "marine";
 
 export const useDocStore = create<DocStore>((set) => ({
   docType: "CV",
