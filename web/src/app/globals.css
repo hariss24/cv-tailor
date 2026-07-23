@@ -281,6 +281,19 @@ a.btn-nav, a.btn-nav:hover { text-decoration: none; color: var(--text); }
   .topbar-right .btn-nav { padding: 0 12px; }
 }
 
+/* Anti-chevauchement de la barre : la zone droite est `flex:1 1 0` avec
+   `min-width:0` (ligne 154) pour rester symétrique de la gauche et centrer la
+   nav. Mais ses boutons sont `flex-shrink:0` : quand la fenêtre se réduit, la
+   boîte de droite se comprime sous la largeur de son contenu et les boutons
+   débordent vers la gauche (justify-content:flex-end) par-dessus le
+   SegmentedNav. En dessous de 1400px (largeur en-deçà de laquelle le layout
+   centré ne tient plus), on redonne `min-width:auto` : la zone droite ne se
+   comprime plus sous son contenu, la nav se cale à gauche au lieu d'être
+   chevauchée. Au-delà de 1400px, le centrage symétrique original est conservé. */
+@media (max-width: 1400px) {
+  .topbar-right { min-width: auto; }
+}
+
 .meta-checkbox { accent-color: var(--orange); width: 14px; height: 14px; cursor: pointer; }
 
 /* ---- Toolbar ---- */
