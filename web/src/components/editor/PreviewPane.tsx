@@ -6,7 +6,7 @@ import { generateResumePdfBlob, generateLetterPdfBlob } from "@/lib/pdfgen/gener
 import type { Resume, Letter } from "@/lib/resume/schema";
 import PdfPreview from "./PdfPreview";
 
-const ZOOM_LEVELS = [1, 1.25, 1.5, 2, 2.5, 3] as const;
+const ZOOM_LEVELS: number[] = [1, 1.25, 1.5, 2, 2.5, 3];
 
 /**
  * Aperçu live : le JSON est dessiné en vrai PDF dans le navigateur 
