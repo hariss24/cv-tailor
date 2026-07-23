@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
-import Link from "next/link";
 import { useDocStore } from "@/state/docStore";
 import { DEFAULT_RESUME, type Resume, type Letter, type DocType } from "@/lib/resume/schema";
 import type { DocData } from "@/state/docStore";
@@ -14,6 +13,7 @@ import { takeSnapshot } from "@/lib/storage/snapshots";
 import ChatPanel from "@/components/modals/ChatPanel";
 import MobileMenu from "@/components/layout/MobileMenu";
 import SegmentedNav from "@/components/layout/SegmentedNav";
+import UserMenu from "@/components/layout/UserMenu";
 
 function slug(s: string): string {
   return s.trim()
@@ -153,7 +153,6 @@ export default function TopBar() {
           </div>
           <div className="logo-text">
             <span className="logo-title">CVMatchr</span>
-            <span className="logo-sub mobile-hidden">Atelier de candidatures</span>
           </div>
         </div>
       </div>
@@ -167,21 +166,10 @@ export default function TopBar() {
       <div className="topbar-right">
         <div className="topbar-pill" title="Nom du fichier PDF" suppressHydrationWarning>{filename}</div>
         <button type="button" className="btn-nav topbar-icon mobile-hidden" onClick={openChat} title="Assistant IA">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24" stroke="none"><path d="M10 6 Q 10 14 18 14 Q 10 14 10 22 Q 10 14 2 14 Q 10 14 10 6 Z M 18 1 Q 18 5 22 5 Q 18 5 18 9 Q 18 5 14 5 Q 18 5 18 1 Z" /></svg>
+          <svg className="ai-sparkle-icon" width="14" height="14" viewBox="0 0 24 24" fill="#FBBF24" stroke="none"><path d="M10 6 Q 10 14 18 14 Q 10 14 10 22 Q 10 14 2 14 Q 10 14 10 6 Z M 18 1 Q 18 5 22 5 Q 18 5 18 9 Q 18 5 14 5 Q 18 5 18 1 Z" /></svg>
         </button>
 
-        <button type="button" id="btn-theme" className="btn-nav topbar-icon mobile-hidden" title="Basculer le thème clair/sombre" aria-label="Basculer le thème" onClick={toggleTheme}>
-          <svg className="theme-ico theme-ico--sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
-          <svg className="theme-ico theme-ico--moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-        </button>
-
-        <Link href="/settings" id="btn-settings" className="mobile-hidden" title="Paramètres">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
-        </Link>
-
-        <Link href="/profil" className="btn-avatar mobile-hidden" title="Mes infos">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-        </Link>
+        <UserMenu onToggleTheme={toggleTheme} />
 
         <div className="expert-divider mobile-hidden" style={{ margin: "0 4px" }} />
 
