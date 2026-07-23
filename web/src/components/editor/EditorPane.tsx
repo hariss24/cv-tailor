@@ -9,12 +9,10 @@ import { TEMPLATE_IDS, type TemplateId } from "@/lib/resume/templates";
 import { useSettingsStore } from "@/state/settingsStore";
 import { saveDraft } from "@/lib/storage/db";
 import { normalizeResume, normalizeLetter } from "@/lib/resume/normalize";
-import { resumeToJsonResume } from "@/lib/resume/jsonResume";
 import { toast, uiPrompt } from "@/state/uiStore";
 import SnapshotsModal from "@/components/modals/SnapshotsModal";
 import ImportTextModal from "@/components/modals/ImportTextModal";
 import ImportPdfModal from "@/components/modals/ImportPdfModal";
-import type { Resume } from "@/lib/resume/schema";
 import { stripBase64FromJson, restoreBase64InJson } from "@/lib/ai/base64";
 
 const TEMPLATE_LABELS: Record<TemplateId, string> = {
@@ -28,7 +26,7 @@ type Tab = "form" | "json" | "import";
 
 /**
  * Panneau d'édition : onglet Formulaire + mode expert (JSON / Importer).
- * Outils intégrés à la barre de titre : Coller/Copier JSON, export Reactive Resume,
+ * Outils intégrés à la barre de titre : Coller/Copier JSON,
  * sélection de modèle, indicateur de brouillon dynamique, snapshots ⟲.
  */
 export default function EditorPane() {
@@ -155,23 +153,6 @@ export default function EditorPane() {
   };
 
 
-  const onExportRr = () => {
-    const json = JSON.stringify(
-      resumeToJsonResume(useDocStore.getState().json as Resume),
-      null,
-      2,
-    );
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const name = (useDocStore.getState().json as Resume).name?.trim() || "cv";
-    a.href = url;
-    a.download = `${name.replace(/[^\w-]+/g, "_") || "cv"}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast("CV exporté (format Reactive Resume).", "success");
-  };
-
   return (
     <>
       <div className="pane-title">
@@ -242,11 +223,6 @@ export default function EditorPane() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             <span className="btn-label">Copier</span>
           </button>
-          {isResumeType ? (
-            <button type="button" className="form-btn-mini form-btn-icon-only" title="Exporter au format JSON Resume (Reactive Resume)" onClick={onExportRr}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </button>
-          ) : null}
           <select
             className="toolbar-select"
             value={templateId}
