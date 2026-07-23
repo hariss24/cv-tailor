@@ -6,6 +6,8 @@ import { generateResumePdfBlob, generateLetterPdfBlob } from "@/lib/pdfgen/gener
 import type { Resume, Letter } from "@/lib/resume/schema";
 import PdfPreview from "./PdfPreview";
 
+const ZOOM_LEVELS = [1, 1.25, 1.5, 2, 2.5, 3] as const;
+
 /**
  * Aperçu live : le JSON est dessiné en vrai PDF dans le navigateur 
  * (debounce + garde d'obsolescence) et affiché via PDF.js (`PdfPreview`).
@@ -21,8 +23,15 @@ export default function PreviewPane() {
 
   const [pages, setPages] = useState(1);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [zoom, setZoom] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const genRef = useRef(0);
+
+  // Paliers de zoom. 1 = « Ajuster » (largeur du panneau) ; au-delà, grossissement réel
+  // (re-rendu net). Indispensable sur desktop où l'ancien toggle plafonnait trop bas.
+  const zoomIndex = ZOOM_LEVELS.indexOf(zoom);
+  const canZoomOut = zoomIndex > 0;
+  const canZoomIn = zoomIndex < ZOOM_LEVELS.length - 1;
+  const zoomLabel = zoom === 1 ? "Ajuster" : `${Math.round(zoom * 100)} %`;
 
   const isPreview = previewOverride !== null;
 
@@ -63,19 +72,29 @@ export default function PreviewPane() {
         {isPreview ? (
           <span className="preview-override-badge">Proposition IA — non appliquée</span>
         ) : null}
-        <button
-          type="button"
-          className="form-btn-mini"
-          onClick={() => setZoom(!zoom)}
-          aria-label={zoom ? "Réduire l'aperçu" : "Agrandir l'aperçu"}
-          title={zoom ? "Ajuster à l'écran" : "Taille réelle"}
-        >
-          {zoom ? (
+        <span className="zoom-control">
+          <button
+            type="button"
+            className="form-btn-mini form-btn-icon-only"
+            onClick={() => setZoom(ZOOM_LEVELS[zoomIndex - 1])}
+            disabled={!canZoomOut}
+            aria-label="Réduire l'aperçu"
+            title="Réduire l'aperçu"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-          ) : (
+          </button>
+          <span className="zoom-control__label" title="Niveau de zoom">{zoomLabel}</span>
+          <button
+            type="button"
+            className="form-btn-mini form-btn-icon-only"
+            onClick={() => setZoom(ZOOM_LEVELS[zoomIndex + 1])}
+            disabled={!canZoomIn}
+            aria-label="Agrandir l'aperçu"
+            title="Agrandir l'aperçu"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-          )}
-        </button>
+          </button>
+        </span>
         <span className="page-badge">{pageLabel}</span>
       </div>
       <div className="pane-body">

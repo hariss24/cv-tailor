@@ -398,7 +398,7 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
   .split { flex-direction: column; }
   .pane.editor-pane, .pane.preview-pane { flex: 1 1 auto; }
   /* La hauteur suit la page rendue ; plancher pour l'état vide seulement. */
-  .pane.preview-pane { min-height: 320px; }
+  .pane.preview-pane { min-height: 220px; }
 }
 /* Le reste des règles mobiles vit en FIN de fichier : à spécificité égale,
    elles doivent venir après les règles de base pour les surcharger. */
@@ -1120,6 +1120,14 @@ button.ghost:active { box-shadow: var(--neu-inset); transform: translateY(1px); 
 }
 .form-btn-add:hover { box-shadow: var(--neu-raised); }
 .form-btn-add:active { box-shadow: var(--neu-inset); }
+/* Contrôle de zoom de l'aperçu (− / niveau / +). */
+.zoom-control { display: inline-flex; align-items: center; gap: 4px; }
+.zoom-control__label {
+  font-family: var(--font-code); font-size: 11px; font-weight: 600;
+  color: var(--muted); min-width: 46px; text-align: center; letter-spacing: 0;
+  text-transform: none;
+}
+
 .page-badge {
   font-family: var(--font-code); font-size: 11px; font-weight: 600;
   color: var(--muted); padding: 2px 8px; border-radius: 8px;
@@ -2078,6 +2086,16 @@ button.go:disabled {
   .ui-dialog__close { padding: 10px 14px; }
   .meta-checkbox, .tailor-check input[type="checkbox"] { width: 20px; height: 20px; }
   .meta select, .meta input:not([type="checkbox"]) { min-height: 44px; }
+
+  /* Contrôle de zoom : boutons compacts (secondaires) — pas la règle tactile 44px. */
+  .zoom-control .form-btn-mini { padding: 9px; min-height: 0; }
+  .zoom-control .form-btn-mini svg { width: 15px; height: 15px; }
+  .zoom-control__label { min-width: 42px; }
+
+  /* Aperçu PDF : marges réduites pour élargir la page. Page centrée verticalement
+     quand il y a du mou ; désactivé au zoom (sinon le haut serait rogné/inatteignable). */
+  .pdf-preview { padding: 6px; gap: 8px; }
+  .pdf-preview:not(.pdf-preview--zoom) { justify-content: center; }
 
   /* -- Toolbar de l'éditeur : icônes seules, libellé en info-bulle. -- */
   .pane-title { row-gap: 8px; }

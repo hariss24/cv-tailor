@@ -8,13 +8,17 @@ import { useEffect, useRef } from "react";
  * depuis `public/`). Un nouveau blob annule le rendu en cours (flag `cancelled`), et les
  * canvases ne sont remplacés qu'une fois le nouveau rendu complet (pas de flash blanc).
  */
+/** Scale de rendu de base (zoom = 1, « Ajuster »). Le canvas est raster au scale
+ *  `BASE_SCALE * zoom` : re-rendre au zoom choisi garde le texte net (pas d'upscale flou). */
+const BASE_SCALE = 1.5;
+
 export default function PdfPreview({
   blob,
-  zoom,
+  zoom = 1,
   onPages,
 }: {
   blob: Blob;
-  zoom?: boolean;
+  zoom?: number;
   onPages?: (n: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -66,7 +70,7 @@ export default function PdfPreview({
         for (let i = 1; i <= doc.numPages; i++) {
           const page = await doc.getPage(i);
           if (cancelled) return;
-          const viewport = page.getViewport({ scale: 1.5 });
+          const viewport = page.getViewport({ scale: BASE_SCALE * zoom });
           const canvas = document.createElement("canvas");
           canvas.width = Math.ceil(viewport.width);
           canvas.height = Math.ceil(viewport.height);
@@ -85,12 +89,12 @@ export default function PdfPreview({
     return () => {
       cancelled = true;
     };
-  }, [blob, onPages]);
+  }, [blob, onPages, zoom]);
 
   return (
     <div
       ref={containerRef}
-      className={`pdf-preview${zoom ? " pdf-preview--zoom" : ""}`}
+      className={`pdf-preview${zoom > 1 ? " pdf-preview--zoom" : ""}`}
       data-testid="pdf-preview"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
