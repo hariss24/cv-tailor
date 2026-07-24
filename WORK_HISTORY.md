@@ -41,6 +41,50 @@
 
 ## Journal
 
+### 2026-07-24 : Adaptation de lettre — trous IA, jargon de l'offre et en-tête périmé
+- **Quoi :** trois correctifs sur le parcours « Adapter la lettre à une offre ».
+  (1) **Trous à compléter.** `SYSTEM_ADAPT_LETTER` interdit désormais tout
+  emplacement à remplir et impose deux issues seulement — une phrase plus générale
+  mais vraie, ou pas de phrase ; le « MODÈLE DE TON » de `HUMAN_TONE_RULE` précise
+  que ses crochets sont une anonymisation de l'exemple, jamais un format à imiter.
+  Garde-fou serveur : `findLetterPlaceholder()` (`lib/ai/letterPlaceholders.ts`)
+  inspecte la réponse, `/api/adapt-letter` relance une fois en pointant le trou au
+  modèle, puis échoue plutôt que d'injecter une lettre à compléter dans l'éditeur.
+  (2) **Jargon recopié.** Le prompt interdit de renvoyer au recruteur la langue
+  administrative de sa propre annonce, n'autorise que les mots-clés que le CV
+  prouve, et fait couper les phrases qui empilent trois compétences (« en
+  alliant », « tout en »). (3) **En-tête périmé.** Nouveau module
+  `lib/letter/adapt.ts`, extrait de `TailorModal` pour être testable :
+  `resolveMeta()` fait primer l'offre sur la barre meta (repli sur la saisie
+  manuelle si l'extraction échoue) et `buildAdaptedLetter()` recompose
+  destinataire, objet, adresse du destinataire (effacée quand l'entreprise change)
+  et expéditeur depuis le CV Maître, sans écraser une saisie manuelle. L'extraction
+  entreprise/poste passe **avant** l'appel d'adaptation et la meta résolue part à
+  l'IA. Anti-doublon : `greeting`/`signoff`/`signature` sont vidés quand le corps
+  porte déjà les siens.
+- **Pourquoi :** une lettre générée pour le Ministère de l'Intérieur est sortie
+  avec des placeholders en clair (« en tant que Poste occupé chez Entreprise »,
+  « j'ai notamment Réalisation marquante avec métrique chiffrée »), le vocabulaire
+  de l'annonce recopié tel quel, et un en-tête resté sur la candidature précédente
+  (« Darwin Microfluidics ») — la barre meta est persistée avec le brouillon et
+  l'offre n'était lue que si l'un de ses champs était vide. L'expéditeur, lui,
+  n'était jamais renseigné et restait sur les valeurs d'usine de `DEFAULT_LETTER`.
+- **Fichiers touchés :** `lib/ai/prompts.ts`, `lib/ai/letterPlaceholders.ts` (créé),
+  `app/api/adapt-letter/route.ts`, `lib/letter/adapt.ts` (créé),
+  `components/modals/TailorModal.tsx`, `components/pack/PackView.tsx` + tests.
+- **Résultat vérifs :** `npx tsc --noEmit`, `npm run lint` (0 erreur),
+  `npm test` (44 fichiers / **300 tests**) et `npm run build` verts. **Vérifié dans
+  l'app** (dev server + navigateur) en rejouant le scénario réel : barre meta
+  polluée par une candidature précédente + offre du Ministère collée → en-tête,
+  expéditeur, corps et PDF corrects, console et logs serveur sans erreur. Ce test
+  de bout en bout a révélé trois défauts que les tests unitaires ne voyaient pas
+  (ancienne entreprise encore envoyée à l'IA quand l'extraction tournait en
+  parallèle ; double salutation ; double formule de politesse dans le PDF).
+- **Piège à retenir :** l'`\b` de fin ne marque pas de frontière après un caractère
+  accentué en regex JS (`occupé`) — les motifs de `letterPlaceholders.ts` s'en
+  passent volontairement.
+- **Commits :** `ff17141`, `f6a804b`, `4800952`.
+
 ### 2026-07-22 : Vérification + refonte du formulaire Offres et autocomplétion
 - **Quoi.** Revue du travail M1–M5. Correction d'un **bug de scan** (le scan
   utilisait une `config` dérivée d'un profil vide via `page.tsx` → `prefilterKeywords`
