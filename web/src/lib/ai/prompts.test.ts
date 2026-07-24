@@ -116,6 +116,15 @@ describe('prompts — adapt letter / extract meta', () => {
     expect(SYSTEM_ADAPT_LETTER).toContain('"body":');
   });
 
+  // Une lettre rendue avec « en tant que Poste occupé chez Entreprise » part telle quelle au
+  // recruteur : c'est le pire bug possible de la fonctionnalité. Le prompt doit interdire le
+  // trou explicitement, parce que le MODÈLE DE TON de HUMAN_TONE_RULE en montre lui-même.
+  it('SYSTEM_ADAPT_LETTER interdit de laisser des trous à compléter', () => {
+    expect(SYSTEM_ADAPT_LETTER).toContain('INTERDICTION ABSOLUE DE LAISSER UN TROU');
+    expect(SYSTEM_ADAPT_LETTER).toContain('SUPPRIME la phrase');
+    expect(HUMAN_TONE_RULE).toContain("les crochets ci-dessus n'existent que pour anonymiser");
+  });
+
   it('SYSTEM_EXTRACT_META demande l\'entreprise et le poste', () => {
     expect(SYSTEM_EXTRACT_META).toContain('JSON PUR');
     expect(SYSTEM_EXTRACT_META).toContain('"company":');

@@ -67,6 +67,9 @@ export const HUMAN_TONE_RULE =
   "dans lequel je proposais mes services en tant que freelance : [url]. Tous ces projets " +
   "personnels m'ont permis de maîtriser naturellement [compétence].\n" +
   "J'habite à 20 minutes à pied de [lieu de l'entreprise], je serais ravi d'échanger avec vous. »\n" +
+  "ATTENTION : les crochets ci-dessus n'existent que pour anonymiser cet exemple. Tu n'imites que " +
+  "la TOURNURE des phrases. Ton texte à toi ne contient jamais de crochets, ni les mots qui étaient " +
+  "dedans : soit tu écris le fait réel lu dans le CV, soit tu n'écris pas la phrase.\n" +
   "CE QUI FAIT CE TON :\n" +
   "- il s'adresse directement au lecteur, comme dans un email : phrases simples, aucune tournure " +
   "de lettre type ;\n" +
@@ -353,6 +356,15 @@ export const SYSTEM_ADAPT_LETTER =
   "- Intègre naturellement 2 à 4 mots-clés ou attentes IMPORTANTS de l'offre.\n" +
   "- Remplace les passages entre crochets [ ] par du contenu concret tiré du CV.\n" +
   "- N'invente AUCUN fait : utilise uniquement les expériences et compétences réellement présentes dans le CV.\n" +
+  "- INTERDICTION ABSOLUE DE LAISSER UN TROU. Le texte que tu renvoies part tel quel au recruteur : " +
+  "il ne doit contenir AUCUN emplacement à compléter, ni entre crochets, ni en clair. Sont interdits " +
+  "les mots qui décrivent ce qu'il faudrait écrire au lieu de l'écrire : « Poste occupé », " +
+  "« Entreprise », « Réalisation marquante », « métrique chiffrée », « nom du projet », « X ans », " +
+  "« [votre chiffre] ». PAS « j'ai notamment Réalisation marquante avec métrique chiffrée » " +
+  "MAIS la vraie réalisation lue dans le CV — et si le CV n'en contient pas, SUPPRIME la phrase.\n" +
+  "- Quand le CV ne fournit pas le fait qui rendrait une phrase concrète, tu as deux issues, " +
+  "jamais une troisième : écrire une phrase plus générale mais VRAIE, ou ne pas écrire la phrase. " +
+  "Une lettre plus courte vaut infiniment mieux qu'une lettre à compléter à la main.\n" +
   "- CONSERVE telles quelles les variables {Entreprise}, {Poste}, {M/Mme Nom}, {Prénom}, {Nom}, {Date} " +
   "si le texte en contient — ne les remplace jamais par leur valeur.\n" +
   "- Réponds en français.\n" +
