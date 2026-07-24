@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { complete } from "@/lib/ai/clients";
-import { SYSTEM_ADAPT_LETTER } from "@/lib/ai/prompts";
+import { adaptLetterSystem } from "@/lib/ai/prompts";
 import { parseAiJson } from "@/lib/ai/json";
 import { aiErrorResponse } from "@/lib/ai/http";
-import { findLetterPlaceholder } from "@/lib/ai/letterPlaceholders";
+import { findLetterPlaceholder, isLetterSkeleton } from "@/lib/ai/letterPlaceholders";
+import { parseLetterTone } from "@/lib/letter/tone";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,10 +15,11 @@ type Body = {
   cv_json?: unknown;
   company?: string;
   role?: string;
+  tone?: string;
 };
 
-async function askForBody(content: string, userKey: string | null): Promise<string> {
-  const raw = await complete([{ role: "user", content }], SYSTEM_ADAPT_LETTER, userKey);
+async function askForBody(content: string, system: string, userKey: string | null): Promise<string> {
+  const raw = await complete([{ role: "user", content }], system, userKey);
   const result = parseAiJson(raw) as { body?: unknown };
   const adapted = String(result?.body ?? "").trim();
   if (!adapted) throw new Error("Réponse IA invalide : champ 'body' attendu.");
@@ -47,8 +49,15 @@ export async function POST(req: Request): Promise<Response> {
 
   const userKey = req.headers.get("x-api-key")?.trim() || null;
 
+  // Un corps encore fait de consignes entre crochets n'a pas de voix à conserver : l'IA
+  // rédige au lieu d'adapter, sinon elle décalque le ton scolaire du squelette d'usine.
+  const system = adaptLetterSystem(
+    parseLetterTone(body.tone),
+    isLetterSkeleton(letterBody) ? "redige" : "adapte",
+  );
+
   try {
-    let adapted = await askForBody(content, userKey);
+    let adapted = await askForBody(content, system, userKey);
 
     // Garde-fou : une lettre à trous part telle quelle au recruteur. Le prompt l'interdit,
     // on vérifie quand même — une seule relance, en pointant le trou au modèle.
@@ -57,7 +66,7 @@ export async function POST(req: Request): Promise<Response> {
       const retry =
         `${content}\n\nTa réponse précédente contenait un emplacement à compléter : « ${hole} ». ` +
         "Recommence. Écris le fait réel lu dans le CV, ou supprime la phrase.";
-      adapted = await askForBody(retry, userKey);
+      adapted = await askForBody(retry, system, userKey);
       const still = findLetterPlaceholder(adapted);
       if (still) {
         throw new Error(

@@ -29,8 +29,9 @@ describe("LetterDocument", () => {
     expect(text).toContain("[Argumentaire");
     expect(text).toContain("[Conclusion");
 
-    // Formule de politesse et signature.
-    expect(text).toContain("salutations distinguées");
+    // Formule de politesse et signature. Le libellé exact est dérivé du modèle : ce test
+    // vérifie que le champ `signoff` est bien rendu, pas quelle politesse on a choisie.
+    expect(text).toContain(DEFAULT_LETTER.signoff);
     expect(text).toContain("Prénom Nom");
   });
 

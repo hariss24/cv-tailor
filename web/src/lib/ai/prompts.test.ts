@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  SYSTEM_ADAPT_LETTER,
+  adaptLetterSystem,
   SYSTEM_EXTRACT_META,
   SYSTEM_TEXT_TO_LETTER,
   RESUME_TAILOR_RULES,
@@ -14,8 +14,12 @@ import {
   type TailorLevel,
 } from "./prompts";
 import { resumeSchema, letterSchema } from "@/lib/resume/schema";
+import { LETTER_TONES } from "@/lib/letter/tone";
 
 const LEVELS: TailorLevel[] = ["peu", "adapte", "hyper"];
+const TONES = LETTER_TONES.map((t) => t.id);
+/** Le prompt réellement envoyé dans le cas nominal (registre par défaut, lettre du candidat). */
+const SYSTEM_ADAPT_LETTER = adaptLetterSystem("humain", "adapte");
 
 describe("prompts — invariants métier", () => {
   // GARDE-FOU ANTI-DÉRIVE — ne pas remplacer par une liste écrite à la main.
@@ -121,8 +125,76 @@ describe('prompts — adapt letter / extract meta', () => {
   // trou explicitement, parce que le MODÈLE DE TON de HUMAN_TONE_RULE en montre lui-même.
   it('SYSTEM_ADAPT_LETTER interdit de laisser des trous à compléter', () => {
     expect(SYSTEM_ADAPT_LETTER).toContain('INTERDICTION ABSOLUE DE LAISSER UN TROU');
-    expect(SYSTEM_ADAPT_LETTER).toContain('SUPPRIME la phrase');
+    expect(SYSTEM_ADAPT_LETTER).toContain('supprime la phrase');
     expect(HUMAN_TONE_RULE).toContain("les crochets ci-dessus n'existent que pour anonymiser");
+  });
+
+  // LE BUG DU 24/07 : le prompt ouvrait sur « adapter LÉGÈREMENT » + « CONSERVE le ton du
+  // texte d'origine ». Appliqué au squelette d'usine (« [Argumentaire : décrivez vos
+  // compétences…] »), ça produisait une lettre scolaire — la règle de tonalité, placée vingt
+  // lignes plus bas, perdait l'arbitrage. Aucun registre ne doit réintroduire cette consigne.
+  it("aucun prompt de lettre n'ordonne de conserver le ton du texte de départ", () => {
+    for (const tone of TONES) {
+      for (const mission of ["adapte", "redige"] as const) {
+        const sys = adaptLetterSystem(tone, mission);
+        expect(sys, `${tone}/${mission}`).not.toContain("CONSERVE le ton");
+        expect(sys, `${tone}/${mission}`).not.toContain("adapter LÉGÈREMENT");
+      }
+    }
+  });
+
+  it("le mode « rédige » dit explicitement que le squelette n'a pas de voix à conserver", () => {
+    const redige = adaptLetterSystem("humain", "redige");
+    expect(redige).toContain("écrire le corps de la lettre");
+    expect(redige).toContain("squelette");
+    // Le mode « adapte », lui, protège la voix du candidat : c'est SON texte.
+    const adapte = adaptLetterSystem("humain", "adapte");
+    expect(adapte).toContain("Garde ses idées");
+    // …mais pas au point de couvrir les formules toutes faites : c'est cette échappatoire qui
+    // laissait passer « je me tiens à votre disposition », hérité du modèle d'usine.
+    expect(adapte).toContain("n'est pas « sa voix »");
+  });
+
+  it("chaque registre porte son modèle de ton et garde les règles communes", () => {
+    for (const tone of TONES) {
+      const sys = adaptLetterSystem(tone, "adapte");
+      expect(sys, tone).toContain("REGISTRE DEMANDÉ");
+      expect(sys, tone).toContain("MODÈLE DE TON");
+      expect(sys, tone).toContain("TONALITÉ");
+      expect(sys, tone).toContain("INTERDICTION ABSOLUE DE LAISSER UN TROU");
+      expect(sys, tone).toContain("NE RECOPIE PAS LE VOCABULAIRE DE L'OFFRE");
+    }
+    expect(adaptLetterSystem("factuel", "adapte")).toContain("FACTUEL ET CONCRET");
+    expect(adaptLetterSystem("humain", "adapte")).toContain("AUTHENTIQUE ET PERSONNEL");
+  });
+
+  // Le registre est le signal qui doit dominer : il passe AVANT les règles. Placé après une
+  // page de consignes, il se perd — c'est exactement le bug d'origine.
+  it("le registre est placé avant les règles générales", () => {
+    for (const tone of TONES) {
+      const sys = adaptLetterSystem(tone, "adapte");
+      expect(sys.indexOf("REGISTRE DEMANDÉ"), tone).toBeLessThan(sys.indexOf("TONALITÉ"));
+    }
+  });
+
+  // GARDE-FOU MESURÉ EN CONDITIONS RÉELLES (24/07, gemini-3.1-flash-lite) : à ~9 000
+  // caractères de consignes, le modèle produisait les formules interdites deux lignes plus
+  // haut ; à ~2 500, il rend le registre demandé du premier coup. Si ce test casse, c'est
+  // qu'on est en train de réempiler des règles — condenser, ou montrer par l'exemple.
+  it("le prompt de lettre reste court (le signal se dilue au-delà)", () => {
+    for (const tone of TONES) {
+      for (const mission of ["adapte", "redige"] as const) {
+        expect(adaptLetterSystem(tone, mission).length, `${tone}/${mission}`).toBeLessThan(4000);
+      }
+    }
+  });
+
+  // Les crochets du prompt se retrouvaient recopiés dans la lettre (bug des « trous »), et
+  // le garde-fou serveur les rejette : aucun exemple de ton ne doit en contenir.
+  it("aucun modèle de ton ne contient de crochets", () => {
+    for (const tone of TONES) {
+      expect(adaptLetterSystem(tone, "redige"), tone).not.toMatch(/\[[^\]\n]{2,80}\]/);
+    }
   });
 
   it('SYSTEM_EXTRACT_META demande l\'entreprise et le poste', () => {

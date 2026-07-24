@@ -230,8 +230,10 @@ export const DEFAULT_LETTER: Letter = {
     "[Accroche : présentez-vous brièvement et expliquez pourquoi ce poste et cette entreprise vous intéressent particulièrement.]\n\n" +
     "[Argumentaire : décrivez vos compétences et expériences les plus pertinentes, avec des exemples concrets.]\n\n" +
     "[Conclusion : réaffirmez votre motivation, mentionnez votre disponibilité pour un entretien et remerciez pour l'attention portée à votre candidature.]",
-  signoff:
-    "Dans l'attente de votre réponse, je reste à votre disposition pour tout échange.\n\n" +
-    "Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.",
+  // Politesse courte : la formule cérémonieuse d'origine (« Dans l'attente de votre réponse,
+  // je reste à votre disposition… Veuillez agréer… ») terminait en langue de bois même une
+  // lettre écrite au registre « Authentique » — ce champ échappe à l'IA, qui ne touche
+  // qu'au corps.
+  signoff: "Cordialement,",
   signature: "Prénom Nom",
 };

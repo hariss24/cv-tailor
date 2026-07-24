@@ -19,6 +19,17 @@ const PATTERNS: RegExp[] = [
   /\bX{1,3}\s*(ans|ann[ée]es|%)/,
 ];
 
+/**
+ * Le corps fourni est-il un squelette à remplir plutôt qu'une lettre écrite par le candidat ?
+ *
+ * `DEFAULT_LETTER.body` est un énoncé d'exercice (« [Argumentaire : décrivez vos
+ * compétences…] »). Demander à l'IA d'en « conserver le ton » produit mécaniquement une
+ * lettre scolaire : dans ce cas elle doit RÉDIGER, pas adapter.
+ */
+export function isLetterSkeleton(body: string): boolean {
+  return /\[[^\]\n]{2,200}\]/.test(body);
+}
+
 /** Renvoie le premier trou trouvé (pour le message d'erreur), sinon null. */
 export function findLetterPlaceholder(body: string): string | null {
   for (const re of PATTERNS) {

@@ -49,6 +49,29 @@ describe("POST /api/adapt-letter", () => {
     expect(mockComplete).toHaveBeenCalledTimes(2);
   });
 
+  // Le squelette d'usine est fait de consignes entre crochets : il n'y a pas de voix à
+  // conserver, l'IA doit rédiger. C'est ce qui produisait la lettre scolaire du 24/07.
+  it("bascule en mode rédaction quand le corps est un squelette à trous", async () => {
+    mockComplete.mockResolvedValue(JSON.stringify({ body: "corps" }));
+    await POST(req({ letter_body: "[Accroche : présentez-vous.]", job_desc: "offre" }));
+    expect(mockComplete.mock.calls[0][1]).toContain("écrire le corps de la lettre");
+  });
+
+  it("garde le mode adaptation quand le corps est une vraie lettre", async () => {
+    mockComplete.mockResolvedValue(JSON.stringify({ body: "corps" }));
+    await POST(req({ letter_body: "Bonjour, je vous écris car…", job_desc: "offre" }));
+    expect(mockComplete.mock.calls[0][1]).toContain("Garde ses idées");
+  });
+
+  it("applique le registre demandé, et retombe sur le défaut si la valeur est invalide", async () => {
+    mockComplete.mockResolvedValue(JSON.stringify({ body: "corps" }));
+    await POST(req({ letter_body: "ma lettre", job_desc: "offre", tone: "factuel" }));
+    expect(mockComplete.mock.calls[0][1]).toContain("FACTUEL ET CONCRET");
+
+    await POST(req({ letter_body: "ma lettre", job_desc: "offre", tone: "n'importe quoi" }));
+    expect(mockComplete.mock.calls[1][1]).toContain("AUTHENTIQUE ET PERSONNEL");
+  });
+
   it("400 si lettre ou offre manquante", async () => {
     const res = await POST(req({ letter_body: "", job_desc: "offre" }));
     expect(res.status).toBe(400);

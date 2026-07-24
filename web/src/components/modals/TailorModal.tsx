@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import DiffModal from "./DiffModal";
 import { loadMasterResume } from "@/lib/storage/master";
 import { resolveMeta, buildAdaptedLetter } from "@/lib/letter/adapt";
+import { LETTER_TONES, loadLetterTone, saveLetterTone, type LetterTone } from "@/lib/letter/tone";
 import type { Resume, Letter } from "@/lib/resume/schema";
 import type { TailorLevel } from "@/lib/ai/prompts";
 import { toast } from "@/state/uiStore";
@@ -51,6 +52,7 @@ export default function TailorModal({
     typeof window !== "undefined" ? useDocStore.getState().pendingJobDesc ?? "" : "",
   );
   const [level, setLevel] = useState<TailorLevel>("adapte");
+  const [tone, setTone] = useState<LetterTone>(loadLetterTone);
   const [useMaster, setUseMaster] = useState(true);
   const [busy, setBusy] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
@@ -231,6 +233,7 @@ export default function TailorModal({
         cv_json: master ? { ...master, photo: "" } : {},
         company: meta.company,
         role: meta.role,
+        tone,
       });
       if (!body.trim()) throw new Error("Le corps adapté reçu est vide — lettre conservée.");
 
@@ -374,7 +377,32 @@ export default function TailorModal({
         <div className="sheet__body">
           {offerSection}
 
-          {isLetter ? null : (
+          {isLetter ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span className="form-label" style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Ton de la lettre
+              </span>
+              <div className="sheet-levels" role="radiogroup" aria-label="Ton de la lettre">
+                {LETTER_TONES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={tone === t.id}
+                    className={`sheet-level${tone === t.id ? " active" : ""}`}
+                    onClick={() => { setTone(t.id); saveLetterTone(t.id); }}
+                    disabled={busy}
+                  >
+                    <span className="sheet-level__head">
+                      <span className="sheet-level__radio"><span className="sheet-level__dot" /></span>
+                      <span className="sheet-level__title">{t.label}</span>
+                    </span>
+                    <span className="sheet-level__desc">{t.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
             <>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <span className="form-label" style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>

@@ -6,6 +6,7 @@ import { useDocStore } from "@/state/docStore";
 import { postJson } from "@/lib/ai/client";
 import { fetchJobMeta } from "@/lib/ai/jobMeta";
 import { resolveMeta } from "@/lib/letter/adapt";
+import { LETTER_TONES, loadLetterTone, saveLetterTone, type LetterTone } from "@/lib/letter/tone";
 import VariableEditor from "./VariableEditor";
 import { TEMPLATE_VARIABLES, type TemplateVars } from "@/lib/templates/render";
 import type { Resume } from "@/lib/resume/schema";
@@ -33,6 +34,9 @@ export default function PackView() {
     typeof window !== "undefined" ? useDocStore.getState().pendingJobDesc ?? "" : "",
   );
   const [busy, setBusy] = useState(false);
+  // Registre d'écriture (persisté hors document). Lecture à l'initialisation comme `jobDesc`
+  // ci-dessus : le bloc qui l'affiche vit sous `showAdapt`, jamais rendu au prérendu serveur.
+  const [tone, setTone] = useState<LetterTone>(loadLetterTone);
   // Déplie l'adaptation IA d'emblée si on arrive avec une offre en attente.
   const [showAdapt, setShowAdapt] = useState(
     () => typeof window !== "undefined" && !!useDocStore.getState().pendingJobDesc,
@@ -118,6 +122,7 @@ export default function PackView() {
         cv_json: { ...(identity?.cv ?? cvRaw), photo: "" },
         company: meta.company,
         role: meta.role,
+        tone,
       });
       patchTpl({ letterBody: body });
       toast("Corps de la lettre adapté à l'offre.", "success");
@@ -220,6 +225,25 @@ export default function PackView() {
               onBlur={() => void prefillFromJob(jobDesc)}
               disabled={busy}
             />
+            <div className="sheet-levels" role="radiogroup" aria-label="Ton de la lettre">
+              {LETTER_TONES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={tone === t.id}
+                  className={`sheet-level${tone === t.id ? " active" : ""}`}
+                  onClick={() => { setTone(t.id); saveLetterTone(t.id); }}
+                  disabled={busy}
+                >
+                  <span className="sheet-level__head">
+                    <span className="sheet-level__radio"><span className="sheet-level__dot" /></span>
+                    <span className="sheet-level__title">{t.label}</span>
+                  </span>
+                  <span className="sheet-level__desc">{t.hint}</span>
+                </button>
+              ))}
+            </div>
             <button type="button" className="go" onClick={adaptWithAi} disabled={busy || !tpl}>
               {busy ? "Adaptation…" : "✨ Adapter le corps à l'offre"}
             </button>

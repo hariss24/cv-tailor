@@ -7,6 +7,7 @@
  */
 
 import { SECTION_IDS } from "@/lib/resume/sections";
+import type { LetterTone } from "@/lib/letter/tone";
 
 /**
  * Règle de tonalité, partagée par tous les prompts qui RÉDIGENT du texte
@@ -269,8 +270,8 @@ export const LETTER_FIELDS_RULE =
   "- 'greeting' : la formule d'APPEL, et rien d'autre. Ex : « Madame, Monsieur, ».\n" +
   "- 'body' : le CORPS de la lettre, uniquement. Il ne contient NI la formule d'appel, NI la " +
   "formule de politesse, NI le nom du candidat : ces trois éléments ont leur propre champ.\n" +
-  "- 'signoff' : la formule de POLITESSE finale, et RIEN D'AUTRE. Ex : « Veuillez agréer, Madame, " +
-  "Monsieur, l'expression de mes salutations distinguées. » ou « Cordialement, ». " +
+  "- 'signoff' : la formule de POLITESSE finale, et RIEN D'AUTRE. Courte de préférence : " +
+  "« Cordialement, », « Belle journée à vous, ». " +
   "INTERDICTION ABSOLUE d'y écrire le nom du candidat : ce champ ne contient jamais de nom.\n" +
   "- 'signature' : le NOM du candidat, et rien d'autre. Recopie la valeur de 'sender_name'. " +
   "Ne le laisse jamais vide et n'y laisse jamais un texte générique du type « Prénom Nom » : " +
@@ -345,63 +346,116 @@ export const SYSTEM_ATS_SCORE =
   "- 'zone' : où la placer — « Expériences », « Compétences », « Accroche », « Formation ».\n" +
   "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
 
+
 // ---- adaptation du modèle de lettre à une offre ------------------------------
 
-export const SYSTEM_ADAPT_LETTER =
-  "Tu es un expert en candidatures. Tu reçois le CORPS d'une lettre de motivation rédigée par le " +
-  "candidat (son modèle personnel), le texte d'une offre d'emploi, et les données JSON de son CV.\n\n" +
-  "TA MISSION : adapter LÉGÈREMENT le corps de la lettre à l'offre.\n" +
-  "RÈGLES :\n" +
-  "- CONSERVE le ton, la structure, le nombre de paragraphes et la longueur (±20 %) du texte d'origine.\n" +
-  "- Intègre naturellement 2 à 4 mots-clés ou attentes IMPORTANTS de l'offre, et UNIQUEMENT ceux que " +
-  "le CV prouve déjà. Un mot-clé que le candidat ne peut pas justifier ne s'ajoute pas.\n" +
-  "- Remplace les passages entre crochets [ ] par du contenu concret tiré du CV.\n" +
-  "- N'invente AUCUN fait : utilise uniquement les expériences et compétences réellement présentes dans le CV.\n" +
-  "- INTERDICTION ABSOLUE DE LAISSER UN TROU. Le texte que tu renvoies part tel quel au recruteur : " +
-  "il ne doit contenir AUCUN emplacement à compléter, ni entre crochets, ni en clair. Sont interdits " +
-  "les mots qui décrivent ce qu'il faudrait écrire au lieu de l'écrire : « Poste occupé », " +
-  "« Entreprise », « Réalisation marquante », « métrique chiffrée », « nom du projet », « X ans », " +
-  "« [votre chiffre] ». PAS « j'ai notamment Réalisation marquante avec métrique chiffrée » " +
-  "MAIS la vraie réalisation lue dans le CV — et si le CV n'en contient pas, SUPPRIME la phrase.\n" +
-  "- Quand le CV ne fournit pas le fait qui rendrait une phrase concrète, tu as deux issues, " +
-  "jamais une troisième : écrire une phrase plus générale mais VRAIE, ou ne pas écrire la phrase. " +
-  "Une lettre plus courte vaut infiniment mieux qu'une lettre à compléter à la main.\n" +
-  "- CONSERVE telles quelles les variables {Entreprise}, {Poste}, {M/Mme Nom}, {Prénom}, {Nom}, {Date} " +
-  "si le texte en contient — ne les remplace jamais par leur valeur.\n" +
-  "- Réponds en français.\n" +
-  HUMAN_TONE_RULE +
-  "SPÉCIFIQUE À LA LETTRE — CE QUI COMPTE VRAIMENT (plus important que les mots-clés de l'offre) :\n" +
-  "Une lettre de motivation n'est pas un inventaire d'outils ni une liste de technologies. Ce qui " +
-  "touche un recruteur, c'est la PERSONNE et sa façon de raconter, pas la fiche technique.\n" +
-  "- Mets en avant le SAVOIR-ÊTRE et la motivation — ce qui anime le candidat, sa manière de " +
-  "travailler, ce qu'il apporte à une équipe — AVANT les outils et les compétences techniques. " +
-  "Ne cite un outil que s'il éclaire une qualité humaine ou un résultat concret, jamais pour remplir.\n" +
-  "- Raconte, n'énumère pas : la lettre se lit comme quelqu'un qui parle, pas comme une offre d'emploi " +
-  "recopiée. Les mots-clés de l'offre s'intègrent dans une phrase vivante, ils ne se listent pas.\n" +
-  "- NE RECOPIE PAS LE VOCABULAIRE DE L'OFFRE. Les offres sont écrites en langue administrative " +
-  "(« enjeux de rayonnement et de visibilité institutionnelle », « stratégie éditoriale multicanale », " +
-  "« transformation digitale de notre institut ») : renvoyer ces formules au recruteur ne prouve rien, " +
-  "il voit qu'on lui récite son annonce. Reprends l'IDÉE avec les mots du candidat, pas le bloc de " +
-  "mots. PAS « je suis prêt à relever le défi de la transformation digitale de votre institut en " +
-  "alliant rédaction technique, optimisation du SEO et gestion des performances » MAIS quelque chose " +
-  "comme « refaire une présence en ligne qui date, c'est ce que j'ai fait chez X, et c'est le genre " +
-  "de chantier qui me plaît ».\n" +
-  "- Une phrase qui empile trois compétences reliées par « en alliant », « tout en » ou « ainsi que » " +
-  "est une phrase d'offre d'emploi : coupe-la en deux, ou garde une seule compétence, la mieux prouvée.\n" +
-  "- Phrases COURTES, une idée par phrase. Bannis les phrases à rallonge qui enchaînent les " +
-  "compétences techniques ;\n" +
-  "- Reste sincère et mesuré : une motivation vraie et simple vaut mieux qu'un argumentaire parfait " +
-  "et froid.\n" +
-  "La voix du candidat prime : si SON texte contient une formule que la règle ci-dessus proscrit, " +
-  "tu peux la laisser. En revanche, chaque phrase que TU écris ou réécris doit respecter cette règle.\n" +
-  "RAPPEL FINAL, PLUS FORT QUE LA RÈGLE DE TONALITÉ : les variables {Entreprise}, {Poste}, " +
-  "{M/Mme Nom}, {Prénom}, {Nom} et {Date} se recopient TELLES QUELLES, accolades comprises. " +
-  "L'exigence d'écrire concret ne t'autorise JAMAIS à les remplacer par leur valeur : c'est " +
-  "l'application qui les remplira.\n\n" +
+/*
+ * POURQUOI CE PROMPT EST COURT, ET DOIT LE RESTER.
+ *
+ * Il a d'abord été écrit comme les autres : mission, puis `HUMAN_TONE_RULE` complet, puis
+ * une page de consignes propres à la lettre. Résultat mesuré sur `gemini-3.1-flash-lite`
+ * (le modèle par défaut) : la lettre sortait en français de candidature standard, avec les
+ * formules explicitement listées comme interdites deux lignes plus haut — « je serais ravi
+ * de vous exposer ma vision », « mettre à profit ». Les contre-exemples cités mot pour mot
+ * étaient même RECOPIÉS : sur un petit modèle, une longue liste d'interdits amorce autant
+ * qu'elle proscrit.
+ *
+ * La même tâche avec un prompt cinq fois plus court, un exemple de ton PROCHE de la lettre
+ * à écrire, et trois règles seulement, produit du premier coup le registre attendu.
+ * D'où la règle de maintenance : ici on MONTRE (modèle de ton par registre), on n'accumule
+ * pas d'interdits. Toute règle ajoutée dilue les autres.
+ */
+
+export type LetterMission = "adapte" | "redige";
+
+const LETTER_MISSIONS: Record<LetterMission, string> = {
+  // Le corps vient du candidat : sa voix est un actif.
+  adapte:
+    "TA MISSION : réécrire à l'offre le corps de lettre que le candidat t'envoie.\n" +
+    "Garde ses idées et leur ordre. Garde ce qui lui appartient vraiment : un détail personnel, " +
+    "une formule à lui. Réécris le reste selon le registre ci-dessous — une formule toute faite " +
+    "recopiée d'un modèle n'est pas « sa voix ».\n\n",
+  // Le corps est le squelette d'usine (« [Argumentaire : décrivez…] ») : aucune voix à garder.
+  // Lui demander d'en « conserver le ton » produisait mécaniquement une lettre scolaire.
+  redige:
+    "TA MISSION : écrire le corps de la lettre, à partir du CV et de l'offre.\n" +
+    "Le texte qu'on te donne n'est pas une lettre : c'est un squelette de consignes entre " +
+    "crochets. Tu écris à sa place, sans reprendre ni ses tournures ni son découpage.\n\n",
+};
+
+/**
+ * Registre d'écriture choisi par l'utilisateur (voir `lib/letter/tone.ts`).
+ *
+ * Chacun porte SON modèle de ton : c'est l'exemple, pas la consigne, qui fait basculer le
+ * registre. Les faits y sont volontairement anonymes (« chez A et B ») — un exemple avec des
+ * chiffres concrets se fait recopier tel quel dans la lettre du candidat.
+ */
+const LETTER_TONE_RULES: Record<LetterTone, string> = {
+  humain:
+    "REGISTRE DEMANDÉ — AUTHENTIQUE ET PERSONNEL.\n" +
+    "Écris comme le candidat parlerait au recruteur en face de lui. Phrases courtes, « je » " +
+    "direct, aucun préambule cérémonieux. Ce qui doit ressortir : ce qu'il a fait concrètement, " +
+    "et ce qui lui plaît dans ce poste.\n" +
+    "MODÈLE DE TON — imite la TOURNURE, jamais les faits ni les amorces de phrase :\n" +
+    "« Je vous contacte pour le poste de A chez B. Je connais déjà bien ce type d'environnement " +
+    "pour y avoir travaillé, et je pense pouvoir vous être utile assez vite.\n" +
+    "Chez C et D, j'ai surtout appris à transformer des besoins métiers en résultats concrets. " +
+    "Sur mon dernier projet, j'ai fait progresser E. Pour y arriver, j'ai jonglé entre plusieurs " +
+    "casquettes : F, G et H.\n" +
+    "J'aimerais beaucoup vous parler de la façon dont je peux vous aider. Si vous avez un moment, " +
+    "je serais ravi d'en discuter de vive voix. »\n\n",
+  equilibre:
+    "REGISTRE DEMANDÉ — ÉQUILIBRÉ.\n" +
+    "La lettre dit qui il est ET ce qu'il sait faire. Ouverture directe sur sa motivation, corps " +
+    "appuyé sur des faits du CV, conclusion accrochée à quelque chose de concret.\n" +
+    "MODÈLE DE TON — imite la TOURNURE, jamais les faits ni les amorces de phrase :\n" +
+    "« Votre poste de A m'intéresse parce qu'il touche à ce que je fais depuis B ans : C.\n" +
+    "Chez D, j'ai pris en charge E, et le résultat a été F. J'y ai aussi appris à travailler avec " +
+    "G, ce que votre annonce demande explicitement. Côté outils, j'utilise H et I au quotidien.\n" +
+    "Ce qui m'attire ici, c'est J. Je serais content d'en parler avec vous. »\n\n",
+  factuel:
+    "REGISTRE DEMANDÉ — FACTUEL ET CONCRET.\n" +
+    "Le candidat veut prouver, pas séduire. Chaque paragraphe s'appuie sur un fait du CV : une " +
+    "mission, un outil, un résultat chiffré. Aucun adjectif sur soi-même (« rigoureux », " +
+    "« motivé ») — un fait à la place, ou rien.\n" +
+    "MODÈLE DE TON — imite la TOURNURE, jamais les faits ni les amorces de phrase :\n" +
+    "« Je postule au poste de A. Mon parcours couvre l'essentiel de ce que vous demandez : B, C " +
+    "et D.\n" +
+    "Chez E, j'ai fait passer F de G à H en faisant I. J'y produis aussi J, avec K. Chez L, " +
+    "j'avais la charge de M.\n" +
+    "Je suis disponible à partir de N. »\n\n",
+};
+
+const ADAPT_LETTER_RULES =
+  "RÈGLES — courtes, toutes obligatoires :\n" +
+  "- N'invente AUCUN fait. Tout vient du CV. Les résultats chiffrés du CV sont tes meilleurs " +
+  "arguments : reprends-les tels quels.\n" +
+  "- INTERDICTION ABSOLUE DE LAISSER UN TROU. Ce texte part tel quel au recruteur : aucun " +
+  "emplacement à compléter, ni entre crochets, ni en clair (« Poste occupé », « Entreprise », " +
+  "« X ans »). Si le CV ne fournit pas le fait, supprime la phrase.\n" +
+  "- NE RECOPIE PAS LE VOCABULAIRE DE L'OFFRE. Les annonces sont écrites en langue " +
+  "administrative ; la renvoyer au recruteur ne prouve rien. Reprends l'idée avec les mots du " +
+  "candidat.\n" +
+  "- TONALITÉ : jamais « fort de mon expérience », « mettre à profit », « force de proposition », " +
+  "« je me tiens à votre disposition », « c'est avec un grand intérêt », « en adéquation avec », " +
+  "« merci de l'attention que vous portez à ma candidature », " +
+  "« au cœur de », « s'inscrit dans ». Jamais de participe présent en fin de phrase " +
+  "(« permettant de… »), jamais trois qualités enfilées.\n" +
+  "- Recopie TELLES QUELLES les variables {Entreprise}, {Poste}, {M/Mme Nom}, {Prénom}, {Nom}, " +
+  "{Date} si le texte en contient, accolades comprises : c'est l'application qui les remplit.\n" +
+  "- Trois paragraphes courts. Français.\n\n" +
   "FORMAT DE RÉPONSE OBLIGATOIRE — JSON PUR, RIEN D'AUTRE :\n" +
-  '{"body": "le corps adapté, avec des sauts de ligne \\n entre les paragraphes"}\n\n' +
-  "CONTRAINTES :\n" +
-  "- JSON PUR : aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
+  '{"body": "le corps, avec des sauts de ligne \\n entre les paragraphes"}\n' +
+  "Aucune balise markdown, aucun ```json, aucun texte avant ou après le JSON.";
+
+/**
+ * Assemble le prompt d'adaptation de lettre : mission, puis registre (avec son modèle de
+ * ton), puis les règles. Le registre est placé AVANT les règles et juste après la mission —
+ * c'est le signal qui doit dominer, et il se perd s'il arrive après une page de consignes.
+ */
+export function adaptLetterSystem(tone: LetterTone, mission: LetterMission): string {
+  return LETTER_MISSIONS[mission] + LETTER_TONE_RULES[tone] + ADAPT_LETTER_RULES;
+}
 
 // ---- extraction entreprise/poste d'une offre ---------------------------------
 
